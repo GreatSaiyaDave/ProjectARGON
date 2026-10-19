@@ -3,7 +3,6 @@
   "cards": {
     "30314994": "Element Dragon: DO NOT PORT. Implemented on the Sept-10 cursor branches as a false ignition; refused on purpose on main in 67fc2361 (v51). Needs a real 'while a monster with Attribute X is on the field' condition.",
     "92755808": "Element Saurus: DO NOT PORT (see Element Dragon, 67fc2361).",
-    "97623219": "Element Valkyrie: DO NOT PORT (see Element Dragon, 67fc2361).",
-    "85519211": "Minefield Eruption: only a Stub on GitHub main (not better than here)."
+    "97623219": "Element Valkyrie: DO NOT PORT (see Element Dragon, 67fc2361)."
   }
 }

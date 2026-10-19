@@ -4986,6 +4986,11 @@ namespace WRLDZ.Duel.Rules
                                             c != null && c.Action ==
                                             EffectActionKind.DestroyEquipsAttachedToThis) == true)
                                         continue;
+                                    // TlmEquipsAndLinkedContinuous batch: Legendary Black Belt — one of the listed names.
+                                    if (!string.IsNullOrEmpty(clause.AnyOfNamedCards) &&
+                                        !System.Array.Exists(clause.AnyOfNamedCards.Split('|'), x =>
+                                            x.Trim().Equals(cand.name ?? "", System.StringComparison.OrdinalIgnoreCase)))
+                                        continue;
                                     var want = clause.EquipHostName ?? clause.NamedCard;
                                     if (!string.IsNullOrEmpty(want))
                                     {

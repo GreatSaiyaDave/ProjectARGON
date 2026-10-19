@@ -191,8 +191,10 @@ namespace WRLDZ.Duel.Rules
                 (21237481, "Type Zero Magic Crusher", "discard a Spell Card to burn 500",
                     c => c.Action == EffectActionKind.InflictDamageToOpponent &&
                          c.Timing != EffectTiming.FaceUpQuickEffect, false),
+                // TlmFlipsControlAndZoneEvents batch: Implemented whole — its target is a Defense Position monster
+                // (FieldDefensePositionMonsters); a FieldAnyMonster Destroy is still the wrong clause; gate off.
                 (1571945, "White Ninja", "a Defense Position monster, not any monster",
-                    c => c.Action == EffectActionKind.Destroy && c.Zone == EffectZoneFilter.FieldAnyMonster, true),
+                    c => c.Action == EffectActionKind.Destroy && c.Zone == EffectZoneFilter.FieldAnyMonster, false),
                 (64500000, "Z-Metal Tank", "Union equip / unequip, not a GY summon",
                     c => c.Action == EffectActionKind.SpecialSummonFromGy, false),
             };

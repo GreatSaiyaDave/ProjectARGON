@@ -325,6 +325,9 @@ namespace WRLDZ.Duel.TextEffects
                     Timing = EffectTiming.EndPhase,
                     Action = EffectActionKind.ChangeBattlePosition,
                     TurnPlayerIsSubject = true,
+                    // OncePerTurnSoft group (v211): "during each player's End Phase" (Lua TRIGGER_F EVENT_PHASE+PHASE_END,
+                    // no turn condition) — it had fired only in its controller's End Phase. Once per End Phase pass.
+                    FiresAtEachPlayersPhase = true,
                     StaysOnField = true,
                     MakesChainLink = true
                 }

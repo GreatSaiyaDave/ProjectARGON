@@ -278,6 +278,9 @@ namespace WRLDZ.Duel.Rules
                    // ConditionalSpellsAndTraps batch: GY / banished counts, named Ojamas, another Spell/Trap you control
                    // (ConditionalSpellsAndTrapsRegressionTests drive them).
                    ConditionalSpellsAndTrapsRuntime.NeedsHardBoard(c) ||
+                   // TlmCostLinkedSpells batch: Minefield Eruption's face-up Mine Golem, Card of Sanctity's hand and field
+                   // cards, Double Attack's Battle Phase turn, Hero Signal's battle window (TlmCostLinkedSpellsRegressionTests).
+                   TlmCostLinkedSpellsRuntime.NeedsHardBoard(c) ||
                    // NormalMonsterSpells batch: Normal Monster boards (NormalMonsterSpellsRegressionTests drive them).
                    NormalMonsterSpellsRuntime.NeedsHardBoard(c) ||
                    // RecoveryAndPhaseCosts batch: Dimension Distortion (an empty GY), Reload (another card in the hand), Salvage
@@ -286,6 +289,10 @@ namespace WRLDZ.Duel.Rules
                    c.ActivationCondition == RecoveryAndPhaseCostsRuntime.AnotherCardInYourHand ||
                    (c.Action == EffectActionKind.AddFromGyToHand && c.Zone == EffectZoneFilter.ControllerGyMonsters &&
                     !string.IsNullOrEmpty(c.AttributeFilter)) ||
+                   // TlmEquipsAndLinkedContinuous batch: Lone Wolf (the 1 and only monster is a face-up listed one) and Kaminote
+                   // Blow (a face-up listed monster); TlmEquipsAndLinkedContinuousRegressionTests drive them.
+                   c.ActivationCondition == TlmEquipsAndLinkedContinuousRuntime.OnlyMonsterIsFaceUpNamed ||
+                   c.ActivationCondition == TlmEquipsAndLinkedContinuousRuntime.NamedFaceUpInYourMonsterZone ||
                    c.Timing == EffectTiming.PositionChanged ||
                    c.Timing == EffectTiming.ThisCardDeclaresAttack ||
                    c.Action == EffectActionKind.PayLpToDeclareAttack ||

@@ -675,15 +675,17 @@ namespace WRLDZ.Duel.TextEffects
             // ForcedActivationAndSubstitution batch (v163): Spirit Elimination — face-up monsters of that Attribute
             // `who` controls stand in for the GY monsters (aux.SpElimFilter(c,true)).
             // ChaosBanishSummons batch: "1 LIGHT and 1 DARK" — a monster of either Attribute is a candidate.
+            // TlmDerivedStatsAndProcedures batch: Megarock Dragon — "Rock-Type monster(s)" (a Type, the live one on the field).
             if (SpiritEliminationRuntime.Affects(engine, who))
                 return SpiritEliminationRuntime.Substitutes(engine, who, card,
-                    !string.IsNullOrEmpty(proc.AttributeFilter),
-                    m => string.IsNullOrEmpty(proc.AttributeFilter) ||
-                         string.Equals(EquipFamilyRuntime.CurrentAttribute(m), proc.AttributeFilter,
-                             StringComparison.OrdinalIgnoreCase) ||
-                         (!string.IsNullOrEmpty(proc.SecondAttributeFilter) &&
-                          string.Equals(EquipFamilyRuntime.CurrentAttribute(m), proc.SecondAttributeFilter,
-                              StringComparison.OrdinalIgnoreCase)));
+                    !string.IsNullOrEmpty(proc.AttributeFilter) || !string.IsNullOrEmpty(proc.RaceFilter),
+                    m => (string.IsNullOrEmpty(proc.RaceFilter) || ClassicEraTemplates.RaceMatches(m.Race, proc.RaceFilter)) &&
+                         (string.IsNullOrEmpty(proc.AttributeFilter) ||
+                          string.Equals(EquipFamilyRuntime.CurrentAttribute(m), proc.AttributeFilter,
+                              StringComparison.OrdinalIgnoreCase) ||
+                          (!string.IsNullOrEmpty(proc.SecondAttributeFilter) &&
+                           string.Equals(EquipFamilyRuntime.CurrentAttribute(m), proc.SecondAttributeFilter,
+                               StringComparison.OrdinalIgnoreCase))));
             if (ContinuousProtections.CannotBanishFromGraveyard(engine, who) || RuleLocksRuntime.BanishFromGyLocked(engine, who))
                 return list;
             foreach (var g in who.Graveyard)
@@ -693,6 +695,9 @@ namespace WRLDZ.Duel.TextEffects
                     !string.Equals(g.Def.attribute, proc.AttributeFilter, StringComparison.OrdinalIgnoreCase) &&
                     !(!string.IsNullOrEmpty(proc.SecondAttributeFilter) &&
                       string.Equals(g.Def.attribute, proc.SecondAttributeFilter, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+                // TlmDerivedStatsAndProcedures batch: the printed Type in the GY (Megarock Dragon).
+                if (!string.IsNullOrEmpty(proc.RaceFilter) && !ClassicEraTemplates.RaceMatches(g.Def.race, proc.RaceFilter))
                     continue;
                 if (ContinuousProtections.GyMovementLocked(engine, card, g)) continue;
                 list.Add(g);
@@ -719,7 +724,7 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             if (cands.Count >= proc.BanishFromGyCount) return true;
-            reason = $"Need {proc.BanishFromGyCount} {proc.AttributeFilter} monster(s) in your GY to banish.";
+            reason = $"Need {proc.BanishFromGyCount} {proc.AttributeFilter}{proc.RaceFilter} monster(s) in your GY to banish.";
             return false;
         }
 
@@ -773,7 +778,14 @@ namespace WRLDZ.Duel.TextEffects
                         seconds.OrderBy(g => g.Def.atk).ThenBy(g => g.Level).First()
                     });
             }
-            else if (candidates.Count == need || !engine.IsHumanControlled(who))
+            else if (proc.BanishFromGyUpTo && (candidates.Count == 1 || !engine.IsHumanControlled(who)))
+            {
+                // TlmDerivedStatsAndProcedures batch: Megarock Dragon banishes 1 or more ("monster(s)", Lua
+                // SelectUnselectGroup 1..#rg). A lone candidate is the only choice; the AI banishes them all (the
+                // original ATK/DEF grow with the count).
+                return BanishAndSummon(engine, who, card, candidates);
+            }
+            else if (!proc.BanishFromGyUpTo && (candidates.Count == need || !engine.IsHumanControlled(who)))
             {
                 var picks = candidates.Count == need
                     ? candidates
@@ -789,11 +801,15 @@ namespace WRLDZ.Duel.TextEffects
                 TargetKind = EffectTargetKind.BanishFromYourGy,
                 IsMonsterEffect = true,
                 UsesTextProgram = true,
-                TargetPicksRemaining = need,
-                PromptOverride = (IsPair(proc)
-                                     ? $"banish 1 {proc.AttributeFilter} and 1 {proc.SecondAttributeFilter} monster from your GY"
-                                     : $"banish {need} {proc.AttributeFilter} monster(s) from your GY") +
-                                 $" to Special Summon {card.Name} (Cancel to not Summon)."
+                TargetPicksRemaining = proc.BanishFromGyUpTo ? candidates.Count : need,
+                PromptOverride = proc.BanishFromGyUpTo
+                    // TlmDerivedStatsAndProcedures batch: a 1..N pick — CANCEL after the first tap finishes it.
+                    ? $"banish 1 or more {proc.RaceFilter}{proc.AttributeFilter} monsters from your GY to Special Summon " +
+                      $"{card.Name}: tap each one, then CANCEL to finish (CANCEL before the first tap: no Summon)."
+                    : (IsPair(proc)
+                          ? $"banish 1 {proc.AttributeFilter} and 1 {proc.SecondAttributeFilter} monster from your GY"
+                          : $"banish {need} {proc.AttributeFilter} monster(s) from your GY") +
+                      $" to Special Summon {card.Name} (Cancel to not Summon)."
             };
             pending.LegalTargets.AddRange(candidates);
             s_picks.Add(pending, new ProcedurePick
@@ -826,6 +842,8 @@ namespace WRLDZ.Duel.TextEffects
             engine.Log($"{who.Name} Special Summons {card.Name} from the hand by banishing " +
                        $"{string.Join(", ", picks.Select(p => p.Name))} from the GY.");
             var summoned = engine.SpecialSummonByOwnHandProcedure(who, card, null);
+            // TlmDerivedStatsAndProcedures batch: Megarock Dragon's original ATK/DEF = the number banished x N.
+            if (summoned) TlmDerivedStatsAndProceduresRuntime.NoteProcedureBanished(engine, card, picks.Count);
             // ChaosBanishSummons batch: the Summon is done — the banish cost's triggers (Soul Absorption) can activate.
             engine.NotifyPublic();
             return summoned;
@@ -856,6 +874,13 @@ namespace WRLDZ.Duel.TextEffects
                 return true;
             }
 
+            ok = FinishPick(engine, p, pick);
+            return true;
+        }
+
+        /// <summary>The picks are complete: re-check the procedure, banish them and Special Summon the card.</summary>
+        static bool FinishPick(DuelEngine engine, PendingActivation p, ProcedurePick pick)
+        {
             s_picks.Remove(p);
             var who = p.Controller;
             engine.ClearPendingActivation();
@@ -863,22 +888,31 @@ namespace WRLDZ.Duel.TextEffects
             {
                 engine.Log($"Cannot Special Summon {pick.Card.Name}: {reason}");
                 engine.NotifyPublic();
-                return true;
+                return false;
             }
 
             if (pick.Zone >= 0 || pick.Position != null)
                 engine.SetPendingSpecialSummonPlacement(pick.Zone, pick.Position);
-            ok = BanishAndSummon(engine, who, pick.Card, pick.Chosen);
+            var ok = BanishAndSummon(engine, who, pick.Card, pick.Chosen);
             engine.ClearPendingSpecialSummonPlacement();
             engine.NotifyPublic();
-            return true;
+            return ok;
         }
 
-        /// <summary>SpellTrapEffects.CancelPending hook: the procedure is not performed; nothing was paid.</summary>
+        /// <summary>
+        /// SpellTrapEffects.CancelPending hook: the procedure is not performed; nothing was paid. A 1..N pick
+        /// (<see cref="EffectClause.BanishFromGyUpTo"/>, Megarock Dragon) with 1+ monster already chosen finishes instead.
+        /// </summary>
         public static bool TryCancelPick(DuelEngine engine)
         {
             var p = engine?.PendingActivation;
             if (p == null || !s_picks.TryGetValue(p, out var pick)) return false;
+            if (pick.Proc != null && pick.Proc.BanishFromGyUpTo && pick.Chosen.Count > 0)
+            {
+                FinishPick(engine, p, pick);
+                return true;
+            }
+
             s_picks.Remove(p);
             engine.ClearPendingActivation();
             engine.Log($"{pick.Card?.Name}: not Special Summoned.");

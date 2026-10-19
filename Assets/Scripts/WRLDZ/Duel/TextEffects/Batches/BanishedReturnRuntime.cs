@@ -53,6 +53,10 @@ namespace WRLDZ.Duel.TextEffects
             if (engine == null || owner?.Banished == null || card == null || c == null) return false;
             if (!owner.Banished.Contains(card) || !card.FaceUp) return false;
             if (c.RequiresBanishedThisTurn && card.BanishedTurnNumber != engine.TurnNumber) return false;
+            // TlmFlipsControlAndZoneEvents batch: D.D. Survivor — banished face-up from its owner's field this turn.
+            if (c.RequiresBanishedFaceUpFromOwnField &&
+                !TlmFlipsControlAndZoneEventsRuntime.BanishedFaceUpFromOwnFieldThisTurn(engine, card))
+                return false;
             if (c.OncePerTurn && s_returnedTurn.TryGetValue(card, out var used) && used.Value == engine.TurnNumber)
                 return false;
             return true;
@@ -74,6 +78,10 @@ namespace WRLDZ.Duel.TextEffects
                 return;
             }
 
+            // TlmFlipsControlAndZoneEvents batch: D.D. Survivor's POS_FACEUP — a human owner picks the face-up position.
+            if (!c.SummonInAttack &&
+                TlmFlipsControlAndZoneEventsRuntime.TryAskSurvivorPosition(engine, owner, card))
+                return;
             DuelEngine.RecordOwnerOnFieldEntry(card, owner, owner);
             if (!engine.SpecialSummonToField(owner, card, BattlePosition.Attack, true))
             {

@@ -164,6 +164,14 @@ namespace WRLDZ.Duel.Rules
             DeckSwarmsAndFusionMaterialsRegressionTests.Run(db, pDeck, aDeck, check);
             ChoiceAmongEffectsRegressionTests.Run(db, pDeck, aDeck, check);
             PhantomChainLinkRegressionTests.Run(db, pDeck, aDeck, check);
+            OncePerTurnSoftRegressionTests.Run(db, pDeck, aDeck, check);
+            TlmBattleShieldsAndBurnZeroRegressionTests.Run(db, pDeck, aDeck, check);
+            TlmSpellTrapAnswersAndAttackLocksRegressionTests.Run(db, pDeck, aDeck, check);
+            TlmDerivedStatsAndProceduresRegressionTests.Run(db, pDeck, aDeck, check);
+            TlmCostLinkedSpellsRegressionTests.Run(db, pDeck, aDeck, check);
+            TlmEquipsAndLinkedContinuousRegressionTests.Run(db, pDeck, aDeck, check);
+            TlmFlipsControlAndZoneEventsRegressionTests.Run(db, pDeck, aDeck, check);
+            OncePerTurnHardRegressionTests.Run(db, pDeck, aDeck, check);
         }
     }
 }

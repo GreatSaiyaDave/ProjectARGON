@@ -26,6 +26,10 @@ namespace WRLDZ.Duel.TextEffects
                     Action = EffectActionKind.RedoOwnCoinTossOncePerTurn,
                     Side = EffectSide.Controller,
                     StaysOnField = true,
+                    // OncePerTurnHard batch: the printed hard once per turn (Lua player flag (tp, id)); the redo itself is
+                    // limited per player by CoinDiceInterruptsRuntime (CoinRedoUsedTurn).
+                    OncePerTurn = true,
+                    OptScope = OncePerTurnScope.PerCardName,
                     MakesChainLink = false
                 }),
 

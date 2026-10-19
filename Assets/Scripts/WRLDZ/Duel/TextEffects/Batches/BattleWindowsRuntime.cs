@@ -894,12 +894,54 @@ namespace WRLDZ.Duel.TextEffects
         }
 
         /// <summary>
+        /// TlmCostLinkedSpells batch (Hero Signal, Lua cfilter IsReason(REASON_BATTLE) + IsLocation(LOCATION_GRAVE) +
+        /// IsPreviousControler(tp)): the monsters <paramref name="who"/>'s open end-of-Damage-Step or "monster sent to the
+        /// GY" window answers that were destroyed by battle and are in a GY now, whose previous controller was
+        /// <paramref name="who"/> — in EITHER player's GY (a monster you took control of goes to its owner's GY), never a
+        /// monster of yours the opponent controlled. Read from the same send records and GY-entry stamps
+        /// (<see cref="GyEntryStamps"/>: reason Battle, <see cref="CardInstance.GyEntryPreviousHolder"/>). A chain response
+        /// window counts too while the Chain built in those windows has not started resolving (EVENT_BATTLE_DESTROYED is
+        /// still the last thing to happen: the records are dropped once a link resolves), as for
+        /// <see cref="MonsterSentWindowOpen"/>.
+        /// </summary>
+        public static List<CardInstance> BattleDestroyedFormerlyControlledBy(DuelEngine engine, DuelistState who)
+        {
+            var list = new List<CardInstance>();
+            var pr = engine?.PendingResponse;
+            if (pr == null || who == null || pr.Responder != who || !s_state.TryGetValue(engine, out var st))
+                return list;
+            IEnumerable<SentRecord> fresh = st.Sent.Where(r =>
+                r.Turn == engine.TurnNumber && r.Phase == engine.Phase && !r.ByCost);
+            IEnumerable<SentRecord> recs = pr.Timing switch
+            {
+                ResponseTiming.MonsterSentFromFieldToYourGy => st.Offered.Where(r => !r.ByCost).Concat(fresh),
+                ResponseTiming.EndOfDamageStep => fresh,
+                ResponseTiming.ChainResponse when !engine.Chain.IsResolving && !engine.IsResolvingChain =>
+                    fresh.Where(r => !r.DuringResolution),
+                _ => Enumerable.Empty<SentRecord>()
+            };
+            foreach (var r in recs)
+            {
+                var c = r.Card;
+                if (c == null || list.Contains(c) || !ReferenceEquals(c.GyEntryPreviousHolder, who)) continue;
+                if (!GyEntryStamps.DestroyedByBattleThisTurn(engine, r.Owner, c)) continue;
+                list.Add(c);
+            }
+
+            return list;
+        }
+
+        /// <summary>
         /// <paramref name="prog"/> is a Michizure-type Trap whose condition holds in this chain response window: it may be
-        /// offered even onto the responder's own activation (whose Tribute cost sent the monster).
+        /// offered even onto the responder's own activation (whose Tribute cost sent the monster). TlmCostLinkedSpells
+        /// batch: Hero Signal likewise answers the battle destruction this Chain follows, also onto the responder's own
+        /// link.
         /// </summary>
         public static bool AnswersSendThisChainMade(DuelEngine engine, DuelistState who, CompiledCardProgram prog) =>
             engine?.PendingResponse != null && engine.PendingResponse.Timing == ResponseTiming.ChainResponse &&
-            HasActivationCondition(prog, MonsterSentFromFieldToYourGy) && MonsterSentWindowOpen(engine, who, out _);
+            ((HasActivationCondition(prog, MonsterSentFromFieldToYourGy) && MonsterSentWindowOpen(engine, who, out _)) ||
+             (HasActivationCondition(prog, TlmCostLinkedSpellsRuntime.MonsterYouControlledDestroyedByBattle) &&
+              BattleDestroyedFormerlyControlledBy(engine, who).Count > 0));
 
         /// <summary>The program answers the <paramref name="timing"/> window of this batch.</summary>
         public static bool AnswersWindow(CompiledCardProgram prog, ResponseTiming timing)
@@ -908,6 +950,10 @@ namespace WRLDZ.Duel.TextEffects
             // (BattleDestroyedGyRecoveryRuntime.TryActivationCondition).
             if ((timing == ResponseTiming.MonsterSentFromFieldToYourGy || timing == ResponseTiming.EndOfDamageStep) &&
                 HasActivationCondition(prog, BattleDestroyedGyRecoveryRuntime.MonsterDestroyedByBattleSentToYourGy))
+                return true;
+            // TlmCostLinkedSpells batch: Hero Signal answers the same windows (a monster you controlled destroyed by battle).
+            if ((timing == ResponseTiming.MonsterSentFromFieldToYourGy || timing == ResponseTiming.EndOfDamageStep) &&
+                HasActivationCondition(prog, TlmCostLinkedSpellsRuntime.MonsterYouControlledDestroyedByBattle))
                 return true;
             if (timing == ResponseTiming.MonsterSentFromFieldToYourGy)
                 return HasActivationCondition(prog, MonsterSentFromFieldToYourGy);

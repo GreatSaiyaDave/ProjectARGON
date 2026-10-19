@@ -808,6 +808,13 @@ namespace WRLDZ.Duel.TextEffects
             RevivalEquipsAndGearfriedAtoms.Atoms,
             DeckSwarmsAndFusionMaterialsAtoms.Atoms,
             ChoiceAmongEffectsAtoms.Atoms,
+            TlmBattleShieldsAndBurnZeroAtoms.Atoms,
+            TlmSpellTrapAnswersAndAttackLocksAtoms.Atoms,
+            TlmDerivedStatsAndProceduresAtoms.Atoms,
+            TlmCostLinkedSpellsAtoms.Atoms,
+            TlmEquipsAndLinkedContinuousAtoms.Atoms,
+            TlmFlipsControlAndZoneEventsAtoms.Atoms,
+            OncePerTurnHardAtoms.Atoms,
         };
         /// <summary>Every whole-sentence atom: <see cref="Atoms"/>, then each batch in <see cref="BatchAtomSets"/>.</summary>
         public static IEnumerable<Atom> AllAtoms()

@@ -328,7 +328,10 @@ namespace WRLDZ.Duel.TextEffects
 
             if (NamedTributes(who, proc).Count == 0)
             {
-                reason = $"Tribute 1 face-up \"{proc.TributeNamedCard}\" on your side of the field.";
+                // TlmDerivedStatsAndProcedures batch: Master Monk Tributes any "Monk Fighter" it controls, face-down too.
+                reason = proc.TributeFaceUpOnly
+                    ? $"Tribute 1 face-up \"{proc.TributeNamedCard}\" on your side of the field."
+                    : $"Tribute 1 \"{proc.TributeNamedCard}\" you control.";
                 return false;
             }
 
@@ -352,7 +355,8 @@ namespace WRLDZ.Duel.TextEffects
             {
                 Candidates = () => NamedTributes(who, proc),
                 Kind = EffectTargetKind.TributeMonsterYouControl,
-                Prompt = $"{card.Name}: choose 1 face-up \"{proc.TributeNamedCard}\" to Tribute, or CANCEL.",
+                Prompt = $"{card.Name}: choose 1 {(proc.TributeFaceUpOnly ? "face-up " : "")}\"{proc.TributeNamedCard}\" " +
+                         "to Tribute, or CANCEL.",
                 AiChoose = list => list.OrderBy(m => m.CurrentAtk).FirstOrDefault(),
                 DuringActivation = true,
                 HoldsChain = false,
@@ -371,8 +375,11 @@ namespace WRLDZ.Duel.TextEffects
                 return false;
             }
 
-            engine.Log($"{who.Name} Special Summons {card.Name} from the hand by Tributing {tribute.Name} " +
-                       $"(\"{proc.RequiresFaceUpName}\" is on the field).");
+            engine.Log($"{who.Name} Special Summons {card.Name} from the hand by Tributing " +
+                       (tribute.FaceUp ? tribute.Name : "a face-down monster") +
+                       (string.IsNullOrEmpty(proc.RequiresFaceUpName)
+                           ? "."
+                           : $" (\"{proc.RequiresFaceUpName}\" is on the field)."));
             return engine.SpecialSummonByOwnHandProcedure(who, card, new List<CardInstance> { tribute });
         }
     }

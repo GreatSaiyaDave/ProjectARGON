@@ -481,8 +481,10 @@ namespace WRLDZ.Duel
             bool destroyedByBattle)
         {
             if (card == null) return false;
-            if (card.CardId == Sangan) return true;
             var prog = TextEffects.CompiledEffectCache.GetOrCompile(card);
+            // The legacy Sangan script only stands in for a text that did not compile (OncePerTurnHard batch: a compiled
+            // Sangan whose once per turn is spent has no trigger).
+            if (card.CardId == Sangan && (prog == null || !prog.FullyCompiled)) return true;
             return prog != null && prog.HasTiming(TextEffects.EffectTiming.SentFromFieldToGy) &&
                    TextEffects.TextEffectRuntime.SentToGyCanActivate(engine, card, prog, destroyed, destroyedByBattle);
         }
@@ -499,8 +501,9 @@ namespace WRLDZ.Duel
                     return;
             }
 
-            // Legacy Sangan hardcode only when text path did not FullyCompile.
-            if (card.CardId == Sangan)
+            // Legacy Sangan hardcode only when text path did not FullyCompile (OncePerTurnHard batch: a compiled Sangan
+            // that resolved nothing — its once per turn spent, or no legal monster — does not fall back to the script).
+            if (card.CardId == Sangan && (prog == null || !prog.FullyCompiled))
             {
                 ResolveSangan(engine, owner, card);
                 return;

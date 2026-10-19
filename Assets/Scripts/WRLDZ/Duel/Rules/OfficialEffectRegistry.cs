@@ -693,6 +693,8 @@ namespace WRLDZ.Duel.Rules
             foreach (var eq in card.Equips)
             {
                 if (eq == null || !eq.FaceUp || eq.IsNegated || !ReferenceEquals(eq.EquippedTo, card)) continue;
+                // TlmEquipsAndLinkedContinuous batch: Lone Wolf's effect on its monster ended when it was turned face-down.
+                if (TlmEquipsAndLinkedContinuousRuntime.BoundEffectsEnded(eq, card)) continue;
                 var eqProg = eq.Def != null ? CompiledEffectCache.GetOrCompile(eq.Def) : null;
                 if (eqProg == null) continue;
                 foreach (var c in eqProg.ClausesFor(EffectTiming.ContinuousWhileFaceUp))

@@ -118,6 +118,8 @@ namespace WRLDZ.Duel.TextEffects
             // Sasuke Samurai #2 (c11760174): IGNITION (LOCATION_MZONE), Cost.PayLP(800); s.target chk GetFlagEffect(tp, id) == 0
             // (a player flag); s.operation: EFFECT_CANNOT_ACTIVATE, PLAYER_TARGET (1,1), value re:IsSpellTrapEffect(),
             // RESET_PHASE|PHASE_END; RegisterFlagEffect(tp, id, RESET_PHASE|PHASE_END).
+            // OncePerTurnSoft group (v211): the printed "Once per turn" of this ignition is also the copy's own soft limit
+            // (OncePerTurn, PerInstance → CardInstance.EffectUsedThisTurn), on top of the player flag above.
             new AtomRegistration.Atom(
                 @"^Once per turn, during your Main Phase, you can pay (\d+) Life Points\. If you do this, until the End " +
                 @"Phase, Spell and Trap Cards cannot be activated\.$",
@@ -128,6 +130,8 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Both,
                     PayLpAmount = int.Parse(m.Groups[1].Value),
                     ActivationCondition = SpellTrapAnswersAndActivationLocksRuntime.TurnLockNotAppliedByYouThisTurn,
+                    OncePerTurn = true,
+                    OptScope = OncePerTurnScope.PerInstance,
                     IsOptional = true,
                     MakesChainLink = true
                 }),

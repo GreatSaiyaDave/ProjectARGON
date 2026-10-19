@@ -643,6 +643,10 @@ namespace WRLDZ.Duel
                 // TargetedClassics Soft: Nobleman of Crossout / Acid Trap Hole — face-down monsters only.
                 // (AnyMonsterOnField would offer face-up monsters too; CollectLegalTargets filters Sets.)
                 TextEffects.EffectZoneFilter.FieldFaceDownMonsters => EffectTargetKind.FaceDownMonsterOnField,
+                // TlmFlipsControlAndZoneEvents batch: no legacy list keeps only Defense Position monsters (the
+                // AnyMonsterOnField list would offer Attack Position ones): None, so the compiled flow
+                // (UsesCompiledActivationPending) asks the pick through TextEffectRuntime.CollectTargets.
+                TextEffects.EffectZoneFilter.FieldDefensePositionMonsters => EffectTargetKind.None,
                 // "Target 1 face-up monster" (Micro Ray): the legacy AnyMonsterOnField list includes Sets; such a clause
                 // takes the compiled flow (UsesCompiledActivationPending, EngineResiduals v163), which asks the target as
                 // the card is activated and its face-up filter.
@@ -1755,6 +1759,9 @@ namespace WRLDZ.Duel
                 // field to the GY as the cost.
                 TextEffects.CallsDiceAndSetTriggersRuntime.PayActivationCost(engine, who, card, prog);
                 if (engine.GameOver) return true;
+                // TlmCostLinkedSpells batch: Card of Sanctity banishes every other card in its controller's hand and field
+                // as the cost.
+                TextEffects.TlmCostLinkedSpellsRuntime.PayActivationCost(engine, who, card, prog);
                 // SpellEventsAndHandSendTriggers batch: a trigger on this card activation (Spirit of the Pot of Greed) goes
                 // right above it; the opponent of the last link's controller may respond first.
                 TextEffects.SpellEventsAndHandSendTriggersRuntime.OnCardActivationPlaced(engine, who, card);
@@ -1863,6 +1870,8 @@ namespace WRLDZ.Duel
                     c.Zone == EffectZoneFilter.FieldFaceDownMonsters ||
                     // SimpleTriggersAndSpells batch: Set cards on either field (no legacy list has that filter).
                     c.Zone == EffectZoneFilter.FieldSetCards ||
+                    // TlmFlipsControlAndZoneEvents batch: Defense Position monsters on either field (no legacy list).
+                    c.Zone == EffectZoneFilter.FieldDefensePositionMonsters ||
                     // PerCopyDeck batch (v163): Graverobber's Spell in the opponent's GY (no legacy list).
                     c.Zone == EffectZoneFilter.OppGySpells ||
                     // ChaosBanishSummons batch: Primal Seed's cards in your banished pile (no legacy list).
@@ -1915,6 +1924,9 @@ namespace WRLDZ.Duel
                     // RevivalEquipsAndGearfried batch: Fulfillment of the Contract / Re-Fusion's Ritual / Fusion Monster in
                     // your GY (the legacy MonsterInEitherGy list has no such filter and skips Extra Deck monsters).
                     TextEffects.RevivalEquipsAndGearfriedRuntime.UsesCompiledActivationPending(c) ||
+                    // TlmCostLinkedSpells batch: Battery Charger's "Batteryman" monster in your GY (the legacy
+                    // MonsterInEitherGy list has both GYs and no series filter).
+                    TextEffects.TlmCostLinkedSpellsRuntime.UsesCompiledActivationPending(c) ||
                     // EngineResiduals (v163): "Target 1 face-up monster on the field" (Offerings to the Doomed, Micro Ray,
                     // Collected Power). The legacy list includes Sets, and the untargeted seat picked the target only at
                     // resolution, for the player too; the compiled flow asks it as the card is activated.
@@ -2114,7 +2126,11 @@ namespace WRLDZ.Duel
                 {
                     if (TextEffects.TextEffectRuntime.TryResolveActivation(
                             engine, who, card, fromHand, monProg, autoPickTarget))
+                    {
+                        // OncePerTurnHard batch: its "once per turn" by name is used by this activation.
+                        TextEffects.OncePerTurnHardRuntime.NoteActivated(engine, who, card, monProg);
                         return true;
+                    }
                 }
                 if (monProg != null && monProg.FullyCompiled)
                     return false;
@@ -2129,7 +2145,12 @@ namespace WRLDZ.Duel
             {
                 if (TextEffects.TextEffectRuntime.TryResolveActivation(
                         engine, who, card, fromHand, openProg, autoPickTarget))
+                {
+                    // OncePerTurnHard batch: a monster's hand ignition (Garbage Ogre) uses its "once per turn" by name.
+                    if (card.Def != null && card.Def.IsMonster)
+                        TextEffects.OncePerTurnHardRuntime.NoteActivated(engine, who, card, openProg);
                     return true;
+                }
             }
 
             if (openProg != null && openProg.FullyCompiled)
@@ -2398,6 +2419,8 @@ namespace WRLDZ.Duel
                 // Michizure (BattleWindows batch): a monster of the AI's was sent from the field to its GY by this chain's
                 // activation (a Tribute cost, even its own) — take an opponent's monster with it.
                 pick ??= legal.FirstOrDefault(c => TextEffects.BattleWindowsRuntime.AiWantsMichizure(engine, who, c));
+                // TlmCostLinkedSpells batch: Hero Signal chained to a Chain built right after its battle destruction.
+                pick ??= legal.FirstOrDefault(c => TextEffects.TlmCostLinkedSpellsRuntime.AiWantsHeroSignal(engine, who, c));
             }
             else if (engine.PendingResponse.Timing == ResponseTiming.MonsterSummoned)
             {
@@ -2431,7 +2454,9 @@ namespace WRLDZ.Duel
                 pick = legal.FirstOrDefault(c => TextEffects.BattleWindowsRuntime.AiWantsDestructionPunch(engine, who, c))
                        ?? legal.FirstOrDefault(c => TextEffects.BattleWindowsRuntime.AiWantsMichizure(engine, who, c))
                        // BattleDestroyedGyRecovery batch (v162): Rope of Life.
-                       ?? legal.FirstOrDefault(c => TextEffects.BattleDestroyedGyRecoveryRuntime.AiWantsRope(engine, who, c));
+                       ?? legal.FirstOrDefault(c => TextEffects.BattleDestroyedGyRecoveryRuntime.AiWantsRope(engine, who, c))
+                       // TlmCostLinkedSpells batch: Hero Signal.
+                       ?? legal.FirstOrDefault(c => TextEffects.TlmCostLinkedSpellsRuntime.AiWantsHeroSignal(engine, who, c));
             }
             else if (engine.PendingResponse.Timing == ResponseTiming.YouDiscardedFromHand)
             {
@@ -2855,6 +2880,9 @@ namespace WRLDZ.Duel
                 return true;
             // "1 of these effects" with two untargeted bullets (Don Zaloog): CANCEL at the first offers the other one.
             if (TextEffects.EffectChoiceRuntime.TryCancelPick(engine))
+                return true;
+            // TlmCostLinkedSpells batch: Gift of the Martyr's target pick follows its paid send cost — Cancel picks for you.
+            if (TextEffects.TlmCostLinkedSpellsRuntime.TryCancelPick(engine))
                 return true;
             // DrawThenDiscard (Graceful Charity): a resolving discard cannot be skipped — Cancel completes it.
             if (p.AwaitingDrawThenDiscard)
@@ -3376,8 +3404,8 @@ case EffectTargetKind.DeclareMonsterType:
                     DestroyAllMonsters(engine, opp, card);
                     break;
                 case HeavyStorm:
-                    DestroyAllSpellTraps(engine, who, except: card);
-                    DestroyAllSpellTraps(engine, opp, except: null);
+                    DestroyAllSpellTraps(engine, who, except: card, destroyer: who);
+                    DestroyAllSpellTraps(engine, opp, except: null, destroyer: who);
                     break;
                 case CardDestruction:
                     var nYou = who.Hand.Count;
@@ -3635,7 +3663,8 @@ case EffectTargetKind.DeclareMonsterType:
                 "Monsters destroyed — read the field…");
         }
 
-        static void DestroyAllSpellTraps(DuelEngine engine, DuelistState who, CardInstance except)
+        static void DestroyAllSpellTraps(DuelEngine engine, DuelistState who, CardInstance except,
+            DuelistState destroyer = null)
         {
             foreach (var z in who.SpellTrapZones)
             {
@@ -3648,7 +3677,8 @@ case EffectTargetKind.DeclareMonsterType:
                 var wasFaceUp = c.FaceUp;
                 engine.Log($"Destroyed S/T: {c.Name}");
                 // CallsDiceAndSetTriggers batch (v163): destroyed while Set (Statue of the Wicked, Dark Coffin).
-                TextEffects.CallsDiceAndSetTriggersRuntime.NoteSpellTrapDestroying(c, wasFaceUp);
+                // TlmBattleShieldsAndBurnZero batch: the activating player destroyed it (Kozaky's Self-Destruct Button).
+                TextEffects.CallsDiceAndSetTriggersRuntime.NoteSpellTrapDestroying(c, wasFaceUp, destroyer);
                 engine.SendCardToGrave(who, c);
                 // "If "X" on the field is destroyed, destroy this card." (Toons batch).
                 TextEffects.ToonsRuntime.NotifyFaceUpCardDestroyed(engine, c, wasFaceUp);

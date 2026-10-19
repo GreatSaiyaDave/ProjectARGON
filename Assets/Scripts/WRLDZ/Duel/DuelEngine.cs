@@ -1656,6 +1656,9 @@ namespace WRLDZ.Duel
             TextEffects.TextEffectRuntime.TryResolveThisCardSummoned(this, who, monster, flipSummon: true);
             // Mysterious Puppeteer: either-player Flip Summon (not Flip-by-battle).
             TextEffects.TextEffectRuntime.NotifyEitherPlayerNormalOrFlipSummoned(this);
+            // TlmBattleShieldsAndBurnZero batch: Grave Ohja — "each time a monster on your side is Flip Summoned" (one
+            // mandatory trigger per Flip Summon, queued on the simultaneous-trigger Chain).
+            TextEffects.TlmBattleShieldsAndBurnZeroRuntime.OnFlipSummoned(this, who, monster);
             // Face-down Defense → face-up Attack is a Defense → Attack change (Crass Clown).
             TextEffects.TextEffectRuntime.NotifyPositionChanged(this, monster, toDefense: false);
             // If Flip opened a target window, do not open summon-response yet
@@ -2193,7 +2196,10 @@ namespace WRLDZ.Duel
         public bool CancelEffectTargeting()
         {
             ClearPendingSpecialSummonPlacement();
+            var cancelledCard = PendingActivation?.Card;
             var ok = TextEffects.CompiledActivationChainRuntime.Continue(this, () => SpellTrapEffects.CancelPending(this));
+            // OncePerTurnHard batch: an ignition undone by Cancel gives its "once per turn" by name back.
+            if (ok) TextEffects.OncePerTurnHardRuntime.NoteCancelled(this, cancelledCard);
             // Flip target cancelled mid-Damage-Step — still finish battle destructions
             if (ok || PendingActivation == null)
                 TryCompleteDeferredBattleDestruction();
@@ -2447,12 +2453,16 @@ namespace WRLDZ.Duel
             DetachFromField(owner, card);
             if (owner.Hand != null && owner.Hand.Remove(card)) card.ProcedureCompleted = false;
             owner.Graveyard?.Remove(card);
+            // Lua IsPreviousLocation(LOCATION_ONFIELD): a Monster Zone or a Spell & Trap Zone (a monster as an Equip Card).
+            var wasFaceUpOnField = (fromFieldMonster || fromFieldSt) && card.FaceUp;
             card.FaceUp = true;
             var pile = PileOwner(owner, card);
             if (!pile.Banished.Contains(card))
                 pile.Banished.Add(card);
             card.BanishedTurnNumber = TurnNumber;
             Log($"{card.Name} is banished.");
+            // TlmFlipsControlAndZoneEvents batch: D.D. Survivor's record (banished face-up from its owner's field).
+            TextEffects.TlmFlipsControlAndZoneEventsRuntime.NoteBanished(this, owner, pile, card, wasFaceUpOnField);
             // ChaosBanishSummons batch: the banish event (Lua EVENT_REMOVE; Soul Absorption).
             TextEffects.BanishEvents.Record(this, card);
         }
@@ -2875,6 +2885,8 @@ namespace WRLDZ.Duel
                 // DeckSummonsAndSarcophagi batch: Ninjitsu Art of Transformation only destroys its monster when it leaves
                 // first (Lua e2 on itself); the monster leaving first leaves it on the field, unlinked.
                 if (TextEffects.DeckSummonsAndSarcophagiRuntime.StaysWhenLinkedMonsterLeaves(eq)) continue;
+                // TlmEquipsAndLinkedContinuous batch: Lone Wolf has no leave-field destruction; it only loses the link.
+                if (TextEffects.TlmEquipsAndLinkedContinuousRuntime.StaysWhenLinkedMonsterLeaves(eq)) continue;
                 // A linked Continuous Spell/Trap whose effects are negated (Metal Detector this turn)
                 // does not destroy itself when its monster leaves; it stays face-up with no link.
                 if (TextEffects.TurnNegationTrapsRuntime.NegatedLinkStaysWhenHostLeaves(eq)) continue;
@@ -3002,7 +3014,10 @@ namespace WRLDZ.Duel
             {
                 // Banished instead: it was never sent to the GY, so no "sent to the GY" event or trigger. It still
                 // left the field — its links and Equip Cards come off as for any banish (BanishCard).
+                var faceUpOnField = (fromFieldMonster || fromFieldSt) && card.FaceUp;
                 TextEffects.RedirectAndReplaceRuntime.BanishInsteadOfGy(this, pile, card);
+                // TlmFlipsControlAndZoneEvents batch: D.D. Survivor's record (banished face-up from its owner's field).
+                TextEffects.TlmFlipsControlAndZoneEventsRuntime.NoteBanished(this, owner, pile, card, faceUpOnField);
                 PendingTributes.Remove(card);
                 UnlinkCardFromHostOnLeave(owner, card, fromFieldSt);
                 if (fromFieldMonster)
@@ -3191,6 +3206,9 @@ namespace WRLDZ.Duel
                 // ForcedActivationAndSubstitution batch (v163): Major Riot's event (a monster to a hand by an effect).
                 if (fromFieldMonster)
                     TextEffects.MajorRiotRuntime.NoteReturnedToHand(this, owner, card, by);
+                // TlmFlipsControlAndZoneEvents batch: Criosphinx's event (a monster from the field to its owner's hand).
+                if (fromFieldMonster)
+                    TextEffects.TlmFlipsControlAndZoneEventsRuntime.NoteMonsterReturnedToHand(this, owner, card);
                 // Spring of Rebirth: monster(s) from field → owner's hand (not S/T bounce, not ED).
                 if (fromFieldMonster)
                 {
@@ -4830,7 +4848,10 @@ namespace WRLDZ.Duel
         /// <summary>A resolving negation link (Magic Jammer, Solemn Judgment …) negates the link it answers.</summary>
         void ApplyActivationNegation(ChainLink link)
         {
-            if (link.FlipSelfFaceUpDefense && link.Card != null)
+            // TlmSpellTrapAnswersAndAttackLocks batch: Mid Shield Gardna negates first, sends the Spell to the GY, then flips
+            // (Big Shield Gardna flips first).
+            var negatesBeforeFlip = TextEffects.TlmSpellTrapAnswersAndAttackLocksRuntime.NegatesBeforeFlip(link);
+            if (link.FlipSelfFaceUpDefense && link.Card != null && !negatesBeforeFlip)
             {
                 link.Card.FaceUp = true;
                 link.Card.Position = BattlePosition.Defense;
@@ -4857,9 +4878,13 @@ namespace WRLDZ.Duel
                         TextEffects.SpellTrapDestroyedResponseRuntime.NoteDestroyedByEffect(
                             this, negatedController, negatedCard, link.Controller);
                 }
+                if (negatesBeforeFlip)
+                    TextEffects.TlmSpellTrapAnswersAndAttackLocksRuntime.SendNegatedCardToGy(this, link);
                 EnsureDeferredSpellTrapGrave(link.TargetLink);
             }
 
+            if (negatesBeforeFlip)
+                TextEffects.TlmSpellTrapAnswersAndAttackLocksRuntime.FlipSelfFaceUpDefense(this, link);
             EnsureDeferredSpellTrapGrave(link);
         }
 
@@ -7129,6 +7154,10 @@ namespace WRLDZ.Duel
             }
             var speed = OfficialEffectRegistry.SpeedOf(card.Def);
             var cls = OfficialEffectRegistry.ClassOfActivation(card.Def, false);
+            // TlmSpellTrapAnswersAndAttackLocks batch: a monster's answer to the last Chain Link is a Quick Effect (Spell Speed
+            // 2) even when its old text prints neither "Quick Effect" nor "during either player's turn" (Mid Shield Gardna,
+            // Lua EFFECT_TYPE_QUICK_F on EVENT_CHAINING).
+            TextEffects.TlmSpellTrapAnswersAndAttackLocksRuntime.MonsterChainAnswerSpeed(card, ref speed, ref cls);
             if (!Chain.CanAddLink(speed, cls)) return false;
 
             // Every cost is checked before any is paid (DR-08): a refused activation costs nothing.
@@ -7871,10 +7900,13 @@ namespace WRLDZ.Duel
                 owner.MonsterZones[i].Occupant = null;
                 // RdsRedoSpellTrap batch: Necklace of Command / Flint watch their monster's destruction (REASON_LOST_TARGET).
                 var lostTargets = TextEffects.RdsRedoSpellTrapRuntime.NoteHostDestroyed(this, owner, card, destroyedByBattle);
+                // TlmEquipsAndLinkedContinuous batch: Nitro Unit watches its monster's destruction by battle (REASON_LOST_TARGET).
+                var lostHosts = TextEffects.TlmEquipsAndLinkedContinuousRuntime.NoteHostDestroyed(this, card, destroyedByBattle);
                 // A destroyed monster's Equip cards (and destroy-linked Continuous
                 // Traps like Call of the Haunted / Battle-Scarred) are sent to the GY.
                 UnlinkEquips(card, hostDestroyed: true, fallbackOwner: owner);
                 TextEffects.RdsRedoSpellTrapRuntime.AfterHostDestroyed(this, lostTargets);
+                TextEffects.TlmEquipsAndLinkedContinuousRuntime.AfterHostDestroyed(this, lostHosts);
                 PendingTributes.Remove(card);
                 if (card.IsToken)
                 {
@@ -7892,6 +7924,8 @@ namespace WRLDZ.Duel
                         banPile.Banished.Add(card);
                     card.BanishedTurnNumber = TurnNumber;
                     Log($"Destroyed: {card.Name} (banished).");
+                    // TlmFlipsControlAndZoneEvents batch: D.D. Survivor's record (banished face-up from its owner's field).
+                    TextEffects.TlmFlipsControlAndZoneEventsRuntime.NoteBanished(this, owner, banPile, card, wasFaceUp);
                     // ChaosBanishSummons batch: the banish event (Soul Absorption).
                     TextEffects.BanishEvents.Record(this, card);
                     // Never sent to the GY, but still destroyed: its own "if this card is destroyed (by battle)"
@@ -8073,6 +8107,12 @@ namespace WRLDZ.Duel
                 Log($"{target.Name} takes no effect damage (Pikeru's Circle of Enchantment).");
                 return;
             }
+            // TlmBattleShieldsAndBurnZero batch: Des Wombat — damage to its controller from a card effect becomes 0.
+            if (TextEffects.TlmBattleShieldsAndBurnZeroRuntime.EffectDamageBecomesZero(this, target, out var zeroBy))
+            {
+                Log($"{zeroBy.Name}: the {dmg} effect damage to {target.Name} becomes 0.");
+                return;
+            }
             target.LifePoints = Mathf.Max(0, target.LifePoints - dmg);
             var src = string.IsNullOrEmpty(sourceName) ? "effect" : sourceName;
             var you = target.IsPlayer ? "You took" : $"{target.Name} took";
@@ -8127,6 +8167,12 @@ namespace WRLDZ.Duel
             if (target.NoEffectDamageThroughTurnNumber > 0 && TurnNumber <= target.NoEffectDamageThroughTurnNumber)
             {
                 Log($"{target.Name} takes no effect damage (Pikeru's Circle of Enchantment).");
+                return false;
+            }
+            // TlmBattleShieldsAndBurnZero batch: Des Wombat.
+            if (TextEffects.TlmBattleShieldsAndBurnZeroRuntime.EffectDamageBecomesZero(this, target, out var zeroBy))
+            {
+                Log($"{zeroBy.Name}: the {dmg} effect damage to {target.Name} becomes 0.");
                 return false;
             }
 

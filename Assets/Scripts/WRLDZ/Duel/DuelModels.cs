@@ -653,6 +653,13 @@ namespace WRLDZ.Duel
         /// does not say. Neko Mane King's "in your possession" reads it.
         /// </summary>
         public DuelistState GyEntryPreviousHolder;
+
+        /// <summary>
+        /// OncePerTurnSoft group (v211): the phase of the turn <see cref="GyEntryTurn"/> in which this copy last entered a GY
+        /// (ygopro Duel.GetCurrentPhase at the move). Vampire Lord's "your next Standby Phase" reads it: destroyed during its
+        /// controller's Draw Phase, it comes back in that same turn's Standby Phase. Meaningful only while GyEntryTurn != 0.
+        /// </summary>
+        public DuelPhase GyEntryPhase;
     }
 
     /// <summary>

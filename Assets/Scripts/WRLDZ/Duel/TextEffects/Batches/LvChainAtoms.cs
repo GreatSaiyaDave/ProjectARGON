@@ -105,9 +105,12 @@ namespace WRLDZ.Duel.TextEffects
             // controls, live only when this copy was Special Summoned by the named card's effect (Lua s.vfilter checks
             // the summon stamp). The gate is RequiresThisSpecialSummonedByNamed, read in FieldSpellEffects.ApplyStatClause;
             // LvChainRuntime already records the summon, so this is the first card to use it as an aura condition.
+            // TlmDerivedStatsAndProcedures batch: Ultimate Insect LV7 (c19877898) — "all your opponent's monsters lose 700
+            // ATK and DEF" (FIELD EFFECT_UPDATE_ATTACK + a clone on EFFECT_UPDATE_DEFENSE, target range 0/MZONE, condition
+            // GetFlagEffect(id) set by LV5's summon): the same gate, DefAmount carries the DEF loss.
             new AtomRegistration.Atom(
                 Start + @"If this card was Special Summoned by the effect of ""([^""]+)"", while it remains on the " +
-                @"field all of your opponent's monsters lose (\d+) ATK" + End,
+                @"field all (?:of )?your opponent's monsters lose (\d+) ATK( and DEF)?" + End,
                 m => new EffectClause
                 {
                     Timing = EffectTiming.ContinuousWhileFaceUp,
@@ -115,7 +118,7 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Opponent,
                     AttributeFilter = null,
                     Amount = -int.Parse(m.Groups[2].Value),
-                    DefAmount = 0,
+                    DefAmount = m.Groups[3].Success ? -int.Parse(m.Groups[2].Value) : 0,
                     SpecialSummonedByNamedCard = m.Groups[1].Value,
                     RequiresThisSpecialSummonedByNamed = true,
                     StaysOnField = true,

@@ -35,6 +35,20 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>The names of the cards whose effects have Special Summoned a given card (its "summoned by" list).</summary>
         static readonly ConditionalWeakTable<CardInstance, List<string>> s_summonedBy = new();
 
+        /// <summary>
+        /// TlmDerivedStatsAndProcedures batch: the field presence each "summoned by" record was made in (the card's
+        /// <see cref="CardInstance.FieldEntryStamp"/> and <see cref="CardInstance.FaceDownStamp"/> right after that
+        /// Summon). The Ultimate Insect auras read it (<see cref="SpecialSummonedByNamedThisPresence"/>).
+        /// </summary>
+        sealed class Presence
+        {
+            public string Name;
+            public int Entry;
+            public int FaceDown;
+        }
+
+        static readonly ConditionalWeakTable<CardInstance, List<Presence>> s_presence = new();
+
         // ───────────────────────────── activation condition ─────────────────────────────
 
         /// <summary>
@@ -82,7 +96,25 @@ namespace WRLDZ.Duel.TextEffects
                 if (before != null && before.Contains(m)) continue;
                 var names = s_summonedBy.GetOrCreateValue(m);
                 if (!names.Contains(source.Def.name)) names.Add(source.Def.name);
+                var presence = s_presence.GetOrCreateValue(m);
+                presence.RemoveAll(x => string.Equals(x.Name, source.Def.name, System.StringComparison.OrdinalIgnoreCase));
+                presence.Add(new Presence { Name = source.Def.name, Entry = m.FieldEntryStamp, FaceDown = m.FaceDownStamp });
             }
+        }
+
+        /// <summary>
+        /// TlmDerivedStatsAndProcedures batch — the "while it remains on the field" auras of Ultimate Insect LV3 / LV5 / LV7
+        /// (FieldSpellEffects.ApplyStatClause): <paramref name="card"/> was Special Summoned by the effect of the card named
+        /// <paramref name="named"/> and is still in the field presence that Summon began. The Lua flag (LV1/LV3/LV5's
+        /// RegisterFlagEffect, RESETS_STANDARD without RESET_LEAVE) ends when the monster leaves the field, is turned
+        /// face-down, or enters the field again some other way (a revival does not bring the aura back).
+        /// </summary>
+        public static bool SpecialSummonedByNamedThisPresence(CardInstance card, string named)
+        {
+            if (card == null || string.IsNullOrEmpty(named)) return false;
+            return s_presence.TryGetValue(card, out var list) && list.Any(x =>
+                string.Equals(x.Name, named, System.StringComparison.OrdinalIgnoreCase) &&
+                x.Entry == card.FieldEntryStamp && x.FaceDown == card.FaceDownStamp);
         }
 
         /// <summary>True when <paramref name="card"/> was Special Summoned by the effect of the card named <paramref name="named"/>.</summary>

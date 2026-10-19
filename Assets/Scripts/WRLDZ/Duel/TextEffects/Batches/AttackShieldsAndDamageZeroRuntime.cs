@@ -69,6 +69,9 @@ namespace WRLDZ.Duel.TextEffects
                     if (who.SpellTrapZones != null && who.SpellTrapZones.Any(z => z?.Occupant != null)) return false;
                     if (who.PendulumZones != null && who.PendulumZones.Any(z => z?.Occupant != null)) return false;
                     return true;
+                // TlmBattleShieldsAndBurnZero batch: Grave Ohja (Lua IsPosition(POS_FACEDOWN_DEFENSE) in its Monster Zone).
+                case TlmBattleShieldsAndBurnZeroRuntime.YouControlFaceDownDefense:
+                    return TlmBattleShieldsAndBurnZeroRuntime.ControlsFaceDownDefense(who);
                 default:
                     return false;
             }

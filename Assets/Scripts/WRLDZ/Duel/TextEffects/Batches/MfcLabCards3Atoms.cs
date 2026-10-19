@@ -112,6 +112,9 @@ namespace WRLDZ.Duel.TextEffects
                     Action = EffectActionKind.GyRevivalAfterStandbyWhenDestroyedByOpponent,
                     Side = EffectSide.Controller,
                     RequiresThisDestroyedByOpponent = true,
+                    // OncePerTurnSoft group (v211): a GY trigger (Lua SetRange(LOCATION_GRAVE)); without this flag
+                    // FirePhaseTriggersFor skipped the clause for a card in the GY, so the revival never happened.
+                    ResolvesFromGy = true,
                     MakesChainLink = true
                 }),
         };

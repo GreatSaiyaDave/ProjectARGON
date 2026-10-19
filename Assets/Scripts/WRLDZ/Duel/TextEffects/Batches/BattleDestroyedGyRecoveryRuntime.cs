@@ -28,6 +28,7 @@ namespace WRLDZ.Duel.TextEffects
             card.GyEntryReason = reason;
             card.GyEntryReasonPlayer = reasonPlayer;
             card.GyEntryPreviousHolder = previousHolder;
+            card.GyEntryPhase = engine?.Phase ?? DuelPhase.Draw;
             card.GyEntryStamp++;
             // SimpleTriggersAndSwarm batch: a "When this card is sent to the GY" (from anywhere) trigger is queued here.
             SimpleTriggersAndSwarmRuntime.NoteEnteredGy(engine, card);
@@ -57,6 +58,7 @@ namespace WRLDZ.Duel.TextEffects
             card.GyEntryReason = GyEntryReason.None;
             card.GyEntryReasonPlayer = null;
             card.GyEntryPreviousHolder = null;
+            card.GyEntryPhase = DuelPhase.Draw;
         }
 
         /// <summary>The player who holds <paramref name="card"/> (field controller, else the pile it is in); null if none.</summary>

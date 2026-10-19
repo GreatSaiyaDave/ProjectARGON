@@ -88,7 +88,11 @@ namespace WRLDZ.Duel.TextEffects
                     return TargetedClassicsRuntime.CountFaceUpBanishedMonsters(opp);
                 default:
                     // IgnitionCostsAndSimpleSpells batch: Solar Ray's face-up LIGHT monsters you control.
-                    return IgnitionCostsAndSimpleSpellsRuntime.BurnCount(engine, who, clause);
+                {
+                    var solar = IgnitionCostsAndSimpleSpellsRuntime.BurnCount(engine, who, clause);
+                    // TlmCostLinkedSpells batch: Minefield Eruption's face-up "Mine Golem" you control.
+                    return solar >= 0 ? solar : TlmCostLinkedSpellsRuntime.BurnCount(engine, who, clause);
+                }
             }
         }
 

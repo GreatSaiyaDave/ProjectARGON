@@ -451,27 +451,31 @@ namespace WRLDZ.Duel.TextEffects
             st.Defender = defender;
             st.DestroyedThisBattle.Clear();
             if (attacker == null || defender == null || atkPlayer == null || defPlayer == null) return;
-            Battled(engine, st, atkPlayer, attacker, defPlayer, defender, destroyDefender);
-            Battled(engine, st, defPlayer, defender, atkPlayer, attacker, destroyAttacker);
+            Battled(engine, st, atkPlayer, attacker, defPlayer, defender, destroyDefender, destroyAttacker);
+            Battled(engine, st, defPlayer, defender, atkPlayer, attacker, destroyAttacker, destroyDefender);
         }
 
-        /// <summary><paramref name="battler"/> (controlled by <paramref name="side"/>) battled <paramref name="other"/>.</summary>
+        /// <summary>
+        /// <paramref name="battler"/> (controlled by <paramref name="side"/>) battled <paramref name="other"/>;
+        /// <paramref name="battlerDestroyed"/>: the battler is destroyed by this battle too.
+        /// </summary>
         static void Battled(DuelEngine engine, State st, DuelistState side, CardInstance battler, DuelistState otherSide,
-            CardInstance other, bool otherDestroyed)
+            CardInstance other, bool otherDestroyed, bool battlerDestroyed)
         {
             if (!otherDestroyed || other?.Def == null || !otherSide.TryFindMonster(other, out _)) return;
             if (!side.TryFindMonster(battler, out _)) return;
 
             // Negated now, even when Lesser Fiend banishes it later: the negation (RESETS_STANDARD_EXC_GRAVE) ends once it
             // is banished (BanishesBattleDestroyed), and the opposing Ha Des may negate Lesser Fiend first.
-            var negator = BattleNegator(engine, side, battler, other);
+            var negator = BattleNegator(engine, side, battler, other, battlerDestroyed);
             if (negator == null) return;
             other.EffectsNegatedAfterBattle = true;
             engine.Log($"{negator.Name}: the effects of {other.Name} are negated (destroyed by battle with {battler.Name}).");
         }
 
         /// <summary>The face-up card whose effect negates <paramref name="other"/>, destroyed by battle with <paramref name="battler"/>.</summary>
-        static CardInstance BattleNegator(DuelEngine engine, DuelistState side, CardInstance battler, CardInstance other)
+        static CardInstance BattleNegator(DuelEngine engine, DuelistState side, CardInstance battler, CardInstance other,
+            bool battlerDestroyed)
         {
             if (battler?.Def == null || !battler.FaceUp) return null;
             foreach (var m in side.MonstersOnField().ToList())
@@ -487,6 +491,9 @@ namespace WRLDZ.Duel.TextEffects
                         // Twin-Headed Wolf: this card battled; the destroyed monster is of the printed card type; while
                         // you control another face-up monster of the named Type.
                         if (!ReferenceEquals(m, battler)) continue;
+                        // TlmSpellTrapAnswersAndAttackLocks batch, Ancient Gear Beast: not when this card is destroyed by
+                        // the same battle (Lua c:IsStatus(STATUS_BATTLE_DESTROYED)).
+                        if (c.RequiresNotDestroyedByBattle && battlerDestroyed) continue;
                         if (!string.IsNullOrEmpty(c.TargetCardKind) && !MatchesCardKind(other, c.TargetCardKind))
                             continue;
                         if (!string.IsNullOrEmpty(c.CountRaceFilter) &&

@@ -274,10 +274,14 @@ namespace WRLDZ.Duel.TextEffects
         /// <summary>
         /// "Must first be Special Summoned …": a copy its own procedure has not summoned
         /// (<see cref="CardInstance.ProcedureCompleted"/>) cannot be Special Summoned by anything else. Once properly
-        /// summoned it may be Special Summoned from the GY or banishment (Monster Reborn).
+        /// summoned it may be Special Summoned from the GY or banishment (Monster Reborn) — unless the procedure is its
+        /// only Special Summon (<see cref="EffectClause.ProcedureIsOnlySpecialSummon"/>, a Nomi such as Master Monk).
         /// </summary>
-        public static bool BlocksSpecialSummon(CardInstance card) =>
-            card != null && !card.ProcedureCompleted && HasHandProcedure(card);
+        public static bool BlocksSpecialSummon(CardInstance card)
+        {
+            var procedure = card == null ? null : HandProcedureOf(card);
+            return procedure != null && (!card.ProcedureCompleted || procedure.ProcedureIsOnlySpecialSummon);
+        }
 
         /// <summary>Hand / Deck candidates of a Special Summon effect: a copy there was never properly summoned.</summary>
         public static bool DefNeedsOwnProcedure(CardDef def) =>

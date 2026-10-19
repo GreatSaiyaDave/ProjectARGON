@@ -3851,6 +3851,133 @@ namespace WRLDZ.Duel.TextEffects
         /// (<see cref="ChoiceAmongEffectsRuntime.ActivationLocked"/>).
         /// </summary>
         OpponentCannotActivateSpellTrapCardsThisTurn,
+        /// <summary>
+        /// TlmBattleShieldsAndBurnZero batch — "Your opponent cannot select a face-down Defense Position monster as an attack
+        /// target." (Hieracosphinx c82260502: FIELD EFFECT_CANNOT_SELECT_BATTLE_TARGET, target range (0, MZONE) = the
+        /// opponent's attackers, atlimit IsPosition(POS_FACEDOWN_DEFENSE)): while the source is face-up and not negated, its
+        /// controller's face-down Defense Position monsters cannot be attack targets; they still block a direct attack
+        /// (<see cref="TlmBattleShieldsAndBurnZeroRuntime.FaceDownDefenseUnselectable"/>, ContinuousProtections.CannotBeAttackTarget).
+        /// </summary>
+        OpponentCannotSelectYourFaceDownDefenseMonstersAsAttackTarget,
+        /// <summary>
+        /// TlmBattleShieldsAndBurnZero batch — "Each time a monster on your side of the field is Flip Summoned, inflict N
+        /// damage to your opponent." (Grave Ohja c40937767: FIELD TRIGGER_F EVENT_FLIP_SUMMON_SUCCESS, ep == tp, not this
+        /// card): one mandatory trigger per Flip Summon (<see cref="TlmBattleShieldsAndBurnZeroRuntime.OnFlipSummoned"/>).
+        /// </summary>
+        InflictDamageToOpponentEachTimeYourMonsterFlipSummoned,
+        /// <summary>
+        /// TlmBattleShieldsAndBurnZero batch — "Any damage to you from a card effect becomes 0." (Des Wombat c9637706:
+        /// EFFECT_CHANGE_DAMAGE 0 for REASON_EFFECT + EFFECT_NO_EFFECT_DAMAGE on its controller, while face-up and not
+        /// negated): DuelEngine.ApplyEffectDamage reads <see cref="TlmBattleShieldsAndBurnZeroRuntime.EffectDamageBecomesZero"/>
+        /// after the reflect; battle damage, LP costs and LP loss are not damage from a card effect.
+        /// </summary>
+        EffectDamageToControllerBecomesZero,
+        /// <summary>
+        /// TlmBattleShieldsAndBurnZero batch — "Inflict N damage to the player who destroyed this Set card." (Kozaky's
+        /// Self-Destruct Button c21908319: no EFFECT_TYPE_ACTIVATE; SINGLE TRIGGER_F EVENT_DESTROYED while previously Set in the
+        /// Spell &amp; Trap Zone; Damage(rp)): <see cref="TlmBattleShieldsAndBurnZeroRuntime.BurnDestroyer"/>.
+        /// </summary>
+        InflictDamageToPlayerWhoDestroyedThisSetCard,
+        /// <summary>
+        /// TlmSpellTrapAnswersAndAttackLocks batch — "If this card attacks, your opponent cannot activate any Spell/Trap Cards
+        /// until the end of the Damage Step." (Ancient Gear Soldier c56094445, Ancient Gear Golem c83104731, Ancient Gear Beast
+        /// c10509340: FIELD EFFECT_CANNOT_ACTIVATE, PLAYER_TARGET (0,1), aclimit re:IsHasType(EFFECT_TYPE_ACTIVATE), condition
+        /// Duel.GetAttacker()==this). While this face-up, un-negated monster is the attacker — from the attack declaration
+        /// through the end of the Damage Step — its controller's opponent cannot activate a Spell/Trap Card (from the hand or
+        /// Set); the effects of face-up Spells/Traps and monster effects stay legal
+        /// (<see cref="TlmSpellTrapAnswersAndAttackLocksRuntime.ActivationLocked"/>, asked by
+        /// ContinuousNegationRuntime.ActivationLocked).
+        /// </summary>
+        ContinuousOpponentCannotActivateSpellTrapCardsWhileThisAttacks,
+        /// <summary>
+        /// TlmDerivedStatsAndProcedures batch — King of the Skull Servants (c36021814 e2): "When this card is destroyed by
+        /// battle and sent to the GY: You can banish 1 other "<see cref="EffectClause.NamedCard"/>" or 1
+        /// "<see cref="EffectClause.AltNamedCard"/>" from your GY; Special Summon this card." (SINGLE TRIGGER_O
+        /// EVENT_BATTLE_DESTROYED; the banish is the cost, aux.SpElimFilter; TlmDerivedStatsAndProceduresRuntime.ResolveBanishNamedReviveThis).
+        /// </summary>
+        SpecialSummonThisFromGyByBanishingNamedFromGy,
+        /// <summary>
+        /// TlmDerivedStatsAndProcedures batch — Megarock Dragon (c71544954): "The original ATK and DEF of this card become the
+        /// number of <see cref="EffectClause.RaceFilter"/> monsters you removed from play when you Special Summoned this card
+        /// x <see cref="EffectClause.Amount"/>." A marker read when its banish hand procedure summons it
+        /// (TlmDerivedStatsAndProceduresRuntime.NoteProcedureBanished: SET_BASE_ATTACK / _DEFENSE, RESETS_STANDARD_DISABLE).
+        /// </summary>
+        OriginalAtkDefBecomeProcedureBanishCountTimes,
+        /// <summary>
+        /// TlmCostLinkedSpells batch — Gift of the Martyr (c98792570): the targeted face-up monster gains ATK equal to the
+        /// printed (text) ATK of the monster sent as the cost (Lua SetTargetParam(GetTextAttack()); the cost numeric) until
+        /// the end of the turn (EFFECT_UPDATE_ATTACK, RESETS_STANDARD_PHASE_END). The cost is
+        /// <see cref="EffectClause.RequiresSendOtherYouControl"/>, filtered by
+        /// <see cref="TlmCostLinkedSpellsRuntime.FilterSendCost"/>.
+        /// </summary>
+        TargetGainsCostTextAtkUntilEndOfTurn,
+        /// <summary>
+        /// TlmCostLinkedSpells batch — Double Attack (c34187685): the targeted face-up monster can attack
+        /// 1 + <see cref="EffectClause.Amount"/> times this turn (EFFECT_EXTRA_ATTACK, RESETS_STANDARD_PHASE_END; the
+        /// BattleBoosts turn grant). Its target must have a lower Level than the monster discarded as the cost
+        /// (<see cref="TlmCostLinkedSpellsRuntime.FilterTargets"/>).
+        /// </summary>
+        TargetGainsExtraAttackThisTurn,
+        /// <summary>
+        /// TlmCostLinkedSpells batch — Minefield Eruption (c85519211): destroy every face-up monster named
+        /// <see cref="EffectClause.ConditionName"/> the controller controls at resolution, in one event.
+        /// </summary>
+        DestroyAllFaceUpNamedYouControl,
+        /// <summary>
+        /// TlmCostLinkedSpells batch — Hero Signal (c22020907): at resolution (no target) the controller selects 1 Level
+        /// <see cref="EffectClause.SummonLevelMax"/> or lower <see cref="EffectClause.TargetSeriesName"/> monster in their
+        /// hand or Deck that can be Special Summoned and Special Summons it face-up (Attack or Defense).
+        /// </summary>
+        SpecialSummonLowLevelSeriesFromHandOrDeck,
+        /// <summary>
+        /// TlmEquipsAndLinkedContinuous batch — Legendary Black Belt (c96458440, FIELD TRIGGER_F EVENT_BATTLE_DESTROYING from
+        /// the Spell &amp; Trap Zone): on <see cref="EffectTiming.EquippedMonsterDestroysByBattle"/>, when the monster this
+        /// Equip Spell is equipped to destroys an opponent's monster by battle and that monster is in the GY (REASON_BATTLE),
+        /// inflict damage to this card's controller's opponent equal to that monster's DEF in the GY (its printed DEF;
+        /// <see cref="TlmEquipsAndLinkedContinuousRuntime.FireEquipSpellDestroysByBattle"/>).
+        /// </summary>
+        InflictDestroyedMonsterDefToOpponent,
+        /// <summary>
+        /// TlmEquipsAndLinkedContinuous batch — Nitro Unit (c23842445, SINGLE TRIGGER_F EVENT_LEAVE_FIELD with
+        /// REASON_LOST_TARGET): a <see cref="EffectTiming.ContinuousWhileFaceUp"/> marker. When its equipped monster is
+        /// destroyed by battle and sent to the GY, this card leaves the field by the rule and inflicts damage to its
+        /// controller's opponent equal to that monster's ATK in the GY (its printed ATK;
+        /// <see cref="TlmEquipsAndLinkedContinuousRuntime.NoteHostDestroyed"/> / <see cref="TlmEquipsAndLinkedContinuousRuntime.AfterHostDestroyed"/>).
+        /// </summary>
+        InflictLostHostAtkToOpponentWhenHostDestroyedByBattle,
+        /// <summary>
+        /// TlmEquipsAndLinkedContinuous batch — Lone Wolf (c82452993, EFFECT_IMMUNE_EFFECT with re:IsMonsterEffect() and
+        /// re:GetOwnerPlayer()~=e:GetOwnerPlayer()): a <see cref="EffectTiming.ContinuousWhileFaceUp"/> clause of a linked
+        /// Continuous Spell/Trap. The monster it is linked to is unaffected by monster effects of this card's controller's
+        /// opponent (<see cref="TlmEquipsAndLinkedContinuousRuntime.ShieldsFromOpponentMonsterEffect"/>, asked by
+        /// ContinuousProtections.IsUnaffectedBy).
+        /// </summary>
+        LinkedMonsterUnaffectedByOpponentMonsterEffects,
+        /// <summary>
+        /// TlmEquipsAndLinkedContinuous batch — Kaminote Blow (c97570038, a player effect on EVENT_DAMAGE_STEP_END until the
+        /// End Phase): for the rest of this turn, at the end of each Damage Step, when one battler is a monster named in
+        /// <see cref="EffectClause.AnyOfNamedCards"/> that the activator controls and the other battler is still in a Monster
+        /// Zone, destroy that other monster (by this card's effect; no target, no Chain Link;
+        /// <see cref="TlmEquipsAndLinkedContinuousRuntime.FireEndOfDamageStep"/>).
+        /// </summary>
+        DestroyMonstersBattlingNamedAtEndOfDamageStepThisTurn,
+        /// <summary>
+        /// TlmFlipsControlAndZoneEvents batch — Dummy Golem (c13532663) FLIP, no target: as it resolves (this card still
+        /// on its controller's field, not being destroyed by the battle that flipped it, its control able to change), the
+        /// OPPONENT selects 1 monster they control (any position, Lua Duel.SelectMatchingCard: not a target) and control
+        /// of it and this card switch permanently (Duel.SwapControl;
+        /// <see cref="TlmFlipsControlAndZoneEventsRuntime.ApplyOpponentSelectsSwitchWithThis"/>).
+        /// </summary>
+        OpponentSelectsOwnMonsterSwitchControlWithThis,
+        /// <summary>
+        /// TlmFlipsControlAndZoneEvents batch — Criosphinx (c18654201) marker (ContinuousWhileFaceUp): each time
+        /// monster(s) return from the field to the hand (one event per return), a face-up Criosphinx raises one mandatory
+        /// trigger; at resolution, if it is still face-up on the field, each player who got such a monster back sends 1
+        /// card of their choice from their hand to the GY (Lua DiscardHand with REASON_EFFECT only: a send, not a
+        /// discard). Fired by <see cref="TlmFlipsControlAndZoneEventsRuntime.OnMonstersReturnedToHand"/>; the ApplyClause
+        /// arm is a no-op.
+        /// </summary>
+        OwnersOfMonstersReturnedToHandSendOneHandCardToGy,
     }
 
 
@@ -4075,6 +4202,13 @@ namespace WRLDZ.Duel.TextEffects
         /// Destroy arm re-checks that it is still face-down as it resolves.
         /// </summary>
         FieldSetCards,
+        /// <summary>
+        /// TlmFlipsControlAndZoneEvents batch — White Ninja (c1571945): a Defense Position monster (face-up or
+        /// face-down) in either player's Monster Zones, this card included (Lua IsDefensePos on LOCATION_MZONE, both
+        /// sides, no exception). A target; the Destroy arm re-checks Defense Position as it resolves. The legacy
+        /// Spell/Trap mirror has no such list: a clause with it takes the compiled flow (UsesCompiledActivationPending).
+        /// </summary>
+        FieldDefensePositionMonsters,
     }
 
     /// <summary>One parsed clause from official card text.</summary>
@@ -4534,7 +4668,12 @@ namespace WRLDZ.Duel.TextEffects
         /// <see cref="RequiresDestroyedByBattleThisTurn"/> (this card destroyed a monster).
         /// </summary>
         public bool RequiresThisDestroyedByBattle;
-        /// <summary>Field→GY trigger only if this copy was NOT destroyed by battle (Mecha-Dog Marron "except by battle").</summary>
+        /// <summary>
+        /// Field→GY trigger only if this copy was NOT destroyed by battle (Mecha-Dog Marron "except by battle"). On a
+        /// <see cref="EffectActionKind.NegateEffectsOfMonstersDestroyedByBattle"/> clause with <see cref="AffectsThisCardOnly"/>
+        /// (Ancient Gear Beast, TlmSpellTrapAnswersAndAttackLocks batch; Lua c:IsStatus(STATUS_BATTLE_DESTROYED) returns): no
+        /// negation when this card is destroyed by the same battle (NegationMonstersRuntime.BattleNegator).
+        /// </summary>
         public bool RequiresNotDestroyedByBattle;
         /// <summary>Resolution subject is the monster that destroyed this card (no targeting).</summary>
         public bool ImplicitTargetIsBattleDestroyer;
@@ -5748,6 +5887,80 @@ namespace WRLDZ.Duel.TextEffects
         /// activated, and it applies only when that chooser picks it (<see cref="ChoiceAmongEffectsRuntime.IsApplyingChosen"/>).
         /// </summary>
         public bool EffectChoiceAppliedAtResolution;
+
+        // ── TlmSpellTrapAnswersAndAttackLocks batch ──
+
+        /// <summary>
+        /// With <see cref="EffectActionKind.NegateActivation"/>: answers only the activation of a Continuous Spell (Trap) Card —
+        /// from the hand or Set, never a later effect of a face-up one (Royal Surrender c56058888 / Spell-Stopping Statute
+        /// c10069180, Lua re:GetActiveType()==TYPE_TRAP+TYPE_CONTINUOUS (TYPE_SPELL+TYPE_CONTINUOUS) and
+        /// re:IsHasType(EFFECT_TYPE_ACTIVATE); <see cref="TlmSpellTrapAnswersAndAttackLocksRuntime.ChainAnswerAllowed"/>).
+        /// </summary>
+        public bool NegateRespondsToContinuousOnly;
+
+        /// <summary>
+        /// With <see cref="EffectActionKind.NegateActivation"/> + <see cref="FlipSelfFaceUpDefense"/>: the negation applies
+        /// first, then the negated Spell Card still on the field is sent to the GY by this effect, then this card (if it is
+        /// still in its Monster Zone) is changed to face-up Defense Position (Mid Shield Gardna c75487237, Lua s.negop;
+        /// <see cref="TlmSpellTrapAnswersAndAttackLocksRuntime.AfterActivationNegation"/>). Big Shield Gardna instead flips
+        /// first and negates only if it did.
+        /// </summary>
+        public bool SendNegatedCardToGyThenFlipSelf;
+
+        // ── TlmDerivedStatsAndProcedures batch ──
+
+        /// <summary>
+        /// On a <see cref="EffectActionKind.SpecialSummonFromHandProcedure"/> clause: "This card cannot be Special Summoned
+        /// except by Tributing …" (Master Monk) is a Nomi — ygopro EnableReviveLimit + EFFECT_SPSUMMON_CONDITION with no
+        /// value, which the core checks whether or not the copy was properly summoned. The procedure is its only Special
+        /// Summon: even a properly summoned copy cannot be Special Summoned by another effect (Monster Reborn;
+        /// <see cref="ToonsRuntime.BlocksSpecialSummon"/>). False: a Semi-Nomi that may come back once properly summoned.
+        /// </summary>
+        public bool ProcedureIsOnlySpecialSummon;
+
+        // ── TlmCostLinkedSpells batch ──
+
+        /// <summary>
+        /// Card of Sanctity (c42664989): "Banish all other cards you control and in your hand (min. 1 from each)" — a cost
+        /// paid as the card is activated (<see cref="TlmCostLinkedSpellsRuntime.PayActivationCost"/>): every other card the
+        /// controller holds in the hand and controls on the field is banished in one event. Activation needs at least one
+        /// such card in the hand and one on the field (<see cref="TlmCostLinkedSpellsRuntime.OtherCardsInHandAndOnField"/>).
+        /// </summary>
+        public bool CostBanishAllOtherHandAndField;
+
+        // ── TlmEquipsAndLinkedContinuous batch ──
+
+        /// <summary>
+        /// A list of card names, separated by '|' ("Chu-Ske the Mouse Fighter|Monk Fighter|Master Monk"; Lua IsCode with
+        /// several codes): the equip limit and equip target of an Equip Spell (Legendary Black Belt), the target of a linked
+        /// Continuous Trap (Lone Wolf), or the monsters an activation condition and effect look at (Kaminote Blow). Read by
+        /// <see cref="TlmEquipsAndLinkedContinuousRuntime.NamedInList"/>.
+        /// </summary>
+        public string AnyOfNamedCards;
+
+        /// <summary>
+        /// The <see cref="EquipAtkBonus"/> / <see cref="EquipDefBonus"/> of this linked card applies only while the linked
+        /// monster's controller controls 2 or more monsters (face-down ones count) and none of them is in Attack Position
+        /// (Impenetrable Formation, Lua s.rcon; FieldSpellEffects.ApplyEquipStats).
+        /// </summary>
+        public bool EquipBonusRequiresTwoMonstersNoneInAttack;
+
+        /// <summary>
+        /// A linked Continuous Spell/Trap that stays on the field, unlinked, when its monster leaves the field by any means
+        /// (Lone Wolf: its effects are on the monster, OWNER_RELATE; it has no leave-field destruction; DuelEngine.UnlinkEquips).
+        /// </summary>
+        public bool LinkStaysWhenHostLeaves;
+
+        // ── TlmFlipsControlAndZoneEvents batch ──
+
+        /// <summary>
+        /// With <see cref="EffectActionKind.SpecialSummonThisFromBanished"/>: only a copy banished face-up from the field
+        /// this turn while its owner controlled it face-up (D.D. Survivor, Lua rmop: IsFaceup, IsPreviousPosition(FACEUP),
+        /// IsPreviousLocation(ONFIELD), IsPreviousControler(tp); flag reset at the End Phase;
+        /// <see cref="TlmFlipsControlAndZoneEventsRuntime.BanishedFaceUpFromOwnFieldThisTurn"/>). The summon is face-up in
+        /// the position its owner chooses (POS_FACEUP) unless <see cref="SummonInAttack"/>.
+        /// </summary>
+        public bool RequiresBanishedFaceUpFromOwnField;
     }
 
     /// <summary>When the activation condition is tested (PSCT "when" vs "if").</summary>

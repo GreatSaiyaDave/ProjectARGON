@@ -20,6 +20,8 @@ namespace WRLDZ.Duel.TextEffects
         PayLp,
         BanishFromGy,
         RemoveCounters,
+        /// <summary>TlmCostLinkedSpells batch: banish cards from the hand or the field (not the GY) as a cost.</summary>
+        Banish,
     }
 
     public enum EffectResolutionKind
@@ -155,6 +157,9 @@ namespace WRLDZ.Duel.TextEffects
             // DcrEquipSpells batch: "Send 1 card from your hand to the Graveyard" is a send, not a discard.
             if (c.RequiresDiscardCost && c.DiscardCostIsSend)
                 return EffectCostKind.SendToGy;
+            // OncePerTurnHard batch: "send this card from your hand to the GY" (Garbage Ogre) is a send, not a discard.
+            if (c.RequiresDiscardSelf && c.DiscardCostIsSend)
+                return EffectCostKind.SendToGy;
             if (c.RequiresDiscardCost || c.RequiresDiscardSelf)
                 return EffectCostKind.Discard;
             if (c.RequiresTributeThis || c.RequiresTributeCount > 0)
@@ -174,6 +179,9 @@ namespace WRLDZ.Duel.TextEffects
                 return EffectCostKind.PayLp;
             if (c.BanishFromGyCount > 0)
                 return EffectCostKind.BanishFromGy;
+            // TlmCostLinkedSpells batch: Card of Sanctity banishes every other card in the hand and on the field.
+            if (c.CostBanishAllOtherHandAndField)
+                return EffectCostKind.Banish;
             // SpellCounterSpenders batch: "Remove N Spell Counters on your side of the field".
             // DestroyWatchersAndSpellShields batch: Blast Magician removes ceil(target ATK / N) of its own Spell Counters.
             if (c.RequiresRemoveSpellCounters > 0 || c.RequiresSpellCounters > 0 || c.RemoveSpellCountersOnYourSide > 0 ||
@@ -373,6 +381,11 @@ namespace WRLDZ.Duel.TextEffects
                     EffectResolutionKind.Destroy,
                 EffectActionKind.PlaceNamedFromDeckOnTop => EffectResolutionKind.Search,
                 EffectActionKind.SpecialSummonChosenFromHandOrDeck => EffectResolutionKind.SpecialSummon,
+                // TlmCostLinkedSpells batch.
+                EffectActionKind.SpecialSummonLowLevelSeriesFromHandOrDeck => EffectResolutionKind.SpecialSummon,
+                EffectActionKind.TargetGainsCostTextAtkUntilEndOfTurn => EffectResolutionKind.ModifyStats,
+                EffectActionKind.TargetGainsExtraAttackThisTurn => EffectResolutionKind.ExtraAttack,
+                EffectActionKind.DestroyAllFaceUpNamedYouControl => EffectResolutionKind.Destroy,
                 EffectActionKind.ShuffleTargetAndHandIntoDeckDraw or
                     EffectActionKind.OpponentDrawsThenDiscardsDrawnSpells =>
                     EffectResolutionKind.Draw,
@@ -954,7 +967,22 @@ namespace WRLDZ.Duel.TextEffects
                 // bullet (no resolution kind of its own: each bullet it applies maps by its own action).
                 EffectActionKind.OpponentCannotDrawDuringNextDrawPhase or
                     EffectActionKind.OpponentCannotActivateSpellTrapCardsThisTurn => EffectResolutionKind.Protection,
+                // TlmSpellTrapAnswersAndAttackLocks batch: the Ancient Gear attack lock.
+                EffectActionKind.ContinuousOpponentCannotActivateSpellTrapCardsWhileThisAttacks => EffectResolutionKind.Protection,
                 EffectActionKind.ApplyOneOfTheseEffectsAtResolution => EffectResolutionKind.None,
+                // TlmBattleShieldsAndBurnZero batch: Hieracosphinx, Grave Ohja, Des Wombat, Kozaky's Self-Destruct Button.
+                EffectActionKind.OpponentCannotSelectYourFaceDownDefenseMonstersAsAttackTarget => EffectResolutionKind.Protection,
+                EffectActionKind.InflictDamageToOpponentEachTimeYourMonsterFlipSummoned or
+                    EffectActionKind.InflictDamageToPlayerWhoDestroyedThisSetCard => EffectResolutionKind.Damage,
+                EffectActionKind.EffectDamageToControllerBecomesZero => EffectResolutionKind.PreventDamage,
+                // TlmEquipsAndLinkedContinuous batch: Legendary Black Belt / Nitro Unit burns, Lone Wolf's shield, Kaminote Blow.
+                EffectActionKind.InflictDestroyedMonsterDefToOpponent or
+                    EffectActionKind.InflictLostHostAtkToOpponentWhenHostDestroyedByBattle => EffectResolutionKind.Damage,
+                EffectActionKind.LinkedMonsterUnaffectedByOpponentMonsterEffects => EffectResolutionKind.Protection,
+                EffectActionKind.DestroyMonstersBattlingNamedAtEndOfDamageStepThisTurn => EffectResolutionKind.Destroy,
+                // TlmFlipsControlAndZoneEvents batch: Dummy Golem's switch; Criosphinx's hand-to-GY send.
+                EffectActionKind.OpponentSelectsOwnMonsterSwitchControlWithThis => EffectResolutionKind.TakeControl,
+                EffectActionKind.OwnersOfMonstersReturnedToHandSendOneHandCardToGy => EffectResolutionKind.Discard,
                 EffectActionKind.DestroyThisOnYourNthStandbyAfterActivation => EffectResolutionKind.Destroy,
                 // LpLocksDelayedBurnAndGyNegation batch: Weapon Change (ATK/DEF switch), Dora of Fate (delayed burn).
                 EffectActionKind.SwitchTargetCurrentAtkDefUntilOpponentsNextEndPhase => EffectResolutionKind.ModifyStats,
@@ -1014,6 +1042,9 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.SpecialSummonThisFromGyNextStandbyAfterEffectDestroyThenDestroyAllSpellTraps or
                     EffectActionKind.OwnerSpecialSummonsListedMaterialWhenFusionDestroyedByEffect or
                     EffectActionKind.TributeMaterialsSpecialSummonCorrespondingAttributeFusion => EffectResolutionKind.SpecialSummon,
+                // TlmDerivedStatsAndProcedures batch: King of the Skull Servants' revival, Megarock Dragon's original ATK/DEF.
+                EffectActionKind.SpecialSummonThisFromGyByBanishingNamedFromGy => EffectResolutionKind.SpecialSummon,
+                EffectActionKind.OriginalAtkDefBecomeProcedureBanishCountTimes => EffectResolutionKind.ModifyStats,
                 EffectActionKind.None => EffectResolutionKind.None,
                 _ => EffectResolutionKind.UniqueException
             };

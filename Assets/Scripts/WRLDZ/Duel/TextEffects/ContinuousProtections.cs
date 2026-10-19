@@ -24,6 +24,9 @@ namespace WRLDZ.Duel.TextEffects
             // Face-down targets are otherwise never ContinuousCannotBeAttackTarget hosts.
             if (!monster.FaceUp)
             {
+                // TlmBattleShieldsAndBurnZero batch: Hieracosphinx — the opponent cannot select its controller's face-down
+                // Defense Position monsters (EFFECT_CANNOT_SELECT_BATTLE_TARGET of the source).
+                if (TlmBattleShieldsAndBurnZeroRuntime.FaceDownDefenseUnselectable(engine, monster)) return true;
                 var atk = engine?.TurnPlayer;
                 return atk != null && atk.CannotAttackFaceDownMonstersThisTurn;
             }
@@ -112,6 +115,9 @@ namespace WRLDZ.Duel.TextEffects
             if (victim == null || source?.Def == null) return false;
             // MonsterNegationAndControlLocks batch: Non-Spellcasting Area (a field effect, not the victim's own effect).
             if (MonsterNegationAndControlLocksRuntime.ShieldsFromSpell(engine, victim, source)) return true;
+            // TlmEquipsAndLinkedContinuous batch: Lone Wolf — the linked card's effect, not the victim's own (it applies
+            // while the victim's own effects are negated).
+            if (TlmEquipsAndLinkedContinuousRuntime.ShieldsFromOpponentMonsterEffect(engine, victim, source)) return true;
             if (!victim.FaceUp || victim.IsNegated) return false;
             foreach (var c in ClausesOn(victim, EffectActionKind.UnaffectedByCardEffects))
             {

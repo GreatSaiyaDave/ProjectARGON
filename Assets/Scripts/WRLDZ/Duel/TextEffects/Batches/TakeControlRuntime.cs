@@ -104,6 +104,11 @@ namespace WRLDZ.Duel.TextEffects
             if (c == null || list == null || list.Count == 0) return;
             if (c.TargetMustBeNormalSummonable)
                 list.RemoveAll(t => !IsNormalSummonableCard(t));
+            // TlmFlipsControlAndZoneEvents batch: "take control … until the End Phase" (Change of Heart, Reshef the Dark
+            // Being): Lua IsControlerCanBeChanged — the taker needs a free Monster Zone, or nothing can be targeted.
+            if (c.Action == EffectActionKind.TakeControlUntilEndPhase && engine != null && who != null &&
+                engine.FirstEmptyForControl(who) < 0)
+                list.Clear();
             if (c.Action != EffectActionKind.TakeControlWhileSourceFaceUp) return;
 
             if (!string.IsNullOrEmpty(c.AttributeFilter))

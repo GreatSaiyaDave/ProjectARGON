@@ -732,6 +732,13 @@ namespace WRLDZ.Duel.TextEffects
                     reason = "Already used this effect this turn.";
                     return false;
                 }
+
+                // OncePerTurnHard batch: "You can only use this effect of "X" once per turn" — every copy of that name.
+                if (OncePerTurnHardRuntime.BlocksActivation(engine, who, card, activate))
+                {
+                    reason = $"You can only use this effect of \"{card.Def.name}\" once per turn.";
+                    return false;
+                }
             }
             else if (fromHand)
             {
@@ -785,6 +792,14 @@ namespace WRLDZ.Duel.TextEffects
                         !HasLegalTargetsConsideringDiscard(engine, who, c, card))
                     {
                         last = "No legal targets.";
+                        continue;
+                    }
+
+                    if (c.RequiresTargetChoice && c.RequiresTributeCount > 0 &&
+                        !TributeCostLeavesTarget(engine, who, card, c, CollectTributeCost(who, card, c, engine),
+                            TributePicks(c)))
+                    {
+                        last = "No legal target left after the Tribute.";
                         continue;
                     }
 
@@ -949,6 +964,16 @@ namespace WRLDZ.Duel.TextEffects
                     CollectTargets(engine, who, c, card).Count < MinTargets(c))
                 {
                     reason = $"Needs {MinTargets(c)} legal targets.";
+                    return false;
+                }
+
+                // OncePerTurnHard batch (review): the Tributed monster cannot also be the target (Golden Dragon Summoner
+                // alone on the field has nothing to return).
+                if (c.RequiresTargetChoice && c.RequiresTributeCount > 0 &&
+                    !TributeCostLeavesTarget(engine, who, card, c, CollectTributeCost(who, card, c, engine),
+                        TributePicks(c)))
+                {
+                    reason = "No legal target left after the Tribute.";
                     return false;
                 }
 
@@ -1245,6 +1270,11 @@ namespace WRLDZ.Duel.TextEffects
 
             // SpellTrapSealsAndImmunity batch: Armor Break answers only the activation of an Equip Spell Card.
             if (!SpellTrapSealsAndImmunityRuntime.ChainAnswerAllowed(clause, target, out reason))
+                return false;
+
+            // TlmSpellTrapAnswersAndAttackLocks batch: Royal Surrender / Spell-Stopping Statute answer only the activation of a
+            // Continuous Trap (Spell) Card.
+            if (!TlmSpellTrapAnswersAndAttackLocksRuntime.ChainAnswerAllowed(clause, target, out reason))
                 return false;
 
             // "This card's activation … cannot be negated" (Amplifier, Spiritualism): no negate-activation
@@ -3494,7 +3524,7 @@ namespace WRLDZ.Duel.TextEffects
                     var clauseMore = CompiledEffectCache.GetOrCompile(card)
                         ?.ClausesFor(EffectTiming.Activate)
                         .FirstOrDefault(HasStructuredIgnitionCost);
-                    var more = CollectIgnitionCostCards(engine, who, card, clauseMore);
+                    var more = CollectIgnitionCostCards(engine, who, card, clauseMore, p.CostPicksRemaining);
                     if (more.Count == 0)
                     {
                         engine.ClearPendingActivation();
@@ -3577,7 +3607,8 @@ namespace WRLDZ.Duel.TextEffects
                 engine.Log(sendCost
                     ? $"Cost: send {discarded.Name} from the hand to the GY."
                     : $"Cost: discard {discarded.Name}.");
-                if (sendCost) p.PromptOverride = null;
+                // The cost prompt (a send, or Reshef's Spell discard) does not carry over to the target pick.
+                p.PromptOverride = null;
                 // EngineResiduals (v163): Cancel at the target that follows undoes the activation and refunds this discard
                 // (SpellTrapEffects.CancelPending; a monster ignition through EngineResidualsRuntime.UndoMonsterIgnition).
                 p.PaidDiscards.Add(discarded);
@@ -3590,6 +3621,8 @@ namespace WRLDZ.Duel.TextEffects
                     return false;
                 }
 
+                // TlmCostLinkedSpells batch: Double Attack's target is below the discarded monster's Level.
+                TlmCostLinkedSpellsRuntime.NoteDiscardCost(engine, who, card, bounce, discarded);
                 var bounceTargets = CollectTargets(engine, who, bounce, card);
                 if (bounceTargets.Count == 0)
                 {
@@ -3820,6 +3853,12 @@ namespace WRLDZ.Duel.TextEffects
                 if (c.RequiresThisSummonedByOwnProcedure &&
                     (!specialSummon || !card.SpecialSummonedByOwnProcedure)) continue;
                 if (c.RequiresNormalOrFlipSummon && specialSummon) continue;
+                // OncePerTurnHard batch: "You can only use this effect of "X" once per turn" (any copy, this turn).
+                if (OncePerTurnHardRuntime.Spent(engine, who, card, c))
+                {
+                    engine.Log($"{card.Name}: this effect of \"{card.Def.name}\" was already used this turn.");
+                    continue;
+                }
                 applicable.Add(c);
             }
             if (applicable.Count == 0) return false;
@@ -3828,6 +3867,8 @@ namespace WRLDZ.Duel.TextEffects
             // effects" — all bullets are one choice, offered once through EffectChoiceRuntime.
             if (applicable.Exists(c => EffectChoiceRuntime.IsChoiceBullet(c)))
             {
+                foreach (var c in applicable)
+                    OncePerTurnHardRuntime.Mark(engine, who, card, c);
                 EffectChoiceRuntime.Offer(engine, who, card, applicable);
                 return true;
             }
@@ -3850,11 +3891,17 @@ namespace WRLDZ.Duel.TextEffects
                     foreach (var c in applicable)
                     {
                         if (c.RequiresTargetChoice || NeedsTargetChoice(c)) continue;
+                        // OncePerTurnHard batch: a targeted clause with no target does not activate, so only the
+                        // clauses that apply use their hard once per turn.
+                        OncePerTurnHardRuntime.Mark(engine, who, card, c);
                         ApplyClause(engine, who, card, c, null, ref skip, ref skip);
                     }
                     engine.NotifyPublic();
                     return true;
                 }
+
+                foreach (var c in applicable)
+                    OncePerTurnHardRuntime.Mark(engine, who, card, c);
 
                 if (!who.IsPlayer)
                 {
@@ -3896,7 +3943,10 @@ namespace WRLDZ.Duel.TextEffects
 
             var d = false;
             foreach (var c in applicable)
+            {
+                OncePerTurnHardRuntime.Mark(engine, who, card, c);
                 ApplyClause(engine, who, card, c, null, ref d, ref d);
+            }
             engine.NotifyPublic();
             return true;
         }
@@ -3934,7 +3984,9 @@ namespace WRLDZ.Duel.TextEffects
             if (clauses == null || clauses.Count == 0) return false;
             if (clauses.Exists(c => c != null && c.RequiresDestroyedByEffectWhileEquipped))
                 return EquipAndSpellProtectionRuntime.WasDestroyedWhileEquipped(engine, card);
-            return clauses.Exists(c => SentToGySendMatches(engine, card, c, destroyed, destroyedByBattle));
+            // OncePerTurnHard batch: a hard once per turn by name already used this turn gives this send no trigger.
+            return clauses.Exists(c => SentToGySendMatches(engine, card, c, destroyed, destroyedByBattle) &&
+                                       !OncePerTurnHardRuntime.SentToGySpent(engine, null, card, c));
         }
 
         public static bool TryResolveSentToGy(DuelEngine engine, DuelistState who, CardInstance card,
@@ -3988,6 +4040,13 @@ namespace WRLDZ.Duel.TextEffects
                                "effect misses the timing.");
                     continue;
                 }
+                // OncePerTurnHard batch: "You can only use this effect of "X" once per turn" — used now, or already used.
+                if (OncePerTurnHardRuntime.SentToGySpent(engine, who, card, c))
+                {
+                    engine.Log($"{card.Name}: this effect of \"{card.Def?.name}\" was already used this turn.");
+                    continue;
+                }
+                OncePerTurnHardRuntime.MarkSentToGy(engine, who, card, c);
                 if (c.Action == EffectActionKind.ReEquipWhenEquippedMonsterDestroyed)
                 {
                     if (card?.EquippedTo == null)
@@ -4422,6 +4481,8 @@ namespace WRLDZ.Duel.TextEffects
             List<EffectClause> activate, EffectClause targeted, bool autoPick, bool monsterIgnition)
         {
             var costCards = CollectDiscardCost(who, targeted.DiscardCostAttribute, card);
+            // TlmCostLinkedSpells batch: Double Attack's discard must leave a lower-Level face-up target.
+            TlmCostLinkedSpellsRuntime.FilterDiscardCost(engine, who, targeted, costCards);
             var bounceTargets = CollectTargets(engine, who, targeted, card);
             if (costCards.Count == 0 ||
                 (bounceTargets.Count == 0 && !costCards.Exists(c => WouldBeLegalGyTarget(targeted, c))))
@@ -4446,6 +4507,8 @@ namespace WRLDZ.Duel.TextEffects
                 engine.Log(targeted.DiscardCostIsSend
                     ? $"Cost: send {discarded.Name} from the hand to the GY."
                     : $"Cost: discard {discarded.Name}.");
+                // TlmCostLinkedSpells batch: Double Attack's target is below the discarded monster's Level.
+                TlmCostLinkedSpellsRuntime.NoteDiscardCost(engine, who, card, targeted, discarded);
                 bounceTargets = CollectTargets(engine, who, targeted, card);
                 if (bounceTargets.Count == 0)
                 {
@@ -4487,7 +4550,11 @@ namespace WRLDZ.Duel.TextEffects
                 AwaitingDiscardCost = true,
                 DiscardCostAttribute = targeted.DiscardCostAttribute,
                 // DcrEquipSpells batch: a send cost is not asked as a discard.
-                PromptOverride = targeted.DiscardCostIsSend ? "send 1 card from your hand to the GY (cost)." : null
+                // TlmFlipsControlAndZoneEvents batch: Reshef the Dark Being's cost is 1 Spell Card, not a monster.
+                PromptOverride = targeted.DiscardCostIsSend ? "send 1 card from your hand to the GY (cost)."
+                    : targeted.DiscardCostAttribute == FaceUpQuickEffectsRuntime.DiscardSpellCard
+                        ? "discard 1 Spell Card from your hand (cost)."
+                        : null
             };
             pending.LegalTargets.AddRange(costCards);
             engine.SetPendingActivation(pending);
@@ -4811,6 +4878,37 @@ namespace WRLDZ.Duel.TextEffects
                    !ToonsRuntime.BlocksSpecialSummon(card);
         }
 
+        /// <summary>
+        /// OncePerTurnHard batch (review): "Tribute N monster(s), then target …" pays the Tribute before the target is
+        /// chosen, so a Tributed monster is never the target. The activation needs a target left over after some legal
+        /// Tribute (Golden Dragon Summoner c28565527 s.cfilter: IsExistingTarget excluding the released card), and each
+        /// Tribute pick must leave one. <paramref name="tribs"/> are the Tribute candidates, <paramref name="picksLeft"/>
+        /// the Tributes still to pay, <paramref name="without"/> a candidate assumed paid. A clause without both a Tribute
+        /// cost and a target is never refused here; targets off the field (GY) are never Tribute candidates.
+        /// </summary>
+        static bool TributeCostLeavesTarget(DuelEngine engine, DuelistState who, CardInstance card, EffectClause c,
+            List<CardInstance> tribs, int picksLeft, CardInstance without = null)
+        {
+            if (c == null || c.RequiresTributeCount <= 0 || !c.RequiresTargetChoice || tribs == null) return true;
+            var targets = CollectTargets(engine, who, c, card);
+            var pool = tribs;
+            if (without != null)
+            {
+                targets.Remove(without);
+                pool = tribs.Where(m => !ReferenceEquals(m, without)).ToList();
+            }
+
+            var need = MinTargets(c);
+            if (picksLeft <= 0) return targets.Count >= need;
+            // Tribute the candidates that are not targets first; only the rest come out of the targets.
+            var spare = pool.Count(m => !targets.Contains(m));
+            var fromTargets = Math.Max(0, picksLeft - spare);
+            return pool.Count >= picksLeft && targets.Count - fromTargets >= need;
+        }
+
+        static int TributePicks(EffectClause c) =>
+            c == null || c.RequiresTributeCount <= 0 ? 0 : c.TributeUpTo ? 1 : c.RequiresTributeCount;
+
         static bool HasLegalTargetsConsideringDiscard(DuelEngine engine, DuelistState who,
             EffectClause c, CardInstance except)
         {
@@ -5051,7 +5149,7 @@ namespace WRLDZ.Duel.TextEffects
             }
 
             if (c.RequiresSendOtherYouControl &&
-                CollectOtherYouControl(who, card, c.AttributeFilter).Count == 0)
+                CollectOtherYouControl(who, card, c.AttributeFilter, engine, c).Count == 0)
             {
                 reason = "No other matching monster you control to send.";
                 return false;
@@ -5404,6 +5502,15 @@ namespace WRLDZ.Duel.TextEffects
         }
 
         static List<CardInstance> CollectOtherYouControl(DuelistState who, CardInstance source,
+            string attribute, DuelEngine engine = null, EffectClause clause = null)
+        {
+            var filtered = CollectOtherYouControlUnfiltered(who, source, attribute);
+            // TlmCostLinkedSpells batch: Gift of the Martyr's cost has a printed ATK and leaves a face-up target.
+            TlmCostLinkedSpellsRuntime.FilterSendCost(engine, who, source, clause, filtered);
+            return filtered;
+        }
+
+        static List<CardInstance> CollectOtherYouControlUnfiltered(DuelistState who, CardInstance source,
             string attribute)
         {
             var list = new List<CardInstance>();
@@ -5547,16 +5654,24 @@ namespace WRLDZ.Duel.TextEffects
         }
 
         static List<CardInstance> CollectIgnitionCostCards(DuelEngine engine, DuelistState who,
-            CardInstance card, EffectClause c)
+            CardInstance card, EffectClause c, int picksLeft = -1)
         {
             if (c == null) return new List<CardInstance>();
             // Soul Exchange: the forced Tribute is picked first (the only offer until it is paid).
             if (c.RequiresTributeCount > 0)
-                return TributeSummonsRuntime.RestrictToForced(who, CollectTributeCost(who, card, c, engine));
+            {
+                var trib = CollectTributeCost(who, card, c, engine);
+                var offer = TributeSummonsRuntime.RestrictToForced(who, trib);
+                if (!c.RequiresTargetChoice) return offer;
+                // OncePerTurnHard batch (review): offer only a Tribute that leaves a target (ygopro
+                // SelectReleaseGroupCost with the cost filter).
+                var left = picksLeft > 0 ? picksLeft : TributePicks(c);
+                return offer.FindAll(m => TributeCostLeavesTarget(engine, who, card, c, trib, left - 1, m));
+            }
             if (c.RequiresSendHandToGy)
                 return CollectDiscardCost(who, "", card);
             if (c.RequiresSendOtherYouControl)
-                return CollectOtherYouControl(who, card, c.AttributeFilter);
+                return CollectOtherYouControl(who, card, c.AttributeFilter, engine, c);
             if (c.RequiresSendRaceFromDeck)
                 return CollectSendRaceFromDeck(engine, who, c);
             if (c.RequiresSendEquipSpellOnThisToGy)
@@ -5752,9 +5867,19 @@ namespace WRLDZ.Duel.TextEffects
 
             if (c.RequiresDiscardSelf)
             {
-                var discarded = MonsterEffects.DiscardFromHandByInstance(who, card);
-                if (discarded == null) return false;
-                engine.Log($"Cost: discard {discarded.Name}.");
+                // OncePerTurnHard batch: Garbage Ogre SENDS itself from the hand (Cost.SelfToGrave, no discard event).
+                if (c.DiscardCostIsSend)
+                {
+                    var sent = MonsterEffects.SendFromHandToGraveByInstance(who, card);
+                    if (sent == null) return false;
+                    engine.Log($"Cost: send {sent.Name} from the hand to the GY.");
+                }
+                else
+                {
+                    var discarded = MonsterEffects.DiscardFromHandByInstance(who, card);
+                    if (discarded == null) return false;
+                    engine.Log($"Cost: discard {discarded.Name}.");
+                }
             }
 
             if (c.RequiresTributeThis || c.RequiresSendThisToGy)
@@ -5798,6 +5923,13 @@ namespace WRLDZ.Duel.TextEffects
                 if (ContinuousProtections.NeitherPlayerCanTribute(engine))
                     return false;
                 var trib = CollectTributeCost(who, card, c, engine);
+                if (c.RequiresTargetChoice)
+                {
+                    // OncePerTurnHard batch (review): Tribute the monsters that are not targets first, so a target is
+                    // left (the order among each group is kept).
+                    var tgts = CollectTargets(engine, who, c, card);
+                    trib = trib.OrderBy(m => tgts.Contains(m) ? 1 : 0).ToList();
+                }
                 var n = c.TributeUpTo
                     ? Mathf.Min(c.RequiresTributeCount, trib.Count)
                     : c.RequiresTributeCount;
@@ -5835,7 +5967,7 @@ namespace WRLDZ.Duel.TextEffects
 
             if (c.RequiresSendOtherYouControl && autoPick)
             {
-                var others = CollectOtherYouControl(who, card, c.AttributeFilter);
+                var others = CollectOtherYouControl(who, card, c.AttributeFilter, engine, c);
                 if (others.Count == 0) return false;
                 // Altar for Tribute (SimpleTargetUtility batch v173): the LP gain equals the cost
                 // monster's ORIGINAL ATK — printed, before modifiers (GainLpEqualToCostAmount).
@@ -6467,6 +6599,9 @@ namespace WRLDZ.Duel.TextEffects
             // ContinuousTrapsAndSpiritSupport batch: Spirit's Invitation triggers once per return event.
             ContinuousTrapsAndSpiritSupportRuntime.FireSpiritReturnTriggers(engine);
             if (engine.GameOver) return;
+            // TlmFlipsControlAndZoneEvents batch: Criosphinx triggers once per return event.
+            TlmFlipsControlAndZoneEventsRuntime.OnMonstersReturnedToHand(engine);
+            if (engine.GameOver) return;
 
             foreach (var who in new[] { engine.Player, engine.Opponent })
             {
@@ -7033,6 +7168,14 @@ namespace WRLDZ.Duel.TextEffects
                          clause.Zone == EffectZoneFilter.FieldSetCards))
                     {
                         engine.Log($"{source?.Name}: {chosenTarget.Name} is no longer face-down — no effect.");
+                        break;
+                    }
+
+                    // TlmFlipsControlAndZoneEvents batch: White Ninja (Lua tc:IsDefensePos() at resolution).
+                    if (chosenTarget != null && clause.Zone == EffectZoneFilter.FieldDefensePositionMonsters &&
+                        chosenTarget.Position != BattlePosition.Defense)
+                    {
+                        engine.Log($"{source?.Name}: {chosenTarget.Name} is no longer in Defense Position — no effect.");
                         break;
                     }
 
@@ -7706,6 +7849,8 @@ namespace WRLDZ.Duel.TextEffects
                         source.EquippedTo = chosenTarget;
                         if (!chosenTarget.Equips.Contains(source))
                             chosenTarget.Equips.Add(source);
+                        // TlmEquipsAndLinkedContinuous batch: Lone Wolf / Impenetrable Formation register their effects now.
+                        TlmEquipsAndLinkedContinuousRuntime.NoteLinked(source, chosenTarget, clause);
                         engine.Log($"{source.Name} binds {chosenTarget.Name}.");
                     }
                     break;
@@ -8415,6 +8560,10 @@ namespace WRLDZ.Duel.TextEffects
                     SpellTrapAnswersAndActivationLocksRuntime.RegisterTurnSpellTrapLock(engine, who, source);
                     break;
                 case EffectActionKind.ContinuousOpponentCannotActivateQuickPlaySpells:
+                    break;
+                // TlmSpellTrapAnswersAndAttackLocks batch: the Ancient Gear attack lock is read by every activation gate
+                // (ContinuousNegationRuntime.ActivationLocked → TlmSpellTrapAnswersAndAttackLocksRuntime.ActivationLocked).
+                case EffectActionKind.ContinuousOpponentCannotActivateSpellTrapCardsWhileThisAttacks:
                     break;
                 // SpellTrapSealsAndImmunity batch: Sonic Jammer's FLIP lock; Dust Barrier's shield and Standby countdown are
                 // read by ShieldsFromSpell / OnStandbyPhase.
@@ -9150,6 +9299,26 @@ namespace WRLDZ.Duel.TextEffects
                     ChoiceAmongEffectsRuntime.RegisterSpellTrapCardLock(engine, who, source);
                     break;
 
+                // TlmEquipsAndLinkedContinuous batch: Legendary Black Belt's burn (fired by
+                // TlmEquipsAndLinkedContinuousRuntime.FireEquipSpellDestroysByBattle with the destroyed monster), Kaminote Blow's
+                // player effect; Nitro Unit's and Lone Wolf's ContinuousWhileFaceUp markers are read by that runtime.
+                case EffectActionKind.InflictDestroyedMonsterDefToOpponent:
+                    TlmEquipsAndLinkedContinuousRuntime.InflictDestroyedDef(engine, who, source, chosenTarget);
+                    break;
+                case EffectActionKind.DestroyMonstersBattlingNamedAtEndOfDamageStepThisTurn:
+                    TlmEquipsAndLinkedContinuousRuntime.RegisterEndOfDamageStepDestroy(engine, who, source, clause);
+                    break;
+                case EffectActionKind.InflictLostHostAtkToOpponentWhenHostDestroyedByBattle:
+                case EffectActionKind.LinkedMonsterUnaffectedByOpponentMonsterEffects:
+                    break;
+                // TlmFlipsControlAndZoneEvents batch: Dummy Golem's FLIP switch (the opponent selects at resolution).
+                case EffectActionKind.OpponentSelectsOwnMonsterSwitchControlWithThis:
+                    TlmFlipsControlAndZoneEventsRuntime.ApplyOpponentSelectsSwitchWithThis(engine, who, source);
+                    break;
+                // TlmFlipsControlAndZoneEvents batch: Criosphinx's marker (TlmFlipsControlAndZoneEventsRuntime.OnMonstersReturnedToHand).
+                case EffectActionKind.OwnersOfMonstersReturnedToHandSendOneHandCardToGy:
+                    break;
+
                 // SanctuaryAndZera batch: The Agent of Judgment - Saturn; Light of Judgment.
                 case EffectActionKind.InflictLpLeadAsDamageToOpponent:
                     SanctuaryAndZeraRuntime.ApplyLpLeadDamage(engine, who, source, clause);
@@ -9549,6 +9718,19 @@ namespace WRLDZ.Duel.TextEffects
                     break;
                 case EffectActionKind.GrantThisExtraAttackThisTurn:
                     BattleBoostsRuntime.GrantExtraAttack(engine, who, source, clause);
+                    break;
+                // TlmCostLinkedSpells batch: Double Attack / Gift of the Martyr / Minefield Eruption / Hero Signal.
+                case EffectActionKind.TargetGainsExtraAttackThisTurn:
+                    TlmCostLinkedSpellsRuntime.GrantExtraAttack(engine, who, source, clause, chosenTarget);
+                    break;
+                case EffectActionKind.TargetGainsCostTextAtkUntilEndOfTurn:
+                    TlmCostLinkedSpellsRuntime.ApplyCostAtkGain(engine, who, source, clause, chosenTarget, costNumeric);
+                    break;
+                case EffectActionKind.DestroyAllFaceUpNamedYouControl:
+                    TlmCostLinkedSpellsRuntime.DestroyAllFaceUpNamed(engine, who, source, clause);
+                    break;
+                case EffectActionKind.SpecialSummonLowLevelSeriesFromHandOrDeck:
+                    TlmCostLinkedSpellsRuntime.ResolveHeroSignal(engine, who, source, clause);
                     break;
                 case EffectActionKind.DeclareTypeForThisCardBattles:
                     BattleBoostsRuntime.DeclareType(engine, who, source, chosenTarget);
@@ -10033,6 +10215,16 @@ namespace WRLDZ.Duel.TextEffects
                     BattleRidersRuntime.SetDefZeroUntilEndOfTurn(engine, who, source, clause, chosenTarget);
                     break;
                 case EffectActionKind.GrantPiercingToYourNamedMonsters:
+                    break;
+                // TlmBattleShieldsAndBurnZero batch: Kozaky's Self-Destruct Button's GY trigger; the continuous ones are read
+                // by ContinuousProtections (Hieracosphinx), DuelEngine.ApplyEffectDamage (Des Wombat) and
+                // DuelEngine.CompleteFlipSummon (Grave Ohja).
+                case EffectActionKind.InflictDamageToPlayerWhoDestroyedThisSetCard:
+                    TlmBattleShieldsAndBurnZeroRuntime.BurnDestroyer(engine, who, source, clause);
+                    break;
+                case EffectActionKind.OpponentCannotSelectYourFaceDownDefenseMonstersAsAttackTarget:
+                case EffectActionKind.EffectDamageToControllerBecomesZero:
+                case EffectActionKind.InflictDamageToOpponentEachTimeYourMonsterFlipSummoned:
                     break;
                 case EffectActionKind.OpponentCannotAttackYourFaceUpRaceMonsters:
                 case EffectActionKind.ContinuousChangeOpponentRaceMonstersToAttack:
@@ -10599,6 +10791,13 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.SpecialSummonArmedThisFromGyInDefenseAtStandby:
                     BattleDestroyedGyRecoveryRuntime.OnStandby(engine, who, source);
                     break;
+                // TlmDerivedStatsAndProcedures batch: King of the Skull Servants' optional revival (cost: banish 1 other
+                // named card from the GY); Megarock Dragon's marker is read by its procedure (no resolution of its own).
+                case EffectActionKind.SpecialSummonThisFromGyByBanishingNamedFromGy:
+                    TlmDerivedStatsAndProceduresRuntime.ResolveBanishNamedReviveThis(engine, who, source, clause);
+                    break;
+                case EffectActionKind.OriginalAtkDefBecomeProcedureBanishCountTimes:
+                    break;
                 case EffectActionKind.SpecialSummonBattleDestroyedTargetGainsAtk:
                     BattleDestroyedGyRecoveryRuntime.ResolveRope(engine, who, source, clause, chosenTarget);
                     break;
@@ -10853,6 +11052,9 @@ namespace WRLDZ.Duel.TextEffects
                     }
                 }
             }
+            // TlmEquipsAndLinkedContinuous batch: Legendary Black Belt — an Equip Spell's trigger on its monster's battle
+            // destruction of an opponent's monster (EVENT_BATTLE_DESTROYING, the destroyed monster in the GY).
+            TlmEquipsAndLinkedContinuousRuntime.FireEquipSpellDestroysByBattle(engine, who, attacker, destroyed);
         }
 
         /// <summary>
@@ -11068,6 +11270,8 @@ namespace WRLDZ.Duel.TextEffects
             if (engine == null) return;
             // DamageStepRules batch: Continuous Destruction Punch (a continuous effect, before the triggers below).
             DamageStepRulesRuntime.FireEndOfDamageStep(engine, atkPlayer, defPlayer, attacker, defender);
+            // TlmEquipsAndLinkedContinuous batch: Kaminote Blow's player effect (EVENT_DAMAGE_STEP_END, continuous).
+            TlmEquipsAndLinkedContinuousRuntime.FireEndOfDamageStep(engine, attacker, defender);
             FireEndOfDamageFor(engine, atkPlayer, attacker, defender, selfIsAttacker: true);
             FireEndOfDamageFor(engine, defPlayer, defender, attacker, selfIsAttacker: false);
         }
@@ -11915,6 +12119,14 @@ namespace WRLDZ.Duel.TextEffects
                         // ChoiceAmongEffects batch: Fuh-Rin-Ka-Zan's Attributes, Penalty Game!'s opponent hand, the
                         // "Apply 1 of these effects" target chk.
                         if (ChoiceAmongEffectsRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
+                            break;
+                        // TlmCostLinkedSpells batch: Minefield Eruption's face-up Mine Golem, Double Attack's Battle Phase,
+                        // Hero Signal's battle-destroyed monster you controlled.
+                        if (TlmCostLinkedSpellsRuntime.TryActivationCondition(engine, who, card, c, out ok, out reason))
+                            break;
+                        // TlmEquipsAndLinkedContinuous batch: Lone Wolf's lone listed monster, Kaminote Blow's listed monster.
+                        if (TlmEquipsAndLinkedContinuousRuntime.TryActivationCondition(engine, who, card, c, out ok,
+                                out reason))
                             break;
                         ok = false;
                         reason = $"Unknown activation condition {c.ActivationCondition}.";
@@ -12816,7 +13028,7 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                         continue;
                     if (c.RequiresThisDefensePosition && card.Position != BattlePosition.Defense)
                         continue;
-                    if (c.RequiresThisDestroyedByOpponent && !card.SentByOpponentEffect)
+                    if (c.RequiresThisDestroyedByOpponent && !MfcLabCards3Runtime.NextStandbyAfterDestroyedByOpponent(engine, who, card))
                         continue;
                     if (c.RequiresDestroyedByBattleThisTurn && !card.DestroyedByBattleThisTurn)
                         continue;
@@ -15151,6 +15363,16 @@ static EffectClause SecondTargetClause(EffectClause c)
                 case EffectZoneFilter.FieldSetCards:
                     SimpleTriggersAndSpellsRuntime.CollectSetCards(who, opp, except, list);
                     break;
+                // TlmFlipsControlAndZoneEvents batch: White Ninja — a Defense Position monster on either field, itself included.
+                case EffectZoneFilter.FieldDefensePositionMonsters:
+                    foreach (var m in who.MonstersOnField().Concat(opp.MonstersOnField()))
+                    {
+                        if (m == null || m.Position != BattlePosition.Defense) continue;
+                        if (shieldable && engine.IsDragonTargetProtected(m)) continue;
+                        list.Add(m);
+                    }
+
+                    break;
                 // FlipCostsAndFusion batch: De-Fusion — a face-up Fusion Monster on either field.
                 case EffectZoneFilter.FieldFaceUpFusionMonsters:
                     FlipCostsAndFusionRuntime.CollectFaceUpFusions(engine, who, opp, list);
@@ -15537,6 +15759,11 @@ static EffectClause SecondTargetClause(EffectClause c)
             // RevivalEquipsAndGearfried batch: Fulfillment of the Contract / Re-Fusion — a Ritual / Fusion Monster in your GY
             // that can be Special Summoned (a properly summoned copy). Mirror: SpellTrapEffects routes them to this flow.
             RevivalEquipsAndGearfriedRuntime.FilterTargets(engine, who, c, except, list);
+            // TlmCostLinkedSpells batch: Double Attack — a face-up monster below the discarded monster's Level, no extra
+            // attack yet.
+            TlmCostLinkedSpellsRuntime.FilterTargets(engine, who, c, except, list);
+            // TlmEquipsAndLinkedContinuous batch: a name-list target (Legendary Black Belt, Lone Wolf) is one of those names.
+            TlmEquipsAndLinkedContinuousRuntime.FilterTargets(c, list);
 
             // Gust / Driving Snow (SpellTrapDestroyedResponse): "Destroy 1 Spell or Trap Card on the field" never
             // targets the activating card itself (Lua: IsExistingTarget(…, e:GetHandler())).
@@ -15803,6 +16030,9 @@ static EffectClause SecondTargetClause(EffectClause c)
                 case EffectZoneFilter.FieldSetCards:
                     // SimpleTriggersAndSpells batch: Granmarg takes an opponent's Set card, its own only when forced.
                     return SimpleTriggersAndSpellsRuntime.AutoPickSetCard(engine, who, targets);
+                case EffectZoneFilter.FieldDefensePositionMonsters:
+                    // TlmFlipsControlAndZoneEvents batch: White Ninja destroys the opponent's best defender first.
+                    return TlmFlipsControlAndZoneEventsRuntime.AutoPickDefender(engine, who, targets);
                 case EffectZoneFilter.FieldFaceDownMonsters:
                     // TargetedClassics Soft: Nobleman of Crossout prefers opp face-down (highest ATK).
                     if (c.PurgeDecksIfFlipMonster)
@@ -15894,6 +16124,8 @@ static EffectClause SecondTargetClause(EffectClause c)
             EffectZoneFilter.FieldFaceDownMonsters => EffectTargetKind.FaceDownMonsterOnField,
             // SimpleTriggersAndSpells batch: Granmarg's Set card (monster or Spell/Trap) on either field.
             EffectZoneFilter.FieldSetCards => EffectTargetKind.AnyCardOnField,
+            // TlmFlipsControlAndZoneEvents batch: White Ninja's Defense Position monster on either field (face-up or Set).
+            EffectZoneFilter.FieldDefensePositionMonsters => EffectTargetKind.AnyMonsterOnField,
             // FlipCostsAndFusion batch: De-Fusion's face-up Fusion Monster on either field (field-glance picker).
             EffectZoneFilter.FieldFaceUpFusionMonsters => EffectTargetKind.FaceUpMonsterOnField,
             // NegationMonsters batch (v161): Double Snare's face-up card on either field (monster or Spell/Trap).
@@ -16276,7 +16508,7 @@ static EffectClause SecondTargetClause(EffectClause c)
             else
             {
                 // CallsDiceAndSetTriggers batch (v163): destroyed while Set (Statue of the Wicked, Dark Coffin).
-                CallsDiceAndSetTriggersRuntime.NoteSpellTrapDestroying(card, wasFaceUp);
+                CallsDiceAndSetTriggersRuntime.NoteSpellTrapDestroying(card, wasFaceUp, destroyer);
                 engine.SendCardToGrave(owner, card, sentBy: source);
             }
             SpellTrapDestroyedResponseRuntime.NoteDestroyedByEffect(engine, owner, card, destroyer);

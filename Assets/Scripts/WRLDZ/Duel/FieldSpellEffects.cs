@@ -112,6 +112,8 @@ namespace WRLDZ.Duel
             TextEffects.SpecialSummonEffectsRuntime.ApplyBoard(engine);
             // DerivedAtkMonsters batch (v176): Great Maju Garzett / Maju Garzett — the Tribute-derived "ATK becomes".
             TextEffects.DerivedAtkMonstersRuntime.ApplyBoard(engine);
+            // TlmDerivedStatsAndProcedures batch: Megarock Dragon's original ATK/DEF from the monsters its procedure banished.
+            TextEffects.TlmDerivedStatsAndProceduresRuntime.ApplyBoard(engine);
             // DestroyWatchersAndSpellShields batch: Mokey Mokey Smackdown's "ATK becomes 3000 until the end of this turn".
             TextEffects.DestroyWatchersAndSpellShieldsRuntime.ApplyBoard(engine);
             // Spirit Ryu (BattleBoosts batch, v161): "+1000 ATK/DEF until the end of the Battle Phase".
@@ -291,6 +293,8 @@ namespace WRLDZ.Duel
                 host.AtkModifier += TextEffectRuntime.LpComparisonAtkDelta(engine, eq, host);
                 foreach (var c in ep.ClauseList)
                 {
+                    // TlmEquipsAndLinkedContinuous batch: Impenetrable Formation — only while 2+ monsters, none in Attack.
+                    if (TlmEquipsAndLinkedContinuousRuntime.SuppressesEquipBonus(engine, eq, c, host)) continue;
                     if (c != null && (c.EquipAtkBonus != 0 || c.EquipDefBonus != 0))
                     {
                         var atk = c.EquipAtkBonus;
@@ -474,6 +478,15 @@ namespace WRLDZ.Duel
                     // Every monster the opponent controls, face-down included. Not the flat "any monster" count.
                     n = engine.OpponentOf(who)?.MonsterCount ?? 0;
                     break;
+                // TlmDerivedStatsAndProcedures batch: Batteryman AA (face-up named monsters you control, all in one battle
+                // position), Lost Guardian (your face-up banished monsters of a Type), King of the Skull Servants (cards in
+                // your GY with either name).
+                case TextEffects.TlmDerivedStatsAndProceduresRuntime.FaceUpNamedYouControlAllInAttack:
+                case TextEffects.TlmDerivedStatsAndProceduresRuntime.FaceUpNamedYouControlAllInDefense:
+                case TextEffects.TlmDerivedStatsAndProceduresRuntime.YourFaceUpBanishedRace:
+                case TextEffects.TlmDerivedStatsAndProceduresRuntime.NamedOrAltInYourGy:
+                    n = TextEffects.TlmDerivedStatsAndProceduresRuntime.Count(who, clause);
+                    break;
                 case "OppRaceFaceUpAndGy":
                 {
                     // Buster Blader: face-up matching monsters the opponent controls + their GY.
@@ -492,7 +505,9 @@ namespace WRLDZ.Duel
             // a printed "?" included.
             if (clause.SelfStatIsSet)
             {
-                self.SelfSetAtk = Math.Max(0, clause.Amount * n);
+                // TlmDerivedStatsAndProcedures batch: a DEF-only set (Lost Guardian's "original DEF", Amount 0) leaves the
+                // printed ATK alone.
+                if (clause.Amount != 0) self.SelfSetAtk = Math.Max(0, clause.Amount * n);
                 if (clause.DefAmount != 0) self.SelfSetDef = Math.Max(0, clause.DefAmount * n);
                 return;
             }
@@ -677,10 +692,12 @@ namespace WRLDZ.Duel
             if (engine == null || clause == null) return;
             // LvChain batch: this clause is only live while this copy was Special Summoned by the named card's
             // effect (Ultimate Insect LV3's −300 ATK aura), so a copy that reached the field any other way gets
-            // nothing. LvChainRuntime already records the summon; this only reads it.
+            // nothing. LvChainRuntime already records the summon; this only reads it. TlmDerivedStatsAndProcedures
+            // batch: only in the field presence that Summon began (the Lua flag resets when the monster leaves the
+            // field or is turned face-down).
             if (clause.RequiresThisSpecialSummonedByNamed &&
                 !string.IsNullOrEmpty(clause.SpecialSummonedByNamedCard) &&
-                !TextEffects.LvChainRuntime.SpecialSummonedByNamed(source, clause.SpecialSummonedByNamedCard))
+                !TextEffects.LvChainRuntime.SpecialSummonedByNamedThisPresence(source, clause.SpecialSummonedByNamedCard))
                 return;
             // AttackShieldsAndDamageZero batch: Theban Nightmare — only while its controller has no cards in hand nor in the
             // Spell & Trap Zones (no condition on every other aura).

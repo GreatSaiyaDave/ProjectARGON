@@ -434,6 +434,8 @@ namespace WRLDZ.Duel.TextEffects
             if (!string.IsNullOrEmpty(clause.EquipHostName) && !monster.IsNamed(clause.EquipHostName) &&
                 (string.IsNullOrEmpty(clause.AltNamedCard) || !monster.IsNamed(clause.AltNamedCard)))
                 return false;
+            // TlmEquipsAndLinkedContinuous batch: Legendary Black Belt — one of the listed names (IsCode(list)).
+            if (!TlmEquipsAndLinkedContinuousRuntime.EquipLimitAllows(clause, monster)) return false;
             if (!string.IsNullOrEmpty(clause.TargetSeriesName))
             {
                 if (equip?.Def == null || !equip.Def.IsEquipSpell || equip.Def.IsMonster) return false;

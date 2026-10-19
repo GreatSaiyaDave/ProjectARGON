@@ -135,6 +135,9 @@ namespace WRLDZ.Duel.TextEffects
                     break;
             }
 
+            // TlmBattleShieldsAndBurnZero batch: a trigger link's burn (Grave Ohja's Flip Summon trigger).
+            if (TriggerChainResponsesRuntime.IsTriggerLink(link))
+                list.AddRange(TlmBattleShieldsAndBurnZeroRuntime.TriggerLinkDamageClauses(prog));
             return list;
         }
 
@@ -146,6 +149,8 @@ namespace WRLDZ.Duel.TextEffects
             switch (c.Action)
             {
                 case EffectActionKind.InflictDamageToOpponent:
+                // TlmBattleShieldsAndBurnZero batch: Grave Ohja's Flip Summon trigger.
+                case EffectActionKind.InflictDamageToOpponentEachTimeYourMonsterFlipSummoned:
                 case EffectActionKind.InflictDamageHalfTributedAtk:
                 case EffectActionKind.InflictDamageEqualToAtk:
                 case EffectActionKind.DestroyOppAttackThenDamage:

@@ -279,6 +279,11 @@ activated at all as covered — the Continuous S/T activation stress test reject
 
 AI may map additional cards **only** onto the same `EffectActionKind` / `EffectTiming` enums (no free-form invent).
 
+## Pass v211 (card batch v211-tlm-fet)
+
+Compiler v211; 62 cards Implemented (OncePerTurnSoft 20, OncePerTurnHard 8, TLM groups 34), 4 intended fail-closes to Stub (Lightning Dragon Ruler of Drafts, Rose Lover, Valerifawn, Xyz-Raypierce). Report `Docs/CURRICULUM_BATCH_v211-tlm-fet.md`.
+Groups: OncePerTurnSoft, OncePerTurnHard (`IsBoilerplate` no longer drops the hard-OPT sentence; `StampNameOpt`; `OncePerTurnHardRuntime` per-player name records), TlmBattleShieldsAndBurnZero, TlmSpellTrapAnswersAndAttackLocks, TlmDerivedStatsAndProcedures, TlmCostLinkedSpells, TlmEquipsAndLinkedContinuous, TlmFlipsControlAndZoneEvents (each `Batches/<Group>Atoms.cs` + `Runtime.cs`, tests `Rules/Batches/<Group>RegressionTests.cs`). Deferred: Rose Lover, Fairy Cheer Girl, Herald of Pure Light, Battlecruiser Dianthus, Behemoth the King of All Animals, Elemental Mistress Doriado.
+
 ## Pass v159 (card batch v159-lon-b)
 
 Compiler v159; 26 cards Implemented (607 to 633), 4 Spirit Message cards Structural, 0 losses. Report `Docs/CURRICULUM_BATCH_v159-lon-b.md`.

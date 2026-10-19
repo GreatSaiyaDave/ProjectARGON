@@ -312,14 +312,14 @@ namespace WRLDZ.Duel.TextEffects
             });
         }
 
-        static BattlePosition AiPosition(CardInstance c) =>
+        internal static BattlePosition AiPosition(CardInstance c) =>
             c?.Def != null && c.Def.def > c.Def.atk ? BattlePosition.Defense : BattlePosition.Attack;
 
         /// <summary>
         /// Special Summon <paramref name="pick"/> face-up from its controller's hand or Deck (a Deck instance takes its copy
         /// and the Deck is shuffled). False when it is no longer there or the Summon is refused (the card stays).
         /// </summary>
-        static bool SummonFromHandOrDeck(DuelEngine engine, DuelistState who, CardInstance source, CardInstance pick,
+        internal static bool SummonFromHandOrDeck(DuelEngine engine, DuelistState who, CardInstance source, CardInstance pick,
             BattlePosition pos, int zone)
         {
             var name = NameOf(source, "Effect");

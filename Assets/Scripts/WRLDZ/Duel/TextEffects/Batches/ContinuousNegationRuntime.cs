@@ -100,6 +100,9 @@ namespace WRLDZ.Duel.TextEffects
             if (SpellTrapAnswersAndActivationLocksRuntime.ActivationLocked(engine, who, card, out reason)) return true;
             // SpellTrapSealsAndImmunity batch: Sonic Jammer's Spell Card lock (the card's activation, from the hand or Set).
             if (SpellTrapSealsAndImmunityRuntime.ActivationLocked(engine, who, card, out reason)) return true;
+            // TlmSpellTrapAnswersAndAttackLocks batch: the Ancient Gear lock while it attacks (the card's activation, from the
+            // hand or Set).
+            if (TlmSpellTrapAnswersAndAttackLocksRuntime.ActivationLocked(engine, who, card, out reason)) return true;
             // LocksRedirectsAndActivity batch: "you cannot activate cards or effects" — the player-wide
             // activation lock (Chaos Emperor Dragon - Envoy of the End), the same hub every activation site asks.
             if (LocksRedirectsAndActivityRuntime.ActivationLocked(engine, who, card))

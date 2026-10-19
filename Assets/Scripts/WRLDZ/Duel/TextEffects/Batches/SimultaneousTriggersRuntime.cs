@@ -311,6 +311,9 @@ namespace WRLDZ.Duel.TextEffects
                 // Link of an effect that does not activate, with the opponent's response window (2026-10-18 fix).
                 if (!MonsterEffects.HasSentFromFieldToGyEffect(engine, card, destroyed, destroyedByBattle)) continue;
                 var prog = card != null ? CompiledEffectCache.GetOrCompile(card) : null;
+                // OncePerTurnHard batch: this copy's mandatory trigger activates with its link; a second copy sent by the same
+                // event has no trigger left (HasSentFromFieldToGyEffect above is false for it).
+                OncePerTurnHardRuntime.NoteSentToGyQueued(engine, owner, card, prog);
                 var gy = prog != null && prog.FullyCompiled ? prog.ClausesFor(EffectTiming.SentFromFieldToGy) : null;
                 entries.Add(new Entry
                 {
@@ -402,6 +405,8 @@ namespace WRLDZ.Duel.TextEffects
             // Its own queued trigger running now (a deferred or held entry replaying the send) resolves; it is not queued again.
             if (ReferenceEquals(StateOf(engine).Replaying, card)) return false;
             if (!ShouldDeferPastChain(engine, new[] { owner })) return false;
+            // OncePerTurnHard batch: queued now, so its once per turn by name is used now.
+            OncePerTurnHardRuntime.NoteSentToGyQueued(engine, owner, card, prog);
             engine.Log($"{card.Name}: its effect activates once the current Chain has resolved.");
             StateOf(engine).Collected.Add(new Entry
             {
@@ -410,6 +415,31 @@ namespace WRLDZ.Duel.TextEffects
                 Card = card,
                 Turn = engine.TurnNumber,
                 Optional = gy.TrueForAll(c => c.IsOptional),
+                Run = run
+            });
+            return true;
+        }
+
+        /// <summary>
+        /// TlmFlipsControlAndZoneEvents batch: a mandatory trigger of <paramref name="card"/> (controlled by
+        /// <paramref name="controller"/>; Criosphinx) that happened while a Chain resolves. When play opens after that
+        /// Chain and the opponent may respond, it is queued (<paramref name="run"/> = its resolution) and goes on the next
+        /// simultaneous-trigger Chain, as <see cref="TryDeferSentToGy"/>. False: resolve it as before.
+        /// </summary>
+        public static bool TryDeferTriggerPastChain(DuelEngine engine, DuelistState controller, CardInstance card,
+            Action run)
+        {
+            if (engine == null || controller == null || card?.Def == null || run == null) return false;
+            if (ReferenceEquals(StateOf(engine).Replaying, card)) return false;
+            if (!ShouldDeferPastChain(engine, new[] { controller })) return false;
+            engine.Log($"{card.Name}: its effect activates once the current Chain has resolved.");
+            StateOf(engine).Collected.Add(new Entry
+            {
+                Kind = EntryKind.Fused,
+                Controller = controller,
+                Card = card,
+                Turn = engine.TurnNumber,
+                Optional = false,
                 Run = run
             });
             return true;

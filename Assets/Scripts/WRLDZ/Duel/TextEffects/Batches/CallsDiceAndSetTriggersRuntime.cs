@@ -73,6 +73,8 @@ namespace WRLDZ.Duel.TextEffects
             /// <summary>The <see cref="CardInstance.GyEntryStamp"/> of the GY trip this destruction makes.</summary>
             public int Stamp;
             public bool FaceDown;
+            /// <summary>TlmBattleShieldsAndBurnZero batch: the player whose card destroyed it (Lua rp), when known.</summary>
+            public DuelistState Destroyer;
         }
 
         sealed class TokenBurn
@@ -158,13 +160,27 @@ namespace WRLDZ.Duel.TextEffects
 
         /// <summary>
         /// TextEffectRuntime.DestroyCard / SpellTrapEffects' legacy Heavy Storm: <paramref name="card"/>, a card in a
-        /// Spell &amp; Trap Zone (or the Field Zone), is about to be destroyed and sent to the GY.
+        /// Spell &amp; Trap Zone (or the Field Zone), is about to be destroyed and sent to the GY. <paramref name="destroyer"/>:
+        /// the player whose card destroys it (TlmBattleShieldsAndBurnZero batch, Kozaky's Self-Destruct Button), when known.
         /// </summary>
-        public static void NoteSpellTrapDestroying(CardInstance card, bool wasFaceUp)
+        public static void NoteSpellTrapDestroying(CardInstance card, bool wasFaceUp, DuelistState destroyer = null)
         {
             if (card == null) return;
             s_destroyed.Remove(card);
-            s_destroyed.Add(card, new DestroyRecord { Stamp = card.GyEntryStamp + 1, FaceDown = !wasFaceUp });
+            s_destroyed.Add(card, new DestroyRecord
+            {
+                Stamp = card.GyEntryStamp + 1, FaceDown = !wasFaceUp, Destroyer = destroyer
+            });
+        }
+
+        /// <summary>
+        /// TlmBattleShieldsAndBurnZero batch: the player who destroyed <paramref name="card"/> while it was face-down, on its
+        /// latest GY trip (no later trip since; it may have left the GY after its trigger activated), or null.
+        /// </summary>
+        public static DuelistState DestroyedFaceDownBy(DuelEngine engine, CardInstance card)
+        {
+            if (engine == null || card == null || !s_destroyed.TryGetValue(card, out var r)) return null;
+            return r.FaceDown && card.GyEntryStamp == r.Stamp ? r.Destroyer : null;
         }
 
         /// <summary>

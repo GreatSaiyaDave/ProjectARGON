@@ -295,6 +295,10 @@ namespace WRLDZ.Duel.Rules
             { if (engine.IsAwaitingEffectTarget) engine.CancelEffectTargeting(); else engine.PassResponse(); }
             ToMainPhase2(engine, p);
             var eq = victim.EquippedTo == hunter && p.TryFindSpellTrap(victim, out _);
+            // OncePerTurnHard batch: the victim's "sent from the field to the GY" effect already activated when it was destroyed
+            // by battle this turn (CountLimit(1, id)), so its second departure is checked on the next turn (the opponent's).
+            var nextTurn = ReachOpponentMain(engine);
+            eq = eq && nextTurn && victim.EquippedTo == hunter && p.TryFindSpellTrap(victim, out _);
             o.Deck.Insert(0, Celtic); // 1400 ATK / 1200 DEF: a legal search for either card
             int pd = p.DeckCount, od = o.DeckCount, ph = p.Hand.Count, oh = o.Hand.Count;
             if (hostDestroyed)
