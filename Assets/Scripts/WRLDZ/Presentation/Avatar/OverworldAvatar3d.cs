@@ -393,6 +393,10 @@ namespace WRLDZ.Presentation
             // the face cards were draped in ApplyFace, before the stance and the stature settled: drape them on the final
             // body (left as they were, a refitted stature left the nose card up to 1.3 mm under the skin)
             if (FaceRigOn && TryGetComponent<AvatarFaceRig>(out var faceRig)) faceRig.Refit();
+            // hair that swings with the head and never clips the skull, neck, chest or eyewear (HairPhysics), bound to
+            // the style and body worn now (no grafted style = off)
+            if (_hairSmr != null || TryGetComponent<HairPhysics>(out _))
+                HairPhysics.Ensure(gameObject).Bind(TryGetComponent<Animator>(out var hairAnim) ? hairAnim : null, _smr, _hairSmr);
             ApplySilhouette(look);
             if (_appliedAlpha < 0.999f) ApplyAlpha(_appliedAlpha);
             if (_renderersOff) foreach (var r in GetComponentsInChildren<Renderer>(true)) r.enabled = false;

@@ -819,4 +819,38 @@ asset on the lenses that moves that represents reflection/refraction."
   card edge while every parameter keeps its meaning.
 - **Builds:** `AvatarAnimeFace` and `AvatarLensGlass` load through `Resources/WRLDZ/Avatar3D/Materials/*.mat` (a shader
   reached only by `Shader.Find` is stripped from player builds; the living face had no other reference).
-- **Open:** Weevil's bangs pass through the frame and lenses (the hair-physics pass treats eyewear as a collider).
+- Weevil's bangs pass behind the frame and lenses since the hair-physics pass below (eyewear clearance map).
+
+## Hair physics: sway, colliders, eyewear, manes over coats (2026-10-19)
+
+Owner: "the hair and assets need to obey real physics and not clip". `HairPhysics` (on the avatar root, order 915,
+bound at the end of `OverworldAvatar3d.ApplyCustomization`) feeds `WRLDZ/AvatarHair`, which moves each vertex in all
+three passes (forward, shadow, depth) through `HairPhysics(p)`:
+
+- **Sway.** One damped spring (1.6 Hz, damping 0.28, plus a little air drag) stands for the hanging mass: it lags the
+  head's acceleration (a steady walk carries the hair along) and falls toward real gravity when the head tilts (the
+  sculpts are shaped for an upright head). A vertex takes the swing in proportion to how far it reaches out of the
+  skull (roots never move), fully below the ears, a quarter above them (gelled spikes stay put).
+- **Skull, neck, chest** (measured from the body's bind pose): a swung strand is kept out, but only a strand whose
+  sculpted rest position is outside them, so no sculpt changes shape at rest.
+- **Arms.** Upper arms and forearms as capsules: the body's median arm radius plus 2 cm for a sleeve. Always kept out,
+  because the sculpts were shaped with the arms held out and a lowered arm passed through Mai's mane. Measuring the
+  coat instead gave 11 cm round Mai's arm and wrapped her hair round her shoulders.
+- **Eyewear.** Once `EyewearGlass` has measured its lenses, a clearance map is drawn in the glasses' plane: how far
+  forward a strand may come at each spot. That is 1.5 mm behind the glass and the frame, ramping out past the rim at
+  35°, and never closer than 3 mm in front of the face's skin. Weevil's brow sits at the lens plane, so a flat "push
+  behind the lens" sank strands into the skin. His bangs now pass behind the frame and show through the clear lenses.
+- **Manes over coats.** Mai's Meshy coat stands 8 cm off her back and her mane hung inside it. Pegasus' hair hung
+  inside his jacket below the shoulder blades. The worn layers are baked once, a few frames after binding so the
+  animator has posed them (a coat's back panels may ride the arm bones; Mai's do), in the upper chest's frame. The
+  sleeves and the head are left out. Per spot on the back, the depth of the hair's deepest layer inside them is taken,
+  counting only strands whose nearest way out is the back (a five-view hull decides this). That depth is smoothed,
+  and every layer at that spot, from the mane's inner layer back, moves back by it. The mane keeps its thickness:
+  projecting only the inner layers out crushed the block and turned the shell inside out (holes). Front locks and
+  curls through a shoulder are left alone. The maps are cached per set of worn meshes and hair.
+- Probes used: per-piece back depth (body 10.5 cm, Mai's coat 18.8 cm, her hair 15 cm behind the upper chest),
+  baked-hull-vs-now comparison, off/on contact sheets for Weevil, Yugi, Pegasus, Téa, Bakura, Mai, Joey, Kaiba, Ishizu
+  and Yami Bakura.
+- **Open:** the coat is still rigid to the hair (the mane rests on it, the coat never yields). The hull comes from
+  the pose a few frames after binding: an AR deploy pose at spawn would bake that pose (cached per worn set).
+  Curls passing through a coat's shoulder still clip there.

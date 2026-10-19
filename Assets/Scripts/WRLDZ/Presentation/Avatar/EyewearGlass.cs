@@ -59,6 +59,7 @@ namespace WRLDZ.Presentation
             var headSlot = -1;
             var bones = smr.bones;
             for (var b = 0; b < bones.Length; b++) if (bones[b] == head) { headSlot = b; break; }
+            _headSlot = headSlot;
             var bind = mesh.bindposes;
             Matrix4x4 m;
             if (headSlot >= 0 && headSlot < bind.Length) m = head.localToWorldMatrix * bind[headSlot];
@@ -148,6 +149,39 @@ namespace WRLDZ.Presentation
         }
 
         Transform _mount;
+        int _headSlot = -1;
+
+        /// <summary>Lens <paramref name="i"/> (0 or 1) in world space: centre, radius and outward normal. False until measured (HairPhysics tucks bangs behind it).</summary>
+        public bool Measured => _measured && _lenses > 0;
+
+        /// <summary>Lens <paramref name="i"/> in head-bone space (the space <see cref="TryMeshToHead"/> maps the mesh into).</summary>
+        public bool TryLensLocal(int i, out Vector3 centre, out float radius, out Vector3 normal)
+        {
+            centre = default; normal = default; radius = 0f;
+            if (!Measured || i < 0 || i > 1) return false;
+            centre = _centreLocal[i]; normal = _normalLocal[i]; radius = _radiusLocal[i];
+            return true;
+        }
+
+        /// <summary>The eyewear mesh and its rest mapping into head-bone space (the sculpt rides the head alone; seating included).</summary>
+        public bool TryMeshToHead(out Mesh mesh, out Matrix4x4 meshToHead)
+        {
+            mesh = _smr != null ? _smr.sharedMesh : null; meshToHead = Matrix4x4.identity;
+            if (!Measured || mesh == null || !mesh.isReadable || _headSlot < 0 || _headSlot >= mesh.bindposes.Length) return false;
+            var seat = _mount != null ? Matrix4x4.TRS(_mount.localPosition, _mount.localRotation, _mount.localScale) : Matrix4x4.identity;
+            meshToHead = seat * mesh.bindposes[_headSlot];
+            return true;
+        }
+
+        public bool TryLens(int i, out Vector3 centre, out float radius, out Vector3 normal)
+        {
+            centre = default; normal = default; radius = 0f;
+            if (!_measured || _lenses == 0 || _head == null || i < 0 || i > 1 || !isActiveAndEnabled) return false;
+            centre = _head.TransformPoint(_centreLocal[i]);
+            normal = _head.TransformDirection(_normalLocal[i]).normalized;
+            radius = _radiusLocal[i] * _head.lossyScale.x;
+            return true;
+        }
 
         void OnDestroy() { if (_mount != null) Destroy(_mount.gameObject); }
 
