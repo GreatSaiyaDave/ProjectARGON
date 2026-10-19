@@ -167,21 +167,26 @@ namespace WRLDZ.Duel.TextEffects
         {
             if (engine == null || who?.Hand == null || cards == null) return;
             var gone = new List<string>();
-            // Discarded by an effect of the opponent's card (Forced Requisition): one discard event whose "sent from
-            // your hand to your GY by an opponent's card effect" triggers fire once all the cards are gone.
-            var byOpponent = byEffectOf != null && !ReferenceEquals(byEffectOf, who);
-            if (byOpponent) DiscardTriggersRuntime.BeginScope(engine);
-            else DiscardEvents.Begin(engine);
-            foreach (var c in cards)
+            // Discarded by an effect of the opponent's card (Forced Requisition) or of its own (Graceful Charity): one
+            // discard event whose "discarded / sent from your hand to your GY by a card effect" triggers fire once all the
+            // cards are gone (EenDarkWorldDiscards batch: the Dark World triggers start on either player's effect).
+            var by = byEffectOf ?? who;
+            DiscardTriggersRuntime.BeginScope(engine);
+            try
             {
-                if (c == null || !who.Hand.Contains(c)) continue;
-                engine.SendCardToGrave(who, c, sentBy: source);
-                DiscardEvents.Record(engine, who, c, DiscardCause.Effect, byEffectOf);
-                if (byOpponent) DiscardTriggersRuntime.NoteDiscard(engine, who, c, byEffectOf);
-                gone.Add(c.Name);
+                foreach (var c in cards)
+                {
+                    if (c == null || !who.Hand.Contains(c)) continue;
+                    engine.SendCardToGrave(who, c, sentBy: source);
+                    DiscardEvents.Record(engine, who, c, DiscardCause.Effect, byEffectOf);
+                    DiscardTriggersRuntime.NoteDiscard(engine, who, c, by);
+                    gone.Add(c.Name);
+                }
             }
-            if (byOpponent) DiscardTriggersRuntime.EndScope(engine);
-            else DiscardEvents.End(engine);
+            finally
+            {
+                DiscardTriggersRuntime.EndScope(engine);
+            }
 
             if (gone.Count > 0)
                 engine.Log($"{who.Name} discards {string.Join(", ", gone)} ({source?.Name}).");

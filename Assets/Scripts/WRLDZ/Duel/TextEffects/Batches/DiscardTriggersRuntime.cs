@@ -28,6 +28,10 @@ namespace WRLDZ.Duel.TextEffects
     /// mandatory, so Cancel discards the card the AI would. The AI chooses with <see cref="PickOwnDiscard"/>.
     /// Triggers of the random discard wait for that choice. Its 1000 LP cost is paid as the card is activated
     /// (<see cref="ActivationLpCostRuntime"/>), not when it resolves, so a negated Duo still costs the LP.</item>
+    /// <item><b>Any card effect</b> (EenDarkWorldDiscards batch): a noted discard also queues
+    /// <see cref="EffectTiming.DiscardedToGyByCardEffect"/> — by either player's effect, the player recorded — which
+    /// <see cref="Flush"/> hands to <see cref="EenDarkWorldDiscardsRuntime.QueueDiscardedTrigger"/> after the inline
+    /// triggers, so the Dark World monsters discarded together go on one simultaneous-trigger Chain.</item>
     /// <item><b>Penguin Knight</b>: <see cref="ApplyShuffleGraveyardIntoDeck"/>.</item>
     /// </list>
     /// </summary>
@@ -38,12 +42,15 @@ namespace WRLDZ.Duel.TextEffects
             public readonly DuelistState Owner;
             public readonly CardInstance Card;
             public readonly EffectTiming Timing;
+            /// <summary>EenDarkWorldDiscards batch: the player whose card effect moved the card.</summary>
+            public readonly DuelistState By;
 
-            public Queued(DuelistState owner, CardInstance card, EffectTiming timing)
+            public Queued(DuelistState owner, CardInstance card, EffectTiming timing, DuelistState by = null)
             {
                 Owner = owner;
                 Card = card;
                 Timing = timing;
+                By = by;
             }
         }
 
@@ -92,6 +99,9 @@ namespace WRLDZ.Duel.TextEffects
             // GyHandAndSummonEventTriggers batch (Blessings of the Nile): each discard by the opponent's card effect
             // is one recorded send; consumed at the next GY-send checkpoint.
             GyHandAndSummonEventTriggersRuntime.NoteDiscardedByEffect(engine, owner, card, byEffectOf);
+            // EenDarkWorldDiscards batch: "If this card is discarded to the Graveyard by a card effect" — either player's
+            // effect (the Dark World monsters); whose effect it was decides their bonus.
+            Note(engine, owner, card, byEffectOf, EffectTiming.DiscardedToGyByCardEffect, anyPlayer: true);
         }
 
         /// <summary>
@@ -130,16 +140,16 @@ namespace WRLDZ.Duel.TextEffects
         }
 
         static void Note(DuelEngine engine, DuelistState owner, CardInstance card, DuelistState byEffectOf,
-            EffectTiming timing)
+            EffectTiming timing, bool anyPlayer = false)
         {
             if (engine == null || owner == null || card?.Def == null || byEffectOf == null) return;
             // "by an effect of a card controlled by your opponent": its owner's own effects do not count.
-            if (ReferenceEquals(byEffectOf, owner)) return;
+            if (!anyPlayer && ReferenceEquals(byEffectOf, owner)) return;
             if (owner.Graveyard == null || !owner.Graveyard.Contains(card)) return;
             var prog = CompiledEffectCache.GetOrCompile(card);
             if (prog == null || !prog.FullyCompiled || prog.ClausesFor(timing).Count == 0) return;
             var st = StateOf(engine);
-            st.Queue.Add(new Queued(owner, card, timing));
+            st.Queue.Add(new Queued(owner, card, timing, byEffectOf));
             if (st.Depth == 0) Flush(engine);
         }
 
@@ -155,14 +165,30 @@ namespace WRLDZ.Duel.TextEffects
             if (st.Depth > 0 || st.Queue.Count == 0) return;
             if (engine.IsResolvingChain) return;
             if (engine.PendingActivation != null && engine.PendingActivation.AwaitingForcedDiscardChoice) return;
-            var batch = st.Queue.ToList();
+            // EenDarkWorldDiscards batch: the "discarded by a card effect" triggers go on one simultaneous-trigger Chain
+            // (SEGOC), so they are all queued after the inline triggers have fired, then flushed once.
+            var batch = st.Queue.OrderBy(q => q.Timing == EffectTiming.DiscardedToGyByCardEffect ? 1 : 0).ToList();
             st.Queue.Clear();
+            var queuedChainTriggers = false;
             foreach (var q in batch)
             {
                 if (engine.GameOver) break;
+                if (q.Timing == EffectTiming.DiscardedToGyByCardEffect)
+                {
+                    if (InDuel(engine, q.Owner) &&
+                        EenDarkWorldDiscardsRuntime.QueueDiscardedTrigger(engine, q.Owner, q.Card, q.By))
+                        queuedChainTriggers = true;
+                    continue;
+                }
+
                 Fire(engine, q);
             }
+
+            if (queuedChainTriggers && !engine.GameOver) engine.NotifyPublic();
         }
+
+        static bool InDuel(DuelEngine engine, DuelistState who) =>
+            ReferenceEquals(who, engine.Player) || ReferenceEquals(who, engine.Opponent);
 
         static void Fire(DuelEngine engine, Queued q)
         {
@@ -369,7 +395,9 @@ namespace WRLDZ.Duel.TextEffects
                 if (c?.Def == null) continue;
                 var prog = CompiledEffectCache.GetOrCompile(c);
                 if (prog != null && prog.FullyCompiled &&
-                    prog.ClausesFor(EffectTiming.DiscardedFromHandByOpponentEffect).Count > 0)
+                    (prog.ClausesFor(EffectTiming.DiscardedFromHandByOpponentEffect).Count > 0 ||
+                     // EenDarkWorldDiscards batch: a Dark World monster gains from any effect discard.
+                     prog.ClausesFor(EffectTiming.DiscardedToGyByCardEffect).Count > 0))
                     return c;
             }
 

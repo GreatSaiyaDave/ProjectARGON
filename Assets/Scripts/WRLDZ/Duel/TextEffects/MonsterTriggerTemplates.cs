@@ -198,9 +198,11 @@ namespace WRLDZ.Duel.TextEffects
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxBattleGyFilterSsDeck = new(
-            @"(?:If|When) this card is destroyed by battle and sent to the (?:GY|Graveyard):\s*" +
+            // CrvDestroyedTriggersAndFloats batch: also the comma form "…sent to the Graveyard, you can Special Summon …
+            // from your Deck in face-up Attack Position." (UFOroid).
+            @"(?:If|When) this card is destroyed by battle and sent to the (?:GY|Graveyard)(?::|,)\s*" +
             @"(?:You can )?Special Summon 1 (\w+)(?:-Type)? monster with (\d+) or less (ATK|DEF) from your Deck" +
-            @"(?:, in (?:face-up )?Attack Position)?\.?",
+            @"(?:,? in (?:face-up )?Attack Position)?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         static readonly Regex RxBattleGyAddNamed = new(

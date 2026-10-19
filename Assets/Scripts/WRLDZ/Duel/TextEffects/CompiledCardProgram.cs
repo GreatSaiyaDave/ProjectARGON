@@ -241,6 +241,15 @@ namespace WRLDZ.Duel.TextEffects
         /// GY-entry stamp of a hand trip, fired once play is idle. Appended — EffectTiming is serialized as an int.
         /// </summary>
         SentFromHandToGy,
+        /// <summary>
+        /// EenDarkWorldDiscards batch: "If this card is discarded to the Graveyard by a card effect:" — this card was
+        /// discarded from its owner's hand to the GY by ANY card effect, either player's (ygopro SINGLE TRIGGER on
+        /// EVENT_TO_GRAVE, previous location hand, r has REASON_DISCARD|REASON_EFFECT: the Dark World monsters). A cost
+        /// discard and the hand size rule never trigger it. Queued by <see cref="DiscardTriggersRuntime.NoteDiscard"/>
+        /// (which records whose card effect discarded it), fired on the simultaneous-trigger Chain by
+        /// <see cref="EenDarkWorldDiscardsRuntime"/>. Appended — EffectTiming is serialized as an int.
+        /// </summary>
+        DiscardedToGyByCardEffect,
     }
 
     public enum EffectActionKind
@@ -3978,6 +3987,223 @@ namespace WRLDZ.Duel.TextEffects
         /// arm is a no-op.
         /// </summary>
         OwnersOfMonstersReturnedToHandSendOneHandCardToGy,
+        /// <summary>
+        /// CrvEmptyHandAndAuras batch — Mechanical Hound (c22512237: EFFECT_CANNOT_ACTIVATE on the opponent,
+        /// re:IsHasType(EFFECT_TYPE_ACTIVATE) and re:IsSpellEffect()) marker (ContinuousWhileFaceUp): the opponent of this
+        /// card's controller cannot activate Spell Cards (from the hand or Set; the effects of face-up Spells stay legal),
+        /// live only while <see cref="EffectClause.WhileCondition"/> holds. Read by every activation gate
+        /// (ContinuousNegationRuntime.ActivationLocked → <see cref="CrvEmptyHandAndAurasRuntime.ActivationLocked"/>); the
+        /// ApplyClause arm is a no-op.
+        /// </summary>
+        ContinuousOpponentCannotActivateSpellCards,
+        /// <summary>
+        /// CrvEmptyHandAndAuras batch — Gyroid (c18325492: EFFECT_INDESTRUCTABLE_COUNT, SetCountLimit(1), REASON_BATTLE)
+        /// marker (ContinuousWhileFaceUp): the first time each turn this face-up card would be destroyed by battle, it is
+        /// not (battle damage applies normally). DuelEngine's damage calculation asks
+        /// <see cref="CrvEmptyHandAndAurasRuntime.IgnoresBattleDestruction"/>, which spends the count; it is fresh each turn
+        /// and in each new field presence or face-up stint. The ApplyClause arm is a no-op.
+        /// </summary>
+        CannotBeDestroyedByBattleOncePerTurn,
+        /// <summary>
+        /// CrvBattleStepRiders batch — ContinuousWhileFaceUp, no Chain Link (Lua EFFECT_UPDATE_ATTACK, SINGLE_RANGE, condition
+        /// PHASE_DAMAGE / PHASE_DAMAGE_CAL): this face-up, unnegated monster's ATK changes by the signed <see cref="EffectClause.Amount"/>
+        /// for the damage calculation of a battle in which it has the role its flag names —
+        /// <see cref="EffectClause.DamageStepOnlyWhenAttacking"/>: it attacks a monster (Steamroid +500);
+        /// <see cref="EffectClause.RequiresThisIsAttackTarget"/>: it is the attack target (Steamroid -500);
+        /// <see cref="EffectClause.RequiresDirectAttack"/>: it attacks directly (Etoile Cyber +500). Added to
+        /// <c>CardInstance.DamageStepAtkBonus</c> by <see cref="CrvBattleStepRidersRuntime.OnDamageCalculation"/>; the
+        /// ApplyClause arm is a no-op.
+        /// </summary>
+        ThisAtkChangesDuringDamageStepByBattleRole,
+        /// <summary>
+        /// CrvBattleStepRiders batch — Chthonian Soldier (c50916353), SentFromFieldToGy, mandatory trigger (Lua TRIGGER_F
+        /// EVENT_BATTLE_DESTROYED, in the GY, destroyed as the attack target of an opponent's monster): inflict to the
+        /// opponent the battle damage this card's controller took from that battle (Duel.GetBattleDamage(tp)); it does not
+        /// activate when that is 0 (<see cref="CrvBattleStepRidersRuntime.SendConditionHolds"/>,
+        /// <see cref="CrvBattleStepRidersRuntime.InflictBattleDamageTaken"/>).
+        /// </summary>
+        InflictBattleDamageYouTookThisBattleToOpponent,
+        /// <summary>
+        /// CrvDestroyedTriggersAndFloats batch — Winged Kuriboh (c57116033, TRIGGER_F EVENT_TO_GRAVE, destroyed on the
+        /// field): for the rest of this turn the resolving player takes no battle damage (a player effect,
+        /// EFFECT_AVOID_BATTLE_DAMAGE reset at the End Phase; it stays when Winged Kuriboh leaves the GY). Read by
+        /// FieldSpellEffects.ControllerAvoidsBattleDamage through <see cref="CrvDestroyedTriggersAndFloatsRuntime.AvoidsBattleDamage"/>.
+        /// </summary>
+        ControllerTakesNoBattleDamageForRestOfTurn,
+        /// <summary>
+        /// CrvDestroyedTriggersAndFloats batch — T.A.D.P.O.L.E. (c10456559): the resolving player adds any number (1 or
+        /// more, Lua SelectMatchingCard 1..3) of copies of <see cref="EffectClause.NamedCard"/> from the Deck to the hand —
+        /// a human taps one copy at a time (CANCEL at the first pick adds none: "you can"; later = done), the AI takes all.
+        /// </summary>
+        AddAnyNumberOfNamedFromDeckToHand,
+        /// <summary>
+        /// CrvDestroyedTriggersAndFloats batch — Wroughtweiler (c6480253, TRIGGER_F, CARD_TARGET): target 1
+        /// <see cref="EffectClause.NamedCard"/> series card (<see cref="EffectClause.NamedCardIsSeries"/>) and 1
+        /// <see cref="EffectClause.AltNamedCard"/> card in the resolving player's GY and add both to the hand (an Extra
+        /// Deck monster returns to the Extra Deck). Either one missing: nothing is targeted and nothing happens.
+        /// </summary>
+        AddTargetedSeriesCardAndNamedCardFromYourGyToHand,
+        /// <summary>
+        /// CrvDestroyedTriggersAndFloats batch — Giant Kozaky (c58185394, TRIGGER_F EVENT_LEAVE_FIELD, destroyed while
+        /// face-up): the player who controlled this card takes damage equal to its original ATK (printed ATK; Lua 2500).
+        /// </summary>
+        PreviousControllerTakesThisOriginalAtkAsDamage,
+        /// <summary>
+        /// CrvDestroyedTriggersAndFloats batch — Hydrogeddon (c22587018, GetFirstMatchingCard + SpecialSummon POS_FACEUP):
+        /// Special Summon 1 copy of <see cref="EffectClause.NamedCard"/> from the resolving player's Deck in the face-up
+        /// position they choose (a human taps the copy and picks ATK or DEF and the zone; CANCEL declines the "You can";
+        /// the AI summons in Attack Position).
+        /// </summary>
+        SpecialSummonNamedFromDeckInChosenFaceUpPosition,
+        /// <summary>
+        /// EenDarkWorldDiscards batch — Beiige, Vanguard of Dark World (c33731070), timing
+        /// <see cref="EffectTiming.DiscardedToGyByCardEffect"/>: Special Summon this card from the GY in face-up Attack or
+        /// Defense Position (its owner chooses; Lua POS_FACEUP), if it is still there. Resolved by
+        /// <see cref="EenDarkWorldDiscardsRuntime"/> (the ApplyClause arm is a no-op).
+        /// </summary>
+        SpecialSummonThisFromGyFaceUpWhenDiscarded,
+        /// <summary>
+        /// EenDarkWorldDiscards batch — Broww, Huntsman of Dark World (c79126789), timing
+        /// <see cref="EffectTiming.DiscardedToGyByCardEffect"/>: draw <see cref="EffectClause.Amount"/> card(s), plus 1 more
+        /// when an effect of the opponent's card discarded it from its owner's hand. Resolved by
+        /// <see cref="EenDarkWorldDiscardsRuntime"/> (the ApplyClause arm is a no-op).
+        /// </summary>
+        DrawPlusOneIfDiscardedByOpponentEffect,
+        /// <summary>
+        /// EenDarkWorldDiscards batch — Goldd, Wu-Lord of Dark World (c78004197), timing
+        /// <see cref="EffectTiming.DiscardedToGyByCardEffect"/>: when an effect of the opponent's card discarded it, its owner
+        /// can target up to <see cref="EffectClause.Amount"/> cards the opponent controls as it activates; Special Summon this
+        /// card from the GY (face-up, owner's choice), then, only if it was Special Summoned, destroy those targets still on
+        /// the field. Resolved by <see cref="EenDarkWorldDiscardsRuntime"/> (the ApplyClause arm is a no-op).
+        /// </summary>
+        SpecialSummonThisFromGyThenDestroyUpToTargetsIfDiscardedByOpponent,
+        /// <summary>
+        /// EenDarkWorldDiscards batch — Sillva, Warlord of Dark World (c32619583), timing
+        /// <see cref="EffectTiming.DiscardedToGyByCardEffect"/>: Special Summon this card from the GY (face-up, owner's
+        /// choice); then, if it was Special Summoned, an effect of the opponent's card discarded it and the opponent holds
+        /// <see cref="EffectClause.Amount"/> or more cards, the opponent chooses exactly that many cards in their hand and
+        /// puts them on the bottom of their Deck in the order they choose. Resolved by
+        /// <see cref="EenDarkWorldDiscardsRuntime"/> (the ApplyClause arm is a no-op).
+        /// </summary>
+        SpecialSummonThisFromGyThenOpponentPutsHandCardsOnDeckBottomIfDiscardedByOpponent,
+        /// <summary>
+        /// EenDarkWorldDiscards batch — Brron, Mad King of Dark World (c6214884): an optional trigger ("You can discard 1
+        /// card."): its controller discards <see cref="EffectClause.Amount"/> card(s) of their choice from their own hand as
+        /// the effect (REASON_EFFECT|REASON_DISCARD, so the discarded card's "discarded by a card effect" trigger starts).
+        /// <see cref="EenDarkWorldDiscardsRuntime.OfferOwnDiscard"/>.
+        /// </summary>
+        YouCanDiscardCardsOfYourChoice,
+        /// <summary>
+        /// EenDarkWorldDiscards batch — Scarr, Scout of Dark World (c5498296): add 1 monster of the
+        /// <see cref="EffectClause.NamedCard"/> series with Level <see cref="EffectClause.Amount"/> or lower from the
+        /// controller's Deck to the hand (mandatory; nothing when none is left).
+        /// <see cref="EenDarkWorldDiscardsRuntime.SearchSeriesMonster"/>.
+        /// </summary>
+        AddSeriesMonsterLevelLeqFromDeckToHand,
+        /// <summary>
+        /// CrvHandProceduresAndNamedSummons batch — Des Frog (c84451804, SINGLE TRIGGER_O on its Tribute Summon): its
+        /// controller Special Summons 1 to min(usable Monster Zones, copies of <see cref="EffectClause.ConditionName"/> in
+        /// their GY) monsters named <see cref="EffectClause.NamedCard"/> from the hand and/or Deck, together, face-up (Lua
+        /// SelectMatchingCard 1..ct over LOCATION_DECK|LOCATION_HAND; not a target;
+        /// <see cref="CrvHandProceduresAndNamedSummonsRuntime.StartDesFrog"/>).
+        /// </summary>
+        SpecialSummonOwnNameFromHandOrDeckUpToNamedInGy,
+        /// <summary>
+        /// CrvHandProceduresAndNamedSummons batch — Water Dragon (c85066822 e2, FIELD EFFECT_SET_ATTACK on both Monster
+        /// Zones), marker (ContinuousWhileFaceUp): while this card is face-up on the field and not negated, the ATK of every
+        /// face-up monster on the field whose Attribute is <see cref="EffectClause.AttributeFilter"/> or whose Type is
+        /// <see cref="EffectClause.RaceFilter"/> becomes 0 — the base every other modifier adds to
+        /// (<see cref="CrvHandProceduresAndNamedSummonsRuntime.ApplyBoard"/>, <see cref="CardInstance.SelfSetAtk"/>).
+        /// </summary>
+        SetAtkZeroOfAttributeOrRaceOnField,
+        /// <summary>
+        /// CrvHandProceduresAndNamedSummons batch — Water Dragon (c85066822 e3, SINGLE TRIGGER_O EVENT_TO_GRAVE, destroyed,
+        /// EFFECT_FLAG_CARD_TARGET): with Amount + ConditionAmount usable Monster Zones, target <see cref="EffectClause.Amount"/>
+        /// "<see cref="EffectClause.NamedCard"/>" and <see cref="EffectClause.ConditionAmount"/>
+        /// "<see cref="EffectClause.AltNamedCard"/>" in your GY and Special Summon them together, face-up
+        /// (<see cref="CrvHandProceduresAndNamedSummonsRuntime.ResolveGyGroups"/>).
+        /// </summary>
+        SpecialSummonTargetedNamedGroupsFromYourGy,
+        /// <summary>
+        /// CrvHandProceduresAndNamedSummons batch — Winged Kuriboh LV10 (c98585345 e2, QUICK_O during the opponent's Battle
+        /// Phase, cost: Tribute this card): destroy every Attack Position monster the opponent controls (not a target),
+        /// then inflict damage to them equal to the destroyed monsters' combined printed ATK (GetTextAttack, "?" = 0). A
+        /// Spell Speed 2 Chain Link of its own (<see cref="CrvHandProceduresAndNamedSummonsRuntime.TryActivateLv10"/> /
+        /// <see cref="CrvHandProceduresAndNamedSummonsRuntime.TryResolveLink"/>).
+        /// </summary>
+        DestroyOppAttackPositionThenBurnPrintedAtk,
+        /// <summary>
+        /// CrvCountersAndPhaseTriggers batch — B.E.S. Crystal Core (c22790789) ignition (CARD_TARGET, count limit 1): the
+        /// targeted face-up Attack Position monster the opponent controls becomes face-up Defense Position, only if it is
+        /// still face-up in Attack Position on the field at resolution (Lua posop: IsPosition(POS_FACEUP_ATTACK) and
+        /// IsRelateToEffect; <see cref="CrvCountersAndPhaseTriggersRuntime.ChangeFaceUpAttackTargetToDefense"/>).
+        /// </summary>
+        ChangeFaceUpAttackTargetToFaceUpDefense,
+        /// <summary>
+        /// CrvCountersAndPhaseTriggers batch — Dark Catapulter (c33875961) ignition, N = the counters on this card (N &gt;= 1):
+        /// cost, banish exactly N cards from your GY; target exactly N Spell/Trap Cards on the field (either side); at
+        /// resolution destroy them only if every target is still on the field, then remove all counters from this card
+        /// (<see cref="CrvCountersAndPhaseTriggersRuntime.BeginCatapulter"/>; legality
+        /// <see cref="CrvCountersAndPhaseTriggersRuntime.CatapulterReady"/>).
+        /// </summary>
+        BanishGyCardsPerCounterDestroyThatManySpellTraps,
+        /// <summary>
+        /// CrvCountersAndPhaseTriggers batch — Cyber Archfiend (c59907935) e1 marker (ContinuousWhileFaceUp): FIELD TRIGGER_O
+        /// EVENT_PREDRAW, at the start of its controller's Draw Phase with an empty hand: draw 1 card before the normal
+        /// draw (<see cref="CrvCountersAndPhaseTriggersRuntime.OfferPreDrawExtraDraw"/>, from DuelEngine.ContinueDrawPhase).
+        /// The ApplyClause arm is a no-op.
+        /// </summary>
+        DrawOneAtDrawPhaseStartIfHandEmpty,
+        /// <summary>
+        /// CrvCountersAndPhaseTriggers batch — Cyber Archfiend (c59907935) e2: TRIGGER_F in its controller's End Phase (count
+        /// limit 1) while they hold 1 or more cards: destroy this card if it is still face-up on the field
+        /// (<see cref="CrvCountersAndPhaseTriggersRuntime.DestroyThisIfHandNotEmpty"/>).
+        /// </summary>
+        DestroyThisAtYourEndPhaseIfHandNotEmpty,
+        /// <summary>
+        /// CrvCountersAndPhaseTriggers batch — Rapid-Fire Magician (c6337436): FIELD CONTINUOUS EVENT_CHAIN_SOLVED (no Chain
+        /// Link) — each time an activation of a Normal Spell Card (GetActiveType()==TYPE_SPELL, EFFECT_TYPE_ACTIVATE) by this
+        /// card's controller resolves, the opponent takes Amount damage
+        /// (<see cref="CrvCountersAndPhaseTriggersRuntime.OnSpellResolved"/>, from TextEffectRuntime.NotifySpellResolved).
+        /// </summary>
+        InflictDamageToOpponentWhenYourNormalSpellResolves,
+        /// <summary>
+        /// TlmLeftoverSpellTraps batch — Grave Lure (c57270476, free-chain Normal Trap; the opponent's Deck must not be
+        /// empty): the top card of the opponent's Deck is shown, turned face-up in that Deck (ygopro ReverseInDeck) and the
+        /// Deck is shuffled. That copy carries <see cref="DeckCopyInfo.SentToGyWhenDrawnBy"/>: when the opponent draws it,
+        /// it is sent to the GY at once, or after the resolving Chain Link if a Chain is resolving
+        /// (<see cref="TlmLeftoverSpellTrapsRuntime.NoteDrawn"/>); the effect ends if the copy leaves the Deck another way.
+        /// </summary>
+        TurnOpponentDeckTopFaceUpSendToGyWhenDrawn,
+        /// <summary>
+        /// TlmLeftoverSpellTraps batch — Pikeru's Second Sight (c58015506, free-chain Normal Trap): a player effect of the
+        /// activator (ygopro EVENT_DRAW, RESET_PHASE|PHASE_END|RESET_OPPO_TURN, 2). Every card the opponent draws is shown to
+        /// the activator (written to the duel log as a "look at"), until the end of the opponent's 2nd End Phase
+        /// (<see cref="TlmLeftoverSpellTrapsRuntime.RegisterSecondSight"/>).
+        /// </summary>
+        OpponentShowsDrawnCardsUntilTheirSecondEndPhase,
+        /// <summary>
+        /// TlmLeftoverSpellTraps batch — Level Conversion Lab (c84397023, free-chain Normal Trap; you must hold a monster):
+        /// at resolution select 1 monster in your hand (not a target), show it, roll a die (CoinDiceInterrupts). 1: send it
+        /// to the GY (by the effect, not a discard). 2-6: its Level becomes the result until the End Phase, also after it is
+        /// Summoned this turn (ygopro EFFECT_CHANGE_LEVEL, RESETS_STANDARD_PHASE_END minus RESET_TOFIELD;
+        /// <see cref="TlmLeftoverSpellTrapsRuntime.StartLevelConversion"/>).
+        /// </summary>
+        ShowHandMonsterRollDieLevelBecomesResultOrSendToGy,
+        /// <summary>
+        /// TlmLeftoverSpellTraps batch — Shifting Shadows (c59237154, Continuous Spell): a
+        /// <see cref="EffectTiming.FaceUpFieldIgnition"/> clause, once per turn per copy, cost <see cref="EffectClause.PayLpAmount"/>,
+        /// needs 2 or more face-down monsters in your Main Monster Zones; at resolution they are rearranged at random
+        /// (ygopro Duel.ShuffleSetCard; <see cref="TlmLeftoverSpellTrapsRuntime.TryResolveShadowsLink"/>).
+        /// </summary>
+        ShuffleYourFaceDownMainZoneMonsters,
+        /// <summary>
+        /// TlmLeftoverSpellTraps batch — Mesmeric Control (c48642904, Normal Spell): a player effect registered at
+        /// resolution (ygopro EFFECT_CANNOT_CHANGE_POSITION on the opponent's monsters, RESET_PHASE|PHASE_END, 2). Until the
+        /// End Phase of the next turn the opponent cannot change their monsters' battle positions by hand (manual change or
+        /// Flip Summon); card effects still can (<see cref="TlmLeftoverSpellTrapsRuntime.ManualPositionChangeLocked"/>).
+        /// </summary>
+        OpponentCannotChangeBattlePositionsDuringTheirNextTurn,
     }
 
 
@@ -5643,7 +5869,9 @@ namespace WRLDZ.Duel.TextEffects
         /// ClassicEraTemplates.RaceMatches). On <see cref="EffectActionKind.DestroyBattledMonsterAtEndOfDamageStep"/> (Getsu
         /// Fuhma, Ryu Kokki) its live Type at the end of the Damage Step; on a
         /// <see cref="EffectTiming.ThisCardDestroysByBattle"/> trigger (Insect Princess) its Type when it battled
-        /// (<see cref="EndOfDamageStepRidersRuntime.SkipsBattleDestroying"/>). Null: any monster.
+        /// (<see cref="EndOfDamageStepRidersRuntime.SkipsBattleDestroying"/>); on a <see cref="EffectTiming.SentFromFieldToGy"/>
+        /// battle-destroyed trigger (Oxygeddon, CrvBattleStepRiders batch) the current Type of the monster that destroyed it
+        /// (<see cref="CrvBattleStepRidersRuntime.SendConditionHolds"/>). Null: any monster.
         /// </summary>
         public string BattledMonsterRaceFilter;
 
@@ -5751,7 +5979,8 @@ namespace WRLDZ.Duel.TextEffects
         /// A condition on a continuous effect of this card, read where the effect applies
         /// (<see cref="AttackShieldsAndDamageZeroRuntime.WhileConditionMet"/>): "YouControlAnotherFaceUpRace" /
         /// "YouControlFaceUpRace" (<see cref="ConditionName"/> = the Type), "YouControlFaceUpLowLevelNormal"
-        /// (<see cref="ConditionAmount"/> = the highest Level), "NoCardsInHandOrSpellTrapZones". Null = no condition.
+        /// (<see cref="ConditionAmount"/> = the highest Level), "NoCardsInHandOrSpellTrapZones",
+        /// "NoCardsInHand" (CrvEmptyHandAndAuras batch). Null = no condition.
         /// </summary>
         public string WhileCondition;
 
@@ -5961,6 +6190,38 @@ namespace WRLDZ.Duel.TextEffects
         /// the position its owner chooses (POS_FACEUP) unless <see cref="SummonInAttack"/>.
         /// </summary>
         public bool RequiresBanishedFaceUpFromOwnField;
+
+        // ── CrvDestroyedTriggersAndFloats batch ──
+
+        /// <summary>
+        /// A "sent from the field" / "destroyed" trigger of this card: only when it was face-up on the field as it left
+        /// (Lua IsPreviousPosition(POS_FACEUP): Poison Draw Frog, Giant Kozaky;
+        /// <see cref="CrvDestroyedTriggersAndFloatsRuntime.LeftFieldFaceUp"/>).
+        /// </summary>
+        public bool RequiresLeftFieldFaceUp;
+
+        /// <summary>
+        /// Poison Draw Frog's "(unless it was attacked while face-down and destroyed by battle)": not when the battle
+        /// that destroyed it flipped it face-up at the start of its Damage Step
+        /// (<see cref="CrvDestroyedTriggersAndFloatsRuntime.FlippedByTheBattleThatDestroyedIt"/>).
+        /// </summary>
+        public bool RequiresNotAttackedFaceDownAndDestroyedByBattle;
+
+        /// <summary>
+        /// "When this card you control is … sent to your Graveyard" (T.A.D.P.O.L.E., Lua tp == GetPreviousControler()):
+        /// the GY it went to belongs to the player who controlled it (a copy stolen from you does not trigger).
+        /// </summary>
+        public bool RequiresSentToPreviousControllersGy;
+
+        // ── CrvCountersAndPhaseTriggers batch ──
+
+        /// <summary>
+        /// With <see cref="RequiresRemoveSpellCounters"/>: the counters removed as the cost are this card's own counters of
+        /// another kind, not Spell Counters (B.E.S. Tetran, counter 0x1f): the card is no Spell Counter holder
+        /// (<see cref="SpellCounterSpendersRuntime.IsSpellCounterHolder"/>) and only the counters of its current field
+        /// presence count (<see cref="TokensDeclarationsAndPicksRuntime.CountersOfLastPresence"/>).
+        /// </summary>
+        public bool CounterCostIsNotSpellCounter;
     }
 
     /// <summary>When the activation condition is tested (PSCT "when" vs "if").</summary>

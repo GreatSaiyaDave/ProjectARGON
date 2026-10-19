@@ -201,6 +201,10 @@ namespace WRLDZ.Duel.TextEffects
             if (!GuardiansAndEquipEventsRuntime.OwnHandProcedureAllows(who, card,
                     ClauseOf(card, EffectActionKind.SpecialSummonThisFromHandByOwnProcedure), out reason))
                 return false;
+            // CrvHandProceduresAndNamedSummons batch: Cyber Dragon — "If only your opponent controls a monster".
+            if (!CrvHandProceduresAndNamedSummonsRuntime.OwnHandProcedureAllows(engine, who,
+                    ClauseOf(card, EffectActionKind.SpecialSummonThisFromHandByOwnProcedure), out reason))
+                return false;
 
             reason = "OK";
             return true;
@@ -232,6 +236,10 @@ namespace WRLDZ.Duel.TextEffects
             if (!CanSummonByOwnHandProcedure(engine, ai, card, out _)) return false;
             // GuardiansAndEquipEvents batch: Guardian Grarl's procedure gives the opponent nothing.
             if (ClauseOf(card, EffectActionKind.SpecialSummonThisFromHandByOwnProcedure)?.RequiresOnlyCardInHand == true)
+                return true;
+            // CrvHandProceduresAndNamedSummons batch: Cyber Dragon's conditional procedure gives the opponent nothing.
+            if (CrvHandProceduresAndNamedSummonsRuntime.IsConditionalOwnHandProcedure(
+                    ClauseOf(card, EffectActionKind.SpecialSummonThisFromHandByOwnProcedure)))
                 return true;
             var opp = engine.OpponentOf(ai);
             if (opp == null) return true;

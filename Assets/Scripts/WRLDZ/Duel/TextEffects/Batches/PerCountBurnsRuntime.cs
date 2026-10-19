@@ -226,6 +226,9 @@ namespace WRLDZ.Duel.TextEffects
             // PhaseTriggersAndIgnitionCosts batch: Mass Driver — Tribute 1 monster (cost), no count limit.
             if (PhaseTriggersAndIgnitionCostsRuntime.IsTributeBurnIgnition(prog))
                 return PhaseTriggersAndIgnitionCostsRuntime.CanUseTributeBurn(engine, who, card, prog, out reason);
+            // TlmLeftoverSpellTraps batch: Shifting Shadows — once per turn, 300 LP, 2+ face-down monsters.
+            if (TlmLeftoverSpellTrapsRuntime.IsShadowsIgnition(prog))
+                return TlmLeftoverSpellTrapsRuntime.CanUseShadowsIgnition(engine, who, card, prog, out reason);
 
             if (ReadyIgnition(card, prog) == null)
             {
@@ -336,6 +339,14 @@ namespace WRLDZ.Duel.TextEffects
                 handled = true;
                 if (engine.GameOver) return true;
             }
+            else if (TlmLeftoverSpellTrapsRuntime.IsShadowsIgnition(prog))
+            {
+                // TlmLeftoverSpellTraps batch: Shifting Shadows pays its LP and stays on the field; the monsters are
+                // rearranged as the link resolves (TlmLeftoverSpellTrapsRuntime.TryResolveShadowsLink).
+                TlmLeftoverSpellTrapsRuntime.ActivateShadowsIgnition(engine, who, card, prog, link);
+                handled = true;
+                if (engine.GameOver) return true;
+            }
             else if (ContinuousLocksAndIgnitionsRuntime.IsHandIgnition(prog))
             {
                 // ContinuousLocksAndIgnitions batch (v163): Call of the Mummy / Frontline Base stay on the field; the monster
@@ -389,6 +400,8 @@ namespace WRLDZ.Duel.TextEffects
             if (ContinuousLocksAndIgnitionsRuntime.TryResolveHandIgnitionLink(engine, link)) return true;
             // PhaseTriggersAndIgnitionCosts batch: Mass Driver's link.
             if (PhaseTriggersAndIgnitionCostsRuntime.TryResolveTributeBurnLink(engine, link)) return true;
+            // TlmLeftoverSpellTraps batch: Shifting Shadows' link.
+            if (TlmLeftoverSpellTrapsRuntime.TryResolveShadowsLink(engine, link)) return true;
             var name = link.Card?.Name ?? "effect";
             if (!s_fixedDamage.TryGetValue(link, out var fixedDamage))
             {

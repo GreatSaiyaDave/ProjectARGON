@@ -814,14 +814,15 @@ namespace WRLDZ.Duel.Rules
                     Shape(prog));
             }
 
-            foreach (var (id, name) in new[]
-                     {
-                         (ShiftingShadows, "Shifting Shadows")
-                     })
             {
-                var prog = CardTextEffectCompiler.Compile(db.Get(id));
-                Check($"near miss: {name} stays not FullyCompiled / not Implemented",
-                    prog != null && !prog.FullyCompiled && !Implemented(db, id) &&
+                // TlmLeftoverSpellTraps batch implemented Shifting Shadows' paid rearrangement as its own face-up ignition
+                // (ShuffleYourFaceDownMainZoneMonsters); it still gets none of this batch's clauses.
+                var prog = CardTextEffectCompiler.Compile(db.Get(ShiftingShadows));
+                Check("near miss: Shifting Shadows compiles to its own face-up ignition, none of this batch's clauses",
+                    prog != null && prog.FullyCompiled && Implemented(db, ShiftingShadows) && prog.ClauseList.Count == 1 &&
+                    prog.ClauseList[0].Timing == EffectTiming.FaceUpFieldIgnition &&
+                    prog.ClauseList[0].Action == EffectActionKind.ShuffleYourFaceDownMainZoneMonsters &&
+                    prog.ClauseList[0].PayLpAmount == 300 &&
                     !prog.ClauseList.Exists(c => c != null && batchActions.Contains(c.Action)),
                     Shape(prog));
             }

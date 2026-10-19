@@ -1404,6 +1404,8 @@ namespace WRLDZ.Duel
 
             // ChaosBanishSummons batch: Strike Ninja's Quick Effect in the opponent's open state, an attack, a Summon.
             TextEffects.ChaosBanishSummonsRuntime.CollectResponses(engine, who, timing, list);
+            // CrvHandProceduresAndNamedSummons batch: Winged Kuriboh LV10's Quick Effect in the opponent's Battle Phase.
+            TextEffects.CrvHandProceduresAndNamedSummonsRuntime.CollectResponses(engine, who, timing, list);
 
             // RuleLocks batch: Chain Energy — a card in the hand cannot be activated without the LP toll.
             list.RemoveAll(c => TextEffects.RuleLocksRuntime.HandActionUnaffordable(engine, who, c, out _));
@@ -1521,6 +1523,9 @@ namespace WRLDZ.Duel
             // ChaosBanishSummons batch: Strike Ninja's free-chain Quick Effect (before the battle-only monster Quick Effects).
             if (TextEffects.ChaosBanishSummonsRuntime.TryIsLegalResponse(engine, who, card, out var ninjaLegal))
                 return ninjaLegal;
+            // CrvHandProceduresAndNamedSummons batch: Winged Kuriboh LV10's Quick Effect in the opponent's Battle Phase.
+            if (TextEffects.CrvHandProceduresAndNamedSummonsRuntime.TryIsLegalResponse(engine, who, card, out var lv10Legal))
+                return lv10Legal;
             // BattleBoosts batch (v161): a face-up monster's battle Quick Effect answers only its own windows.
             if (TextEffects.BattleBoostsRuntime.IsMonsterQuickCard(who, card, quickProg))
                 return TextEffects.BattleBoostsRuntime.CanActivateQuick(engine, who, card, quickProg, out _);
@@ -2020,6 +2025,11 @@ namespace WRLDZ.Duel
             if (TextEffects.ChaosBanishSummonsRuntime.TryActivateNinja(engine, who, card, fromHand, autoPickTarget,
                     out var ninjaOk))
                 return ninjaOk;
+            // CrvHandProceduresAndNamedSummons batch: Winged Kuriboh LV10's Quick Effect (Tribute itself) seats its own
+            // Spell Speed 2 link.
+            if (TextEffects.CrvHandProceduresAndNamedSummonsRuntime.TryActivateLv10(engine, who, card, fromHand,
+                    autoPickTarget, out var lv10Ok))
+                return lv10Ok;
             // BattleBoosts batch (v161): a face-up monster's battle Quick Effect (Injection Fairy Lily, Spirit Ryu) seats its
             // own Spell Speed 2 link in its window.
             if (TextEffects.BattleBoostsRuntime.TryActivate(engine, who, card, fromHand, autoPickTarget,
@@ -2517,6 +2527,9 @@ namespace WRLDZ.Duel
             pick ??= legal.FirstOrDefault(c => TextEffects.BattleBoostsRuntime.AiWantsQuickEffect(engine, who, c));
             // ChaosBanishSummons batch: Strike Ninja dodges a Chain Link or an attack that would remove it.
             pick ??= legal.FirstOrDefault(c => TextEffects.ChaosBanishSummonsRuntime.AiWantsNinja(engine, who, c));
+            // CrvHandProceduresAndNamedSummons batch: Winged Kuriboh LV10 at the player's attack declaration.
+            pick ??= legal.FirstOrDefault(c =>
+                TextEffects.CrvHandProceduresAndNamedSummonsRuntime.AiWantsLv10(engine, who, c));
             // TargetNegationsAndHandQuickEffects batch (v163): Charm of Shabti when an attack would destroy a Gravekeeper's.
             pick ??= legal.FirstOrDefault(c =>
                 TextEffects.TargetNegationsAndHandQuickEffectsRuntime.AiWantsHandQuick(engine, who, c));

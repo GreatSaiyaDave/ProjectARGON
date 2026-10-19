@@ -103,6 +103,9 @@ namespace WRLDZ.Duel.TextEffects
             // TlmSpellTrapAnswersAndAttackLocks batch: the Ancient Gear lock while it attacks (the card's activation, from the
             // hand or Set).
             if (TlmSpellTrapAnswersAndAttackLocksRuntime.ActivationLocked(engine, who, card, out reason)) return true;
+            // CrvEmptyHandAndAuras batch: Mechanical Hound's Spell Card lock while its controller has no hand (the card's
+            // activation, from the hand or Set).
+            if (CrvEmptyHandAndAurasRuntime.ActivationLocked(engine, who, card, out reason)) return true;
             // LocksRedirectsAndActivity batch: "you cannot activate cards or effects" — the player-wide
             // activation lock (Chaos Emperor Dragon - Envoy of the End), the same hub every activation site asks.
             if (LocksRedirectsAndActivityRuntime.ActivationLocked(engine, who, card))

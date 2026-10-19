@@ -105,6 +105,14 @@ namespace WRLDZ.Duel.TextEffects
             @"and Special Summon this card in face-up Attack Position\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        // Union procedure, CRV print (Doitsu, Protective Soul Ailin; CrvIgnitionsAndUnions batch): the same
+        // aux.AddUnionProcedure(c, f, true) as the classic print, worded "equip this card to a "X" you control, OR unequip
+        // it to Special Summon this card in face-up Attack Position".
+        static readonly Regex RxUnionCrv = new(
+            @"(?<=^|\.\s)Once per turn,\s*you can equip this card to an? ""([^""]+)"" you control,\s*OR unequip it to " +
+            @"Special Summon this card in face-up Attack Position\.?",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         // Union procedure, typed host (Heavy Mech Support Platform): "Target 1 Machine monster you control" in place
         // of a quoted name. The host filter is a Type/Race, so it is carried as RaceFilter and the clause takes the
         // "any face-up monster of its controller" Union shape (UnionEquipsAnyFaceUpMonster), which
@@ -127,8 +135,11 @@ namespace WRLDZ.Duel.TextEffects
         // which the runtime reads from the raw text, so the leftover is boilerplate).
         // "While equipped to a monster by this card's effect, increase the ATK/DEF of
         // the equipped monster by 400 points." (Pitch-Dark Dragon; Koitsu prints ATK only).
+        // "When equipped to a monster by this card's effect, that monster gains 2500 ATK." (Doitsu, the CRV print: Lua
+        // EFFECT_TYPE_EQUIP UPDATE_ATTACK with aux.IsUnionState — a continuous bonus, not a trigger).
         static readonly Regex RxUnionBonusGains = new(
-            @"(?:(?:While equipped(?: by this effect)?, the equipped monster)|(?:A monster equipped with this card))" +
+            @"(?:(?:While equipped(?: by this effect)?, the equipped monster)|(?:A monster equipped with this card)|" +
+            @"(?:When equipped to a monster by this card's effect, that monster))" +
             @" gains? (\d+) ATK(?:/DEF)?\.?",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -497,6 +508,7 @@ namespace WRLDZ.Duel.TextEffects
             AddUnionProcedure(RxUnionEither.Match(text), text, into, spans);
             AddUnionProcedure(RxUnionEitherTyped.Match(text), text, into, spans, typed: true);
             AddUnionProcedure(RxUnionClassic.Match(text), text, into, spans);
+            AddUnionProcedure(RxUnionCrv.Match(text), text, into, spans);
             var battleDiscard = RxUnionBattleDiscard.Match(text);
             if (battleDiscard.Success)
             {

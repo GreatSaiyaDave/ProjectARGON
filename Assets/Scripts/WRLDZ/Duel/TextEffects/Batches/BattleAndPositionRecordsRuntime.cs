@@ -530,7 +530,10 @@ namespace WRLDZ.Duel.TextEffects
         public static bool BattleIndestructible(DuelEngine engine, DuelistState side, CardInstance mine, CardInstance other)
         {
             if (engine == null || mine == null || !mine.FaceUp || mine.Position != BattlePosition.Attack) return false;
-            if (LiveClause(mine, EffectActionKind.CannotBeDestroyedByBattleWhileInFaceUpAttackPosition) == null) return false;
+            var shield = LiveClause(mine, EffectActionKind.CannotBeDestroyedByBattleWhileInFaceUpAttackPosition);
+            if (shield == null) return false;
+            // CrvEmptyHandAndAuras batch: Reborn Zombie — only while its controller has no cards in hand.
+            if (!AttackShieldsAndDamageZeroRuntime.WhileConditionMet(engine, mine, shield)) return false;
             engine.Log($"{mine.Name}: in face-up Attack Position, it is not destroyed by battle.");
             return true;
         }

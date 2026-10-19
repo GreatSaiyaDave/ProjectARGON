@@ -57,6 +57,8 @@ namespace WRLDZ.Duel.TextEffects
             if (engine?.Player == null || engine.Opponent == null) return;
             Sweep(engine, engine.Player);
             Sweep(engine, engine.Opponent);
+            // TlmLeftoverSpellTraps batch: Level Conversion Lab's "Level becomes N" (a set Level, applied after the stamps).
+            TlmLeftoverSpellTrapsRuntime.ApplyLevelChanges(engine);
         }
 
         static void Sweep(DuelEngine engine, DuelistState who)

@@ -880,7 +880,9 @@ namespace WRLDZ.Duel.TextEffects
                     return false;
                 }
 
-                if (c.RequiresRemoveSpellCounters > 0 && card.Counters < c.RequiresRemoveSpellCounters)
+                // CrvCountersAndPhaseTriggers batch: B.E.S. Tetran's own counters (not Spell Counters) of this presence.
+                if (c.RequiresRemoveSpellCounters > 0 &&
+                    CrvCountersAndPhaseTriggersRuntime.CostCounters(card, c) < c.RequiresRemoveSpellCounters)
                 {
                     reason = $"Needs {c.RequiresRemoveSpellCounters} Spell Counter(s).";
                     return false;
@@ -3853,6 +3855,9 @@ namespace WRLDZ.Duel.TextEffects
                 if (c.RequiresThisSummonedByOwnProcedure &&
                     (!specialSummon || !card.SpecialSummonedByOwnProcedure)) continue;
                 if (c.RequiresNormalOrFlipSummon && specialSummon) continue;
+                // CrvHandProceduresAndNamedSummons batch: King's Knight's "while you control "X"", Bubbleman's "no other cards
+                // and no cards in your hand" (a trigger whose condition fails is not activated).
+                if (!CrvHandProceduresAndNamedSummonsRuntime.SummonTriggerConditionMet(engine, who, card, c)) continue;
                 // OncePerTurnHard batch: "You can only use this effect of "X" once per turn" (any copy, this turn).
                 if (OncePerTurnHardRuntime.Spent(engine, who, card, c))
                 {
@@ -3967,6 +3972,12 @@ namespace WRLDZ.Duel.TextEffects
             if (c.RequiresDestroyedWhileFaceDown &&
                 !CallsDiceAndSetTriggersRuntime.WasDestroyedFaceDownThisTrip(engine, card))
                 return false;
+            // CrvBattleStepRiders batch: Chthonian Soldier (attacked, battle damage taken) and Oxygeddon (battled a Pyro).
+            if (destroyedByBattle && !CrvBattleStepRidersRuntime.SendConditionHolds(engine, card, c))
+                return false;
+            // CrvDestroyedTriggersAndFloats batch: face-up as it left (Poison Draw Frog, Giant Kozaky), not flipped by the
+            // attack that destroyed it (Poison Draw Frog), sent to its previous controller's GY (T.A.D.P.O.L.E.).
+            if (!CrvDestroyedTriggersAndFloatsRuntime.SendMatches(engine, card, c, destroyedByBattle)) return false;
             return true;
         }
 
@@ -5860,9 +5871,15 @@ namespace WRLDZ.Duel.TextEffects
 
             if (c.RequiresRemoveSpellCounters > 0)
             {
-                if (card.Counters < c.RequiresRemoveSpellCounters) return false;
-                card.Counters -= c.RequiresRemoveSpellCounters;
-                engine.Log($"Cost: remove {c.RequiresRemoveSpellCounters} Spell Counter(s) (now {card.Counters}).");
+                // CrvCountersAndPhaseTriggers batch: B.E.S. Tetran's own counters; the paid counters are noted so Cancel at
+                // the target pick that follows refunds them (EngineResidualsRuntime.UndoMonsterIgnition).
+                var have = CrvCountersAndPhaseTriggersRuntime.CostCounters(card, c);
+                if (have < c.RequiresRemoveSpellCounters) return false;
+                card.Counters = have - c.RequiresRemoveSpellCounters;
+                CrvCountersAndPhaseTriggersRuntime.NoteCounterCostPaid(engine, card, c.RequiresRemoveSpellCounters);
+                engine.Log($"Cost: remove {c.RequiresRemoveSpellCounters} " +
+                           (c.CounterCostIsNotSpellCounter ? "counter(s)" : "Spell Counter(s)") +
+                           $" (now {card.Counters}).");
             }
 
             if (c.RequiresDiscardSelf)
@@ -7049,6 +7066,21 @@ namespace WRLDZ.Duel.TextEffects
                 // send of a Fusion Monster (MonsterEffects.OnSentFromFieldToGy) — never here.
                 case EffectActionKind.SpecialSummonAnyNumberOfOwnNameFromDeck:
                     DeckSwarmsAndFusionMaterialsRuntime.StartDeckSwarm(engine, who, source, clause);
+                    break;
+                // CrvHandProceduresAndNamedSummons batch: Des Frog's hand/Deck Special Summon, Water Dragon's GY targets and
+                // Winged Kuriboh LV10's destroy-then-burn (its Quick Effect link resolves through
+                // CrvHandProceduresAndNamedSummonsRuntime.TryResolveLink). Water Dragon's "ATK becomes 0" is applied on each
+                // board refresh (CrvHandProceduresAndNamedSummonsRuntime.ApplyBoard), never here.
+                case EffectActionKind.SpecialSummonOwnNameFromHandOrDeckUpToNamedInGy:
+                    CrvHandProceduresAndNamedSummonsRuntime.StartDesFrog(engine, who, source, clause);
+                    break;
+                case EffectActionKind.SpecialSummonTargetedNamedGroupsFromYourGy:
+                    CrvHandProceduresAndNamedSummonsRuntime.ResolveGyGroups(engine, who, source, clause);
+                    break;
+                case EffectActionKind.SetAtkZeroOfAttributeOrRaceOnField:
+                    break;
+                case EffectActionKind.DestroyOppAttackPositionThenBurnPrintedAtk:
+                    CrvHandProceduresAndNamedSummonsRuntime.ResolveLv10(engine, who, source);
                     break;
                 case EffectActionKind.SpecialSummonRaceFromDeckEffectsNegatedDestroyAtEndPhase:
                     DeckSwarmsAndFusionMaterialsRuntime.ResolveNegatedPair(engine, who, source, clause);
@@ -8565,6 +8597,11 @@ namespace WRLDZ.Duel.TextEffects
                 // (ContinuousNegationRuntime.ActivationLocked → TlmSpellTrapAnswersAndAttackLocksRuntime.ActivationLocked).
                 case EffectActionKind.ContinuousOpponentCannotActivateSpellTrapCardsWhileThisAttacks:
                     break;
+                // CrvEmptyHandAndAuras batch: Mechanical Hound's lock is read by every activation gate
+                // (ContinuousNegationRuntime.ActivationLocked); Gyroid's count by DuelEngine's damage calculation.
+                case EffectActionKind.ContinuousOpponentCannotActivateSpellCards:
+                case EffectActionKind.CannotBeDestroyedByBattleOncePerTurn:
+                    break;
                 // SpellTrapSealsAndImmunity batch: Sonic Jammer's FLIP lock; Dust Barrier's shield and Standby countdown are
                 // read by ShieldsFromSpell / OnStandbyPhase.
                 case EffectActionKind.OpponentCannotActivateSpellCardsUntilEndOfNextTurn:
@@ -9139,11 +9176,15 @@ namespace WRLDZ.Duel.TextEffects
                     // DiscardTriggers (v142): both hands are discarded by this card's effect; the opponent's
                     // discard triggers (Electric Snake / Minar) activate after the redraw.
                     var oppDiscarded = opp.Hand.Where(h => h != null).ToList();
+                    // EenDarkWorldDiscards batch: the activator's own hand is discarded by this card's effect too (the
+                    // Dark World "discarded by a card effect" triggers; Electric Snake ignores its owner's effects).
+                    var ownDiscarded = who.Hand.Where(h => h != null).ToList();
                     DiscardTriggersRuntime.BeginScope(engine);
                     try
                     {
                         DiscardAll(who);
                         DiscardAll(opp);
+                        DiscardTriggersRuntime.NoteDiscards(engine, who, ownDiscarded, who);
                         DiscardTriggersRuntime.NoteDiscards(engine, opp, oppDiscarded, who);
                         var drawYou = clause.Amount > 0 ? clause.Amount : nYou;
                         var drawOpp = clause.Amount > 0 ? clause.Amount : nOpp;
@@ -9317,6 +9358,44 @@ namespace WRLDZ.Duel.TextEffects
                     break;
                 // TlmFlipsControlAndZoneEvents batch: Criosphinx's marker (TlmFlipsControlAndZoneEventsRuntime.OnMonstersReturnedToHand).
                 case EffectActionKind.OwnersOfMonstersReturnedToHandSendOneHandCardToGy:
+                    break;
+                // CrvBattleStepRiders batch: Steamroid / Etoile Cyber's Damage Step ATK applies at damage calculation
+                // (CrvBattleStepRidersRuntime.OnDamageCalculation); Chthonian Soldier's battle-damage mirror.
+                case EffectActionKind.ThisAtkChangesDuringDamageStepByBattleRole:
+                    break;
+                case EffectActionKind.InflictBattleDamageYouTookThisBattleToOpponent:
+                    CrvBattleStepRidersRuntime.InflictBattleDamageTaken(engine, who, source);
+                    break;
+                // CrvDestroyedTriggersAndFloats batch: Winged Kuriboh, T.A.D.P.O.L.E., Wroughtweiler, Giant Kozaky.
+                case EffectActionKind.ControllerTakesNoBattleDamageForRestOfTurn:
+                    CrvDestroyedTriggersAndFloatsRuntime.GrantNoBattleDamageThisTurn(engine, who, source);
+                    break;
+                case EffectActionKind.AddAnyNumberOfNamedFromDeckToHand:
+                    CrvDestroyedTriggersAndFloatsRuntime.StartAddAnyNumberFromDeck(engine, who, source, clause);
+                    break;
+                case EffectActionKind.AddTargetedSeriesCardAndNamedCardFromYourGyToHand:
+                    CrvDestroyedTriggersAndFloatsRuntime.ResolveSeriesAndNamedFromGy(engine, who, source, clause);
+                    break;
+                case EffectActionKind.PreviousControllerTakesThisOriginalAtkAsDamage:
+                    CrvDestroyedTriggersAndFloatsRuntime.ApplyOriginalAtkDamage(engine, who, source);
+                    break;
+                case EffectActionKind.SpecialSummonNamedFromDeckInChosenFaceUpPosition:
+                    CrvDestroyedTriggersAndFloatsRuntime.SpecialSummonNamedFromDeck(engine, who, source, clause);
+                    break;
+                // EenDarkWorldDiscards batch: the Dark World "discarded by a card effect" triggers resolve on the
+                // simultaneous-trigger Chain (EenDarkWorldDiscardsRuntime.QueueDiscardedTrigger, from
+                // DiscardTriggersRuntime.Flush), never here.
+                case EffectActionKind.SpecialSummonThisFromGyFaceUpWhenDiscarded:
+                case EffectActionKind.DrawPlusOneIfDiscardedByOpponentEffect:
+                case EffectActionKind.SpecialSummonThisFromGyThenDestroyUpToTargetsIfDiscardedByOpponent:
+                case EffectActionKind.SpecialSummonThisFromGyThenOpponentPutsHandCardsOnDeckBottomIfDiscardedByOpponent:
+                    break;
+                // EenDarkWorldDiscards batch: Brron's "You can discard 1 card."; Scarr's battle-destroyed search.
+                case EffectActionKind.YouCanDiscardCardsOfYourChoice:
+                    EenDarkWorldDiscardsRuntime.OfferOwnDiscard(engine, who, source, clause);
+                    break;
+                case EffectActionKind.AddSeriesMonsterLevelLeqFromDeckToHand:
+                    EenDarkWorldDiscardsRuntime.SearchSeriesMonster(engine, who, source, clause);
                     break;
 
                 // SanctuaryAndZera batch: The Agent of Judgment - Saturn; Light of Judgment.
@@ -9769,6 +9848,22 @@ namespace WRLDZ.Duel.TextEffects
                         engine.Rng.Shuffle(who.Deck);
                     engine.Log($"{source?.Name}: {who?.Name} shuffles their own Deck.");
                     break;
+                // TlmLeftoverSpellTraps batch: Grave Lure, Pikeru's Second Sight, Level Conversion Lab, Mesmeric Control.
+                // Shifting Shadows' face-up ignition resolves on its own link (TlmLeftoverSpellTrapsRuntime.TryResolveShadowsLink).
+                case EffectActionKind.TurnOpponentDeckTopFaceUpSendToGyWhenDrawn:
+                    TlmLeftoverSpellTrapsRuntime.ApplyGraveLure(engine, who, source);
+                    break;
+                case EffectActionKind.OpponentShowsDrawnCardsUntilTheirSecondEndPhase:
+                    TlmLeftoverSpellTrapsRuntime.RegisterSecondSight(engine, who, source);
+                    break;
+                case EffectActionKind.ShowHandMonsterRollDieLevelBecomesResultOrSendToGy:
+                    TlmLeftoverSpellTrapsRuntime.StartLevelConversion(engine, who, source);
+                    break;
+                case EffectActionKind.ShuffleYourFaceDownMainZoneMonsters:
+                    break;
+                case EffectActionKind.OpponentCannotChangeBattlePositionsDuringTheirNextTurn:
+                    TlmLeftoverSpellTrapsRuntime.RegisterPositionLock(engine, who, source);
+                    break;
 
                 // FlipDownAndPeek batch (v162): 8-Claws Scorpion's damage-calculation ATK is a marker read by
                 // FlipDownAndPeekRuntime.ApplyDamageCalculationAtk; Giant Axe Mummy (EndOfDamageStep: chosenTarget is the
@@ -9854,7 +9949,11 @@ namespace WRLDZ.Duel.TextEffects
 
                 case EffectActionKind.DiscardUpToMonstersFromHand:
                     if (chosenTarget != null)
-                        MonsterEffects.DiscardFromHandByInstance(who, chosenTarget);
+                    {
+                        // EenDarkWorldDiscards batch: a discard by this card's effect (the Dark World triggers).
+                        var gone = MonsterEffects.DiscardFromHandByInstance(who, chosenTarget, DiscardCause.Effect, who);
+                        if (gone != null) DiscardTriggersRuntime.NoteDiscard(engine, who, gone, who);
+                    }
                     break;
 
                 case EffectActionKind.OpponentTributesOneMonster:
@@ -10350,6 +10449,22 @@ namespace WRLDZ.Duel.TextEffects
                     break;
                 case EffectActionKind.InflictCountersTimesAmountToDestroyer:
                     TokensDeclarationsAndPicksRuntime.InflictCounterBurn(engine, source, clause);
+                    break;
+
+                // CrvCountersAndPhaseTriggers batch: B.E.S. Crystal Core's ignition, Dark Catapulter's ignition, Cyber
+                // Archfiend's End Phase self-destruction; its pre-draw marker (DuelEngine.ContinueDrawPhase) and Rapid-Fire
+                // Magician's burn (NotifySpellResolved) are read elsewhere.
+                case EffectActionKind.ChangeFaceUpAttackTargetToFaceUpDefense:
+                    CrvCountersAndPhaseTriggersRuntime.ChangeFaceUpAttackTargetToDefense(engine, source, chosenTarget);
+                    break;
+                case EffectActionKind.BanishGyCardsPerCounterDestroyThatManySpellTraps:
+                    CrvCountersAndPhaseTriggersRuntime.BeginCatapulter(engine, who, source, clause);
+                    break;
+                case EffectActionKind.DestroyThisAtYourEndPhaseIfHandNotEmpty:
+                    CrvCountersAndPhaseTriggersRuntime.DestroyThisIfHandNotEmpty(engine, who, source);
+                    break;
+                case EffectActionKind.DrawOneAtDrawPhaseStartIfHandEmpty:
+                case EffectActionKind.InflictDamageToOpponentWhenYourNormalSpellResolves:
                     break;
 
                 // PhaseTriggersAndIgnitionCosts batch: Amazoness Blowpiper, Helping Robo for Combat, Senri Eye, Magical
@@ -10977,6 +11092,8 @@ namespace WRLDZ.Duel.TextEffects
                 if (c == null || c.Action != EffectActionKind.Destroy) continue;
                 if (c.RequiresTargetFaceDownDefense && !isFaceDownDefense) continue;
                 if (c.RequiresTargetFaceUpDefense && !isFaceUpDefense) continue;
+                // CrvBattleStepRiders batch: Nanobreaker — a face-up monster of Level N or lower, any position.
+                if (!CrvBattleStepRidersRuntime.StartOfDamageStepTargetAllowed(c, attacker, defender)) continue;
 
                 var owner = engine.OpponentOf(who);
                 if (owner == null || !owner.TryFindMonster(defender, out _)) continue;
@@ -11065,6 +11182,8 @@ namespace WRLDZ.Duel.TextEffects
             DuelistState opp, CardInstance source, bool wasDirect, int damage = 0)
         {
             if (engine == null || who == null || opp == null || source?.Def == null) return;
+            // CrvBattleStepRiders batch: Chthonian Soldier reads the battle damage each player took from this battle.
+            CrvBattleStepRidersRuntime.NoteBattleDamage(engine, opp, damage);
             // UnionRiders batch (v175): Burning Beast / Freezing Beast — the equipped monster inflicted battle damage.
             UnionRidersRuntime.FireEquippedMonsterInflictedBattleDamage(engine, who, opp, source);
             // RdsRedoBattle batch: Silent Swordsman LV5's direct-attack record (EVENT_BATTLE_DAMAGE flag).
@@ -12128,6 +12247,14 @@ namespace WRLDZ.Duel.TextEffects
                         if (TlmEquipsAndLinkedContinuousRuntime.TryActivationCondition(engine, who, card, c, out ok,
                                 out reason))
                             break;
+                        // CrvHandProceduresAndNamedSummons batch: Cyber Dragon's procedure, Bubbleman's draw.
+                        if (CrvHandProceduresAndNamedSummonsRuntime.TryActivationCondition(engine, who, card, c, out ok,
+                                out reason))
+                            break;
+                        // CrvCountersAndPhaseTriggers batch: Dark Catapulter's counters, GY cards and Spell/Trap Cards.
+                        if (CrvCountersAndPhaseTriggersRuntime.TryActivationCondition(engine, who, card, c, out ok,
+                                out reason))
+                            break;
                         ok = false;
                         reason = $"Unknown activation condition {c.ActivationCondition}.";
                         break;
@@ -13181,6 +13308,8 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
 
             // SpellEventsAndHandSendTriggers batch: Curse of Darkness damages the Spell's activator.
             SpellEventsAndHandSendTriggersRuntime.OnSpellResolved(engine, who, spell);
+            // CrvCountersAndPhaseTriggers batch: Rapid-Fire Magician (its controller's Normal Spell Card resolved).
+            CrvCountersAndPhaseTriggersRuntime.OnSpellResolved(engine, who, spell);
             engine.NotifyPublic();
         }
 

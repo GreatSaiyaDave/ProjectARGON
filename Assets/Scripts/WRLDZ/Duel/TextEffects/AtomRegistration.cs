@@ -815,6 +815,14 @@ namespace WRLDZ.Duel.TextEffects
             TlmEquipsAndLinkedContinuousAtoms.Atoms,
             TlmFlipsControlAndZoneEventsAtoms.Atoms,
             OncePerTurnHardAtoms.Atoms,
+            CrvEmptyHandAndAurasAtoms.Atoms,
+            CrvBattleStepRidersAtoms.Atoms,
+            CrvDestroyedTriggersAndFloatsAtoms.Atoms,
+            EenDarkWorldDiscardsAtoms.Atoms,
+            CrvIgnitionsAndUnionsAtoms.Atoms,
+            CrvHandProceduresAndNamedSummonsAtoms.Atoms,
+            CrvCountersAndPhaseTriggersAtoms.Atoms,
+            TlmLeftoverSpellTrapsAtoms.Atoms,
         };
         /// <summary>Every whole-sentence atom: <see cref="Atoms"/>, then each batch in <see cref="BatchAtomSets"/>.</summary>
         public static IEnumerable<Atom> AllAtoms()

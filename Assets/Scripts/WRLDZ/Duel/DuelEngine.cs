@@ -781,6 +781,14 @@ namespace WRLDZ.Duel
                 Notify();
                 return;
             }
+            // CrvCountersAndPhaseTriggers batch: Cyber Archfiend — at the start of the Draw Phase with an empty hand, draw 1
+            // before the normal draw (ygopro EVENT_PREDRAW, TRIGGER_O). A human's yes/no or a Chain Link holds the Draw
+            // Phase; the runtime calls ContinueDrawPhase again once it is answered (each copy is offered once).
+            if (TextEffects.CrvCountersAndPhaseTriggersRuntime.OfferPreDrawExtraDraw(this, who))
+            {
+                Notify();
+                return;
+            }
             if (firstPlayerFirstTurn)
                 Log($"[{who.Name}] Draw Phase skipped (going first).");
             else if (who.SkipNextDrawPhaseCount > 0)
@@ -1161,6 +1169,8 @@ namespace WRLDZ.Duel
                 drawn++;
                 TextEffects.PerCopyDeckRuntime.NoteDrawn(this, who, inst, copy);
                 TextEffects.TextEffectRuntime.ApplyCrushCardOnDraw(this, who, inst);
+                // TlmLeftoverSpellTraps batch: Pikeru's Second Sight shows the card; a Grave Lure copy goes to the GY.
+                TextEffects.TlmLeftoverSpellTrapsRuntime.NoteDrawn(this, who, inst, copy);
                 TextEffects.TextEffectRuntime.CheckHandWinConditions(this);
                 if (GameOver) return;
                 if (!silent)
@@ -2981,6 +2991,8 @@ namespace WRLDZ.Duel
             var fromFieldSt = owner.TryFindSpellTrap(card, out var si);
             var fromPendulumZone = owner.PendulumZones != null &&
                                    (owner.PendulumZones[0]?.Occupant == card || owner.PendulumZones[1]?.Occupant == card);
+            // CrvDestroyedTriggersAndFloats batch: its position as it leaves (Lua IsPreviousPosition; Poison Draw Frog).
+            if (fromFieldMonster) TextEffects.CrvDestroyedTriggersAndFloatsRuntime.NoteLeavingField(card, card.FaceUp);
             // S/T leaving field:
             // · Activation resolve → fade hologram (SpellActivationPresentation)
             // · Destroyed by effect (MST / Heavy Storm) → shatter
@@ -4289,7 +4301,10 @@ namespace WRLDZ.Duel
                 {
                     if (st == null || !st.FaceUp || st.IsNegated || st.Def == null) continue;
                     // MonsterNegationAndControlLocks batch: Non-Spellcasting Area — a Spell's attack lock does not apply.
-                    if (TextEffects.MonsterNegationAndControlLocksRuntime.ShieldsFromSpell(this, attacker, st)) continue;
+                    // CrvEmptyHandAndAuras batch: any immunity to this source does the same (Elemental HERO Wildheart vs
+                    // Gravity Bind; EFFECT_CANNOT_ATTACK is a field effect, which EFFECT_IMMUNE_EFFECT ignores).
+                    // IsUnaffectedBy already includes ShieldsFromSpell.
+                    if (ContinuousProtections.IsUnaffectedBy(this, attacker, st)) continue;
                     var prog = TextEffects.CompiledEffectCache.GetOrCompile(st.Def);
                     if (prog == null) continue;
                     foreach (var c in prog.ClausesFor(TextEffects.EffectTiming.ContinuousWhileFaceUp))
@@ -4934,6 +4949,8 @@ namespace WRLDZ.Duel
             {
                 // RdsRedoSpellTrap batch: the Trap Card activation the previous link resolved is over (Chain Burst).
                 TextEffects.RdsRedoSpellTrapRuntime.FlushResolvedTrap(this);
+                // TlmLeftoverSpellTraps batch: Grave Lure copies drawn during the previous link go to the GY now.
+                TextEffects.TlmLeftoverSpellTrapsRuntime.FlushDrawnToGy(this);
                 // SummonPromptsAndCosts batch (v163): the link Special Summons a card whose summon cost needs a human's
                 // Tribute pick (Tyrant Dragon) — it is picked as the link starts to resolve; the Chain waits for it.
                 if (TextEffects.SummonPromptsAndCostsRuntime.HoldBeforeLinkResolves(this, Chain.Last))
@@ -4989,6 +5006,9 @@ namespace WRLDZ.Duel
                     continue;
                 // ChaosBanishSummons batch: Strike Ninja's Quick Effect link (banish itself until the End Phase).
                 if (TextEffects.ChaosBanishSummonsRuntime.TryResolveNinjaLink(this, link))
+                    continue;
+                // CrvHandProceduresAndNamedSummons batch: Winged Kuriboh LV10's Quick Effect link (destroy, then burn).
+                if (TextEffects.CrvHandProceduresAndNamedSummonsRuntime.TryResolveLink(this, link))
                     continue;
                 // TargetNegationsAndHandQuickEffects batch (v163): a hand Quick Effect link (Charm of Shabti); a mandatory
                 // negation link that is no longer right after the activation it answers (Great Dezard, Fushioh Richie).
@@ -5236,6 +5256,8 @@ namespace WRLDZ.Duel
 
             // RdsRedoSpellTrap batch: the last link's Trap Card activation is over (Chain Burst), while the Chain still counts.
             TextEffects.RdsRedoSpellTrapRuntime.FlushResolvedTrap(this);
+            // TlmLeftoverSpellTraps batch: Grave Lure copies drawn during the last link go to the GY.
+            TextEffects.TlmLeftoverSpellTrapsRuntime.FlushDrawnToGy(this);
             IsResolvingChain = false;
             Chain.Clear();
             // EffectDamageEvents batch (v162): per-link damage modifiers end with the Chain (RESET_CHAIN).
@@ -5736,6 +5758,9 @@ namespace WRLDZ.Duel
                     $"[Damage Step · Start] Flipped {targetOrNull.Name} face-up in Defense Position " +
                     $"(DEF {BattleMechanics.DefenseValue(targetOrNull)}).");
             }
+            // CrvDestroyedTriggersAndFloats batch: "attacked while face-down" (Poison Draw Frog) is this battle's flip.
+            TextEffects.CrvDestroyedTriggersAndFloatsRuntime.NoteDamageStepStart(attacker, targetOrNull,
+                flippedByBattle != null);
 
             DamageSubStep = DamageSubStep.BeforeDamageCalculation;
             // Dreamsprite (BattleWindows batch): attacked by an opponent's monster, it moves the battle to another monster
@@ -5984,6 +6009,9 @@ namespace WRLDZ.Duel
             if (targetOrNull != null)
                 TextEffects.TextEffectRuntime.NotifyAttackedBy(this, targetOrNull, attacker);
             TextEffects.TextEffectRuntime.ApplyDamageStepAttributeBonus(attacker, targetOrNull);
+            // CrvBattleStepRiders batch: the battle record (Chthonian Soldier's battle damage) and Steamroid / Etoile Cyber's
+            // Damage Step ATK.
+            TextEffects.CrvBattleStepRidersRuntime.OnDamageCalculation(this, who, attacker, targetOrNull);
             // FlipDownAndPeek batch (v162): 8-Claws Scorpion attacking a monster that was face-down Defense when the Damage
             // Step started (its ATK becomes 2400 for this calculation); the battle is noted for Giant Axe Mummy.
             TextEffects.FlipDownAndPeekRuntime.ApplyDamageCalculationAtk(this, attacker, targetOrNull, flippedByBattle);
@@ -6035,6 +6063,12 @@ namespace WRLDZ.Duel
             if (targetOrNull != null) targetOrNull.AtkBecomesZeroThisCalculation = false;
 
             DamageSubStep = DamageSubStep.AfterDamageCalculation;
+            // CrvEmptyHandAndAuras batch: Gyroid — the first battle destruction each turn does not happen
+            // (EFFECT_INDESTRUCTABLE_COUNT: the count is spent only when it would be destroyed).
+            if (calc.DestroyAttacker && TextEffects.CrvEmptyHandAndAurasRuntime.IgnoresBattleDestruction(this, attacker))
+                calc.DestroyAttacker = false;
+            if (calc.DestroyDefender && TextEffects.CrvEmptyHandAndAurasRuntime.IgnoresBattleDestruction(this, targetOrNull))
+                calc.DestroyDefender = false;
             // The monsters this battle destroys cannot be targeted by the battle-damage triggers below.
             _battleDestroyPending = (calc.DestroyAttacker ? attacker : null, calc.DestroyDefender ? targetOrNull : null);
             // Apply LP damage before destruction so UI/orbs update even if destroy is deferred
@@ -6445,6 +6479,9 @@ namespace WRLDZ.Duel
                 Log($"[Damage Step · Start] Flipped {targetOrNull.Name} face-up in Defense Position " +
                     $"(DEF {BattleMechanics.DefenseValue(targetOrNull)}).");
             }
+            // CrvDestroyedTriggersAndFloats batch: "attacked while face-down" (Poison Draw Frog) is this battle's flip.
+            TextEffects.CrvDestroyedTriggersAndFloatsRuntime.NoteDamageStepStart(attacker, targetOrNull,
+                flippedByBattle != null);
 
             Log(targetOrNull == null
                 ? $"{attacker.Name} attacks directly instead."
@@ -7867,6 +7904,9 @@ namespace WRLDZ.Duel
             if (owner.TryFindMonster(card, out var i))
             {
                 var wasFaceUp = card.FaceUp;
+                // CrvDestroyedTriggersAndFloats batch: its position as it leaves (Lua IsPreviousPosition; Giant Kozaky, also
+                // when it is banished or put in the Deck instead).
+                TextEffects.CrvDestroyedTriggersAndFloatsRuntime.NoteLeavingField(card, wasFaceUp);
                 // DestroyWatchersAndSpellShields batch: its Type on the field (DNA Surgery), read before it leaves.
                 var raceOnField = wasFaceUp ? card.Race : null;
                 // NegationMonsters batch (v161): Lesser Fiend — a monster it destroys by battle is banished instead

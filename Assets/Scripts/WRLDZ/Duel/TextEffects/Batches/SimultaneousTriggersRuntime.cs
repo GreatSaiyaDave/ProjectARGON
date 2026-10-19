@@ -503,6 +503,11 @@ namespace WRLDZ.Duel.TextEffects
                     if (p?.Card != null) seat.Targets.Add(p.Card);
                 // DeckSwarmsAndFusionMaterials batch: the target a Centrifugal Field trigger chose as it activated.
                 seat.Targets.AddRange(DeckSwarmsAndFusionMaterialsRuntime.ActivationTargets(e.Run));
+                // CrvDestroyedTriggersAndFloats batch: the 2 cards a Wroughtweiler trigger targeted as it activated.
+                if (e.Kind == EntryKind.Fused)
+                    seat.Targets.AddRange(CrvDestroyedTriggersAndFloatsRuntime.ActivationTargets(engine, e.Card));
+                // EenDarkWorldDiscards batch: the cards Goldd targeted as it activated.
+                seat.Targets.AddRange(EenDarkWorldDiscardsRuntime.ActivationTargets(e.Run));
                 seats.Add(seat);
             }
 
@@ -672,6 +677,10 @@ namespace WRLDZ.Duel.TextEffects
                             FlipMassAndOpponentPicksRuntime.ActivateSentToGyTargets(engine, e.Controller, e.Card);
                             // DeckSwarmsAndFusionMaterials batch: Centrifugal Field's owner targets the listed material.
                             DeckSwarmsAndFusionMaterialsRuntime.ActivateQueuedTrigger(engine, e.Run);
+                            // CrvDestroyedTriggersAndFloats batch: Wroughtweiler targets its E-HERO card and Polymerization.
+                            CrvDestroyedTriggersAndFloatsRuntime.ActivateSentToGyTargets(engine, e.Controller, e.Card);
+                            // EenDarkWorldDiscards batch: Goldd's owner targets up to 2 of the opponent's cards.
+                            EenDarkWorldDiscardsRuntime.ActivateQueuedTrigger(engine, e.Run);
                         }
                         return false;
                     }

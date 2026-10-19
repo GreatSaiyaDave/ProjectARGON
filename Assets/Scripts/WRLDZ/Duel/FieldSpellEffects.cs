@@ -116,6 +116,8 @@ namespace WRLDZ.Duel
             TextEffects.TlmDerivedStatsAndProceduresRuntime.ApplyBoard(engine);
             // DestroyWatchersAndSpellShields batch: Mokey Mokey Smackdown's "ATK becomes 3000 until the end of this turn".
             TextEffects.DestroyWatchersAndSpellShieldsRuntime.ApplyBoard(engine);
+            // CrvHandProceduresAndNamedSummons batch: Water Dragon — the ATK of FIRE / Pyro monsters on the field becomes 0.
+            TextEffects.CrvHandProceduresAndNamedSummonsRuntime.ApplyBoard(engine);
             // Spirit Ryu (BattleBoosts batch, v161): "+1000 ATK/DEF until the end of the Battle Phase".
             TextEffects.BattleBoostsRuntime.ApplyBoard(engine);
             // Cat's Ear Tribe (DamageStepRules batch): the battler's Damage Step original ATK ends with the Damage Step.
@@ -154,6 +156,8 @@ namespace WRLDZ.Duel
             TextEffects.SpellCounterSpendersRuntime.SweepSelfDestroy(engine);
             // Berserk Gorilla (AttackObligations batch): destroyed while it is in face-up Defense Position.
             TextEffects.AttackObligationsRuntime.SweepSelfDestroy(engine);
+            // Giant Kozaky (CrvDestroyedTriggersAndFloats batch): destroyed while no face-up "Kozaky" is on the field.
+            TextEffects.CrvDestroyedTriggersAndFloatsRuntime.SweepSelfDestroy(engine);
             // Skull Invitation: cards that reached a GY since the last checkpoint (StandbyGrowthAndMaintenance, v142).
             TextEffects.StandbyGrowthAndMaintenanceRuntime.GySendCheckpoint(engine);
             // DestroyWatchersAndSpellShields batch: Pole Position's highest-ATK group (Lua EVENT_ADJUST); a changed group
@@ -815,6 +819,9 @@ namespace WRLDZ.Duel
             // SimpleSpellTraps batch: The A. Forces — Amount per face-up monster of the counted Types you control
             // (a live count, recomputed on every refresh). 1 for every other aura.
             var perCount = TextEffects.SimpleSpellTrapsRuntime.AuraMultiplier(engine, controller, clause);
+            // CrvEmptyHandAndAuras batch: Batteryman C — Amount per face-up copy you control, only while every one is in
+            // the clause's battle position (1 for every other aura).
+            perCount *= TextEffects.CrvEmptyHandAndAurasRuntime.AuraMultiplier(controller, clause);
             foreach (var who in new[] { engine.Player, engine.Opponent })
             {
                 if (who == null) continue;
@@ -829,6 +836,9 @@ namespace WRLDZ.Duel
                         !CardMatchesNamed(m, clause.NamedCard, clause.NamedCardIsSeries))
                         continue;
                     if (clause.AffectsDefensePositionOnly && m.Position != BattlePosition.Defense) continue;
+                    // CrvEmptyHandAndAuras batch: a monster unaffected by this source gets nothing from its aura (Elemental
+                    // HERO Wildheart vs a Continuous Trap; field effects respect EFFECT_IMMUNE_EFFECT).
+                    if (m != source && ContinuousProtections.IsUnaffectedBy(engine, m, source)) continue;
                     m.AtkModifier += clause.Amount * perCount;
                     m.DefModifier += clause.DefAmount * perCount;
                 }
@@ -1060,6 +1070,8 @@ namespace WRLDZ.Duel
             CardInstance attacker, CardInstance defender)
         {
             if (engine == null || who == null) return false;
+            // CrvDestroyedTriggersAndFloats batch: Winged Kuriboh's "for the rest of this turn, you take no battle damage".
+            if (TextEffects.CrvDestroyedTriggersAndFloatsRuntime.AvoidsBattleDamage(engine, who)) return true;
             foreach (var st in who.SpellTrapsOnField())
             {
                 if (st == null || !st.FaceUp || st.IsNegated || st.Def == null) continue;
@@ -1097,6 +1109,22 @@ namespace WRLDZ.Duel
             return TextEffects.AttackShieldsAndDamageZeroRuntime.AvoidsBattleDamage(engine, who, attacker, defender);
         }
 
+        /// <summary>
+        /// A <see cref="EffectActionKind.SelfDestroyUnlessNamedFaceUp"/> clause of a card <paramref name="who"/> controls:
+        /// the card it needs is there, so it is not destroyed. Shared by the Spell/Trap sweep below and the monster sweep
+        /// (CrvDestroyedTriggersAndFloatsRuntime.SweepSelfDestroy).
+        /// </summary>
+        public static bool SelfDestroyNamedRequirementMet(DuelEngine engine, DuelistState who, EffectClause c)
+        {
+            if (c == null || string.IsNullOrEmpty(c.RequiresFaceUpName)) return true;
+            // SpellTrapSealsAndImmunity batch: the Talismans need the named monster face-up in your Monster Zone.
+            return c.NamedFaceUpInYourMonsterZone
+                ? ControllerHasNamedFaceUpMonster(who, c.RequiresFaceUpName, c.NamedCardIsSeries)
+                : c.RequiresControllerNamedCard
+                    ? ControllerHasNamedCard(who, c.RequiresFaceUpName, c.NamedCardIsSeries)
+                    : NamedCardIsFaceUpOnField(engine, c.RequiresFaceUpName);
+        }
+
         static void DestroyNamedLeavesContinuous(DuelEngine engine, DuelistState who)
         {
             if (who == null) return;
@@ -1112,13 +1140,7 @@ namespace WRLDZ.Duel
                     if (c == null || c.Action != EffectActionKind.SelfDestroyUnlessNamedFaceUp)
                         continue;
                     if (string.IsNullOrEmpty(c.RequiresFaceUpName)) continue;
-                    // SpellTrapSealsAndImmunity batch: the Talismans need the named monster face-up in your Monster Zone.
-                    var ok = c.NamedFaceUpInYourMonsterZone
-                        ? ControllerHasNamedFaceUpMonster(who, c.RequiresFaceUpName, c.NamedCardIsSeries)
-                        : c.RequiresControllerNamedCard
-                        ? ControllerHasNamedCard(who, c.RequiresFaceUpName, c.NamedCardIsSeries)
-                        : NamedCardIsFaceUpOnField(engine, c.RequiresFaceUpName);
-                    if (ok) continue;
+                    if (SelfDestroyNamedRequirementMet(engine, who, c)) continue;
                     doomed.Add(st);
                     break;
                 }

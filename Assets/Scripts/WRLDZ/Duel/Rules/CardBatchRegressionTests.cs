@@ -172,6 +172,14 @@ namespace WRLDZ.Duel.Rules
             TlmEquipsAndLinkedContinuousRegressionTests.Run(db, pDeck, aDeck, check);
             TlmFlipsControlAndZoneEventsRegressionTests.Run(db, pDeck, aDeck, check);
             OncePerTurnHardRegressionTests.Run(db, pDeck, aDeck, check);
+            CrvEmptyHandAndAurasRegressionTests.Run(db, pDeck, aDeck, check);
+            CrvBattleStepRidersRegressionTests.Run(db, pDeck, aDeck, check);
+            CrvDestroyedTriggersAndFloatsRegressionTests.Run(db, pDeck, aDeck, check);
+            EenDarkWorldDiscardsRegressionTests.Run(db, pDeck, aDeck, check);
+            CrvIgnitionsAndUnionsRegressionTests.Run(db, pDeck, aDeck, check);
+            CrvHandProceduresAndNamedSummonsRegressionTests.Run(db, pDeck, aDeck, check);
+            CrvCountersAndPhaseTriggersRegressionTests.Run(db, pDeck, aDeck, check);
+            TlmLeftoverSpellTrapsRegressionTests.Run(db, pDeck, aDeck, check);
         }
     }
 }

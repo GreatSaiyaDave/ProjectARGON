@@ -182,6 +182,8 @@ namespace WRLDZ.Duel.TextEffects
             if (link == null || !ReferenceEquals(link.Card, card) || link.Resolved || link.EffectKey != "manual")
                 return false;
             if (!engine.DropUnresolvedLink(card)) return false;
+            // CrvCountersAndPhaseTriggers batch: counters removed from this card as the cost (B.E.S. Tetran, Breaker).
+            CrvCountersAndPhaseTriggersRuntime.RefundCounterCost(engine, card, link);
             if (p.PaidDiscards.Count > 0)
                 TextEffectRuntime.RefundResponseDiscards(engine, who, p.PaidDiscards);
             if (p.PaidLpCost > 0)

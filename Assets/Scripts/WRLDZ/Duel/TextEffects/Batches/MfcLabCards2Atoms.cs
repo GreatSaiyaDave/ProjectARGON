@@ -17,15 +17,20 @@ namespace WRLDZ.Duel.TextEffects
     {
         public static readonly AtomRegistration.Atom[] Atoms =
         {
-            // Winged Kuriboh (c57116034): if destroyed and sent to GY, no battle damage for rest of turn.
+            // Winged Kuriboh (c57116034 / c57116033): if destroyed and sent to GY, no battle damage for rest of turn.
+            // CrvDestroyedTriggersAndFloats batch: Lua TRIGGER_F EVENT_TO_GRAVE with IsPreviousLocation(ONFIELD) and
+            // REASON_DESTROY (a Tribute does not trigger it); the player effect EFFECT_AVOID_BATTLE_DAMAGE lasts to the End
+            // Phase (CrvDestroyedTriggersAndFloatsRuntime.AvoidsBattleDamage). It had compiled to the continuous
+            // PreventControllerBattleDamage marker, whose ApplyClause arm is a no-op (the card did nothing).
             new AtomRegistration.Atom(
-                @"^\s*If this card on the field is destroyed and sent to the Graveyard:\s*" +
+                @"^\s*If this card on the field is destroyed and sent to the (?:GY|Graveyard):\s*" +
                 @"For the rest of this turn, you take no battle damage\.?\s*$",
                 m => new EffectClause
                 {
                     Timing = EffectTiming.SentFromFieldToGy,
-                    Action = EffectActionKind.PreventControllerBattleDamage,
+                    Action = EffectActionKind.ControllerTakesNoBattleDamageForRestOfTurn,
                     Side = EffectSide.Controller,
+                    RequiresDestroyed = true,
                     MakesChainLink = true
                 }),
 

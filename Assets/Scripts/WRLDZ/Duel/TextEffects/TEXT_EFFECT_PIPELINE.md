@@ -320,6 +320,11 @@ Seed 853 to 885 programs (added 32, removed 0, changed 11). Runtimes live in `Te
 Compiler v167; Union procedure is now playable (monster moves into a Spell/Trap Zone). 0 Implemented-count bump — this is a shell for cards whose sentences already compiled. Report `Docs/CURRICULUM_BATCH_v167-union.md`.
 Seed 887 → 895 programs (added 8 including Z-Metal Tank; removed 0). Tests `Rules/Batches/UnionEquipRegressionTests.cs`. Duel checks: S/T-zone landing, one Union per host, once-per-turn, unequip SS, battle substitute, Z-Metal alt host. Arena: generic SpellCast / SpecialSummon; gap in `FX_MAP.md`.
 
+## Pass v212 (card batch v212-crv-een-soi)
+
+Compiler v212; 51 cards Implemented, 0 losses; suite 8345/0. Report `Docs/CURRICULUM_BATCH_v212-crv-een-soi.md`.
+Groups: CrvEmptyHandAndAuras, CrvBattleStepRiders, CrvDestroyedTriggersAndFloats, EenDarkWorldDiscards, CrvIgnitionsAndUnions, CrvHandProceduresAndNamedSummons, CrvCountersAndPhaseTriggers, TlmLeftoverSpellTraps. Deferred: Cybernetic Magician (SINGLE SET_ATTACK_FINAL needs per-source ATK ordering). Skipped: Doriado (multi-Attribute), Jetroid (hand Trap), Familiar-Possessed Aussa/Eria (Deck procedure), Infernal Incinerator (custom Tribute procedure).
+
 ## Pass v210 (card batch v210-rds-fet)
 
 Compiler v210; 46 cards Implemented (45 batch cards + Silent Magician LV8, a sibling), 0 losses; suite 7790/0. Report `Docs/CURRICULUM_BATCH_v210-rds-fet.md`.

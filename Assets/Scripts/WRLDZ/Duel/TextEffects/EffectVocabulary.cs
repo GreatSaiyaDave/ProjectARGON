@@ -983,6 +983,28 @@ namespace WRLDZ.Duel.TextEffects
                 // TlmFlipsControlAndZoneEvents batch: Dummy Golem's switch; Criosphinx's hand-to-GY send.
                 EffectActionKind.OpponentSelectsOwnMonsterSwitchControlWithThis => EffectResolutionKind.TakeControl,
                 EffectActionKind.OwnersOfMonstersReturnedToHandSendOneHandCardToGy => EffectResolutionKind.Discard,
+                // CrvBattleStepRiders batch: Steamroid / Etoile Cyber (Damage Step ATK), Chthonian Soldier (battle damage mirror).
+                EffectActionKind.ThisAtkChangesDuringDamageStepByBattleRole => EffectResolutionKind.ModifyStats,
+                EffectActionKind.InflictBattleDamageYouTookThisBattleToOpponent => EffectResolutionKind.Damage,
+                // CrvHandProceduresAndNamedSummons batch: Des Frog's and Water Dragon's Special Summons, Water Dragon's
+                // "ATK becomes 0" aura, Winged Kuriboh LV10's destroy-then-burn.
+                EffectActionKind.SpecialSummonOwnNameFromHandOrDeckUpToNamedInGy or
+                    EffectActionKind.SpecialSummonTargetedNamedGroupsFromYourGy => EffectResolutionKind.SpecialSummon,
+                EffectActionKind.SetAtkZeroOfAttributeOrRaceOnField => EffectResolutionKind.ModifyStats,
+                EffectActionKind.DestroyOppAttackPositionThenBurnPrintedAtk => EffectResolutionKind.Destroy,
+                // CrvCountersAndPhaseTriggers batch: B.E.S. Crystal Core, Dark Catapulter, Cyber Archfiend, Rapid-Fire Magician.
+                EffectActionKind.ChangeFaceUpAttackTargetToFaceUpDefense => EffectResolutionKind.ChangePosition,
+                EffectActionKind.BanishGyCardsPerCounterDestroyThatManySpellTraps or
+                    EffectActionKind.DestroyThisAtYourEndPhaseIfHandNotEmpty => EffectResolutionKind.Destroy,
+                EffectActionKind.DrawOneAtDrawPhaseStartIfHandEmpty => EffectResolutionKind.Draw,
+                EffectActionKind.InflictDamageToOpponentWhenYourNormalSpellResolves => EffectResolutionKind.Damage,
+                // TlmLeftoverSpellTraps batch: Grave Lure, Pikeru's Second Sight, Level Conversion Lab, Shifting Shadows,
+                // Mesmeric Control (TlmLeftoverSpellTrapsRuntime).
+                EffectActionKind.TurnOpponentDeckTopFaceUpSendToGyWhenDrawn => EffectResolutionKind.Discard,
+                EffectActionKind.OpponentShowsDrawnCardsUntilTheirSecondEndPhase => EffectResolutionKind.ChangePosition,
+                EffectActionKind.ShowHandMonsterRollDieLevelBecomesResultOrSendToGy => EffectResolutionKind.Randomize,
+                EffectActionKind.ShuffleYourFaceDownMainZoneMonsters => EffectResolutionKind.ChangePosition,
+                EffectActionKind.OpponentCannotChangeBattlePositionsDuringTheirNextTurn => EffectResolutionKind.Protection,
                 EffectActionKind.DestroyThisOnYourNthStandbyAfterActivation => EffectResolutionKind.Destroy,
                 // LpLocksDelayedBurnAndGyNegation batch: Weapon Change (ATK/DEF switch), Dora of Fate (delayed burn).
                 EffectActionKind.SwitchTargetCurrentAtkDefUntilOpponentsNextEndPhase => EffectResolutionKind.ModifyStats,
@@ -1045,6 +1067,23 @@ namespace WRLDZ.Duel.TextEffects
                 // TlmDerivedStatsAndProcedures batch: King of the Skull Servants' revival, Megarock Dragon's original ATK/DEF.
                 EffectActionKind.SpecialSummonThisFromGyByBanishingNamedFromGy => EffectResolutionKind.SpecialSummon,
                 EffectActionKind.OriginalAtkDefBecomeProcedureBanishCountTimes => EffectResolutionKind.ModifyStats,
+                // CrvEmptyHandAndAuras batch: Mechanical Hound's Spell Card lock, Gyroid's once-per-turn battle shield.
+                EffectActionKind.ContinuousOpponentCannotActivateSpellCards or
+                    EffectActionKind.CannotBeDestroyedByBattleOncePerTurn => EffectResolutionKind.Protection,
+                // CrvDestroyedTriggersAndFloats batch: Winged Kuriboh, T.A.D.P.O.L.E., Wroughtweiler, Giant Kozaky.
+                EffectActionKind.ControllerTakesNoBattleDamageForRestOfTurn => EffectResolutionKind.PreventDamage,
+                EffectActionKind.AddAnyNumberOfNamedFromDeckToHand or
+                    EffectActionKind.AddTargetedSeriesCardAndNamedCardFromYourGyToHand => EffectResolutionKind.Search,
+                EffectActionKind.PreviousControllerTakesThisOriginalAtkAsDamage => EffectResolutionKind.Damage,
+                EffectActionKind.SpecialSummonNamedFromDeckInChosenFaceUpPosition => EffectResolutionKind.SpecialSummon,
+                // EenDarkWorldDiscards batch: the Dark World "discarded by a card effect" triggers, Brron, Scarr.
+                EffectActionKind.SpecialSummonThisFromGyFaceUpWhenDiscarded or
+                    EffectActionKind.SpecialSummonThisFromGyThenDestroyUpToTargetsIfDiscardedByOpponent or
+                    EffectActionKind.SpecialSummonThisFromGyThenOpponentPutsHandCardsOnDeckBottomIfDiscardedByOpponent =>
+                    EffectResolutionKind.SpecialSummon,
+                EffectActionKind.DrawPlusOneIfDiscardedByOpponentEffect => EffectResolutionKind.Draw,
+                EffectActionKind.YouCanDiscardCardsOfYourChoice => EffectResolutionKind.Discard,
+                EffectActionKind.AddSeriesMonsterLevelLeqFromDeckToHand => EffectResolutionKind.Search,
                 EffectActionKind.None => EffectResolutionKind.None,
                 _ => EffectResolutionKind.UniqueException
             };

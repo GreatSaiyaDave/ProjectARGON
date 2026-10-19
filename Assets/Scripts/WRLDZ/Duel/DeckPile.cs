@@ -25,6 +25,16 @@ namespace WRLDZ.Duel
         /// after it left the Deck other than by a draw, has no such trigger.
         /// </summary>
         public bool DrawTrigger;
+
+        /// <summary>
+        /// TlmLeftoverSpellTraps batch — Grave Lure (c57270476): the player whose effect turned this copy face-up and sends
+        /// it to the GY when its holder draws it (ygopro EVENT_DRAW continuous effect on that card, reset when it leaves the
+        /// Deck any other way). Null = no such effect. Read by <see cref="TextEffects.TlmLeftoverSpellTrapsRuntime.NoteDrawn"/>.
+        /// </summary>
+        public DuelistState SentToGyWhenDrawnBy;
+
+        /// <summary>TlmLeftoverSpellTraps batch: the Grave Lure that marked this copy (the card that sends it).</summary>
+        public CardInstance SentToGyWhenDrawnSource;
     }
 
     /// <summary>

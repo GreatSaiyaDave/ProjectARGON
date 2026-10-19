@@ -72,6 +72,10 @@ namespace WRLDZ.Duel.TextEffects
                 // TlmBattleShieldsAndBurnZero batch: Grave Ohja (Lua IsPosition(POS_FACEDOWN_DEFENSE) in its Monster Zone).
                 case TlmBattleShieldsAndBurnZeroRuntime.YouControlFaceDownDefense:
                     return TlmBattleShieldsAndBurnZeroRuntime.ControlsFaceDownDefense(who);
+                // CrvEmptyHandAndAuras batch: Cybernetic Cyclopean, Reborn Zombie, Mechanical Hound (Lua
+                // GetFieldGroupCount(tp, LOCATION_HAND, 0) == 0).
+                case CrvEmptyHandAndAurasRuntime.NoCardsInHand:
+                    return CrvEmptyHandAndAurasRuntime.HandEmpty(who);
                 default:
                     return false;
             }

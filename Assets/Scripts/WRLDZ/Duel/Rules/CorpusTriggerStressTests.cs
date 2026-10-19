@@ -293,6 +293,9 @@ namespace WRLDZ.Duel.Rules
                    // Blow (a face-up listed monster); TlmEquipsAndLinkedContinuousRegressionTests drive them.
                    c.ActivationCondition == TlmEquipsAndLinkedContinuousRuntime.OnlyMonsterIsFaceUpNamed ||
                    c.ActivationCondition == TlmEquipsAndLinkedContinuousRuntime.NamedFaceUpInYourMonsterZone ||
+                   // CrvCountersAndPhaseTriggers batch: Dark Catapulter needs counters, as many GY cards and as many
+                   // Spell/Trap Cards (CrvCountersAndPhaseTriggersRegressionTests drive it).
+                   c.ActivationCondition == CrvCountersAndPhaseTriggersRuntime.CatapulterReady ||
                    c.Timing == EffectTiming.PositionChanged ||
                    c.Timing == EffectTiming.ThisCardDeclaresAttack ||
                    c.Action == EffectActionKind.PayLpToDeclareAttack ||

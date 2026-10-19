@@ -442,6 +442,8 @@ namespace WRLDZ.Duel.TextEffects
         {
             // BattleAndPositionRecords batch: The Unhappy Girl's battle partners, Judgment of the Desert's flipped monsters.
             if (BattleAndPositionRecordsRuntime.ManualPositionChangeLocked(engine, card)) return true;
+            // TlmLeftoverSpellTraps batch: Mesmeric Control's player lock (the opponent's monsters, through the next turn).
+            if (TlmLeftoverSpellTrapsRuntime.ManualPositionChangeLocked(engine, card)) return true;
             if (engine == null || card == null || !s_state.TryGetValue(engine, out var st)) return false;
             if (engine.ControllerOf(card) == null) return false;
             if (st.FieldLockBy != null && InThisDuel(engine, st.FieldLockBy) && st.FieldLockTurn == engine.TurnNumber)

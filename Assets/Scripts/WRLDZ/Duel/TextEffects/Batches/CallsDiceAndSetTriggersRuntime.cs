@@ -249,7 +249,19 @@ namespace WRLDZ.Duel.TextEffects
             var i = engine.Rng.PickIndex(opp.Hand.Count);
             if (i < 0 || i >= opp.Hand.Count) i = 0;
             var card = opp.Hand[i];
-            var gone = MonsterEffects.DiscardFromHandByInstance(opp, card, DiscardCause.Effect, who);
+            // EenDarkWorldDiscards batch: a discard by this card's effect (Electric Snake, the Dark World triggers).
+            DiscardTriggersRuntime.BeginScope(engine);
+            CardInstance gone;
+            try
+            {
+                gone = MonsterEffects.DiscardFromHandByInstance(opp, card, DiscardCause.Effect, who);
+                if (gone != null) DiscardTriggersRuntime.NoteDiscard(engine, opp, gone, who);
+            }
+            finally
+            {
+                DiscardTriggersRuntime.EndScope(engine);
+            }
+
             engine.Log($"{source?.Name}: {opp.Name} discards 1 random card ({gone?.Name ?? card?.Name}).");
             engine.NotifyPublic();
         }

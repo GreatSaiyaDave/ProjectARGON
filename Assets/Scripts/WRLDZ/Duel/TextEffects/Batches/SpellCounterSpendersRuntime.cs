@@ -55,7 +55,9 @@ namespace WRLDZ.Duel.TextEffects
                     c.Action == EffectActionKind.GainAtkPerSpellCounter ||
                     c.Action == EffectActionKind.MoveSpellCounterFromThisToTarget ||
                     c.Action == EffectActionKind.DestroyThisWhenLastSpellCounterRemoved ||
-                    c.PlaceCounterOnSpellActivate || c.RequiresRemoveSpellCounters > 0 || c.RequiresSpellCounters > 0)
+                    c.PlaceCounterOnSpellActivate || c.RequiresSpellCounters > 0 ||
+                    // CrvCountersAndPhaseTriggers batch: B.E.S. Tetran's cost removes its own (non-Spell) counters.
+                    (c.RequiresRemoveSpellCounters > 0 && !c.CounterCostIsNotSpellCounter))
                     return true;
             }
 

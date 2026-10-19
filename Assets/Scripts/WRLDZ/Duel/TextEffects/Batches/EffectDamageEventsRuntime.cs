@@ -135,6 +135,9 @@ namespace WRLDZ.Duel.TextEffects
                     break;
             }
 
+            // CrvHandProceduresAndNamedSummons batch: Winged Kuriboh LV10's Quick Effect link burns the opponent.
+            if (CrvHandProceduresAndNamedSummonsRuntime.IsLv10Link(link))
+                list.AddRange(prog.ClausesFor(EffectTiming.MonsterQuickEffect));
             // TlmBattleShieldsAndBurnZero batch: a trigger link's burn (Grave Ohja's Flip Summon trigger).
             if (TriggerChainResponsesRuntime.IsTriggerLink(link))
                 list.AddRange(TlmBattleShieldsAndBurnZeroRuntime.TriggerLinkDamageClauses(prog));
@@ -154,6 +157,8 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.InflictDamageHalfTributedAtk:
                 case EffectActionKind.InflictDamageEqualToAtk:
                 case EffectActionKind.DestroyOppAttackThenDamage:
+                // CrvHandProceduresAndNamedSummons batch: Winged Kuriboh LV10's Quick Effect link.
+                case EffectActionKind.DestroyOppAttackPositionThenBurnPrintedAtk:
                     yield return opp;
                     break;
                 case EffectActionKind.DestroyTokensInflictPer:
