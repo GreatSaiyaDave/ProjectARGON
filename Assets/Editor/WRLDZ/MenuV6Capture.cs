@@ -423,7 +423,10 @@ namespace WRLDZ.EditorTools
                 foreach (var kv in table)
                 {
                     if (!routesLegacy.TryGetValue(kv.Key, out var leg)) continue;
-                    if (leg == kv.Value) same.Add(label + " " + kv.Key + ": " + kv.Value);
+                    // P3: a recess opens its ledger sheet first; its CTA is the route legacy takes at once ("sheet X → Y")
+                    var arrow = kv.Value.LastIndexOf(" → ", StringComparison.Ordinal);
+                    var v6 = arrow >= 0 ? kv.Value.Substring(arrow + 3) : kv.Value;
+                    if (leg == v6) same.Add(label + " " + kv.Key + ": " + kv.Value);
                     else differ.Add(label + " " + kv.Key + ": " + kv.Value + " vs legacy " + leg);
                 }
 
@@ -434,9 +437,13 @@ namespace WRLDZ.EditorTools
             }
 
             // P2 (BUILD_PLAN §6 P2 verify): the title stills, the boot handoff stills + a 30 fps handoff sequence (hrpop.py),
-            // and the cold open, both plans
-            if (!string.IsNullOrEmpty(_phase) && _phase.StartsWith("p2"))
+            // and the cold open, both plans. P3 shoots them again: P3 fixes the P2 landing's defects (the carve rim at handoff
+            // u 1.7-1.95, the cold open at .3 / .9, TOUCH / the credit line, the video -> title cut)
+            if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p2") || _phase.StartsWith("p3")))
                 yield return P2Shots();
+            // P3 (BUILD_PLAN §6 P3 verify): the Stone's sheets at fixed sheet times, both plans, and the false door over an overlay
+            if (!string.IsNullOrEmpty(_phase) && _phase.StartsWith("p3"))
+                yield return P3Shots();
 
             // 4. WORLD MAP last: it leaves the scene
             yield return SetSize(1920, 1080);
@@ -496,6 +503,8 @@ namespace WRLDZ.EditorTools
                 yield return SetSize(w, h);
                 var kind = w >= h ? MenuLayoutKind.Landscape : MenuLayoutKind.Portrait;
                 ClearMenu();   // the menu's canvas (sort 50, opaque) would cover the title canvas (49)
+                // P3: the Genesis clip's own end into the live title (the held last frame fading over the live one)
+                if (_phase.StartsWith("p3")) yield return GenesisCut(kind, lay);
                 RectTransform tc = null;
                 TitleStage ts = null;
                 try
@@ -526,7 +535,8 @@ namespace WRLDZ.EditorTools
                 MenuV6Clock.Freeze(0f);   // an entrance built on a clock frozen past its end finishes on its first frame
                 var menu = RebuildWith(MenuEntry.Mode.FromTitle);
                 yield return Wait(.6f);
-                foreach (var u in new[] { 0, .6f, 1f, 1.5f, 1.8f, 2.3f, 2.6f, 2.95f })
+                // (P3: + u 1.7 / 1.75 / 1.85 / 1.9 / 1.95, the carve rim's window, where the P2 landing showed an ellipse)
+                foreach (var u in new[] { 0, .6f, 1f, 1.5f, 1.7f, 1.75f, 1.8f, 1.85f, 1.9f, 1.95f, 2.3f, 2.6f, 2.95f })
                 {
                     MenuV6Clock.Freeze(u);
                     if (ts != null) ts.Freeze(24.6 + u);
@@ -561,6 +571,251 @@ namespace WRLDZ.EditorTools
                     yield return null;
                     yield return new WaitForEndOfFrame();
                     Shot("cold_" + lay + "_t" + t.ToString("0.0", CultureInfo.InvariantCulture), 1);
+                }
+
+                MenuV6Clock.Unfreeze();
+                Rebuild();
+                yield return Wait(.4f);
+            }
+        }
+
+        /// <summary>
+        /// P3 (the P2 landing's video -> title step, fixed by GenesisVideo.HoldAndFade): the real clip played to its natural end
+        /// into the live title, on a live clock. The clip is sought to 20.9 s once it shows a frame (no 21 s wait); frames are
+        /// written from raw 21.2 until 0.8 s after the title went live (genesis_&lt;layout&gt;_cut/, timings in t.csv: wall s
+        /// since live, raw, live, the held frame's alpha), plus stills just before the cut and 0.2 / 0.45 s after it. Skipped
+        /// with a note when the local clip is missing (a clone) or fails.
+        /// </summary>
+        IEnumerator GenesisCut(MenuLayoutKind kind, string lay)
+        {
+            if (TitleStage.GenesisClip(kind) == null)
+            {
+                _notes.Add(lay + " genesis cut: no local clip (MenuV6Local), not shot");
+                yield break;
+            }
+
+            MenuV6Clock.Unfreeze();
+            RectTransform tc = null;
+            TitleStage ts = null;
+            try
+            {
+                tc = WrldzTheme.Canvas("TitleCutCanvas", 49, aspect: true);
+                ts = TitleStage.Build(tc, kind, new TitleStage.Options { Video = true, StartRaw = TitleStage.GenEndRaw });
+            }
+            catch (Exception ex)
+            {
+                _notes.Add(lay + " genesis cut: " + ex.Message);
+            }
+
+            if (ts == null || ts.Video == null)
+            {
+                _notes.Add(lay + " genesis cut: the title built without its clip");
+                if (tc != null) Destroy(tc.gameObject);
+                yield break;
+            }
+
+            // the clip's first frame, then the seek near its end
+            var t0 = Time.realtimeSinceStartup;
+            while (ts.Video != null && !ts.IsLive && ts.Video.Raw <= 0 && Time.realtimeSinceStartup - t0 < 8f) yield return null;
+            var vp = ts.Video != null ? ts.Video.GetComponent<UnityEngine.Video.VideoPlayer>() : null;
+            if (vp != null && !ts.IsLive) vp.time = 20.9;
+            var seq = Path.Combine(_out, "genesis_" + lay + "_cut");
+            Directory.CreateDirectory(seq);
+            var csv = new StringBuilder("i,wall_since_live,raw,live,held_alpha\n");
+            var liveAt = -1f;
+            var pre = false;
+            var post2 = false;
+            var post45 = false;
+            var n = 0;
+            t0 = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - t0 < 26f)
+            {
+                yield return new WaitForEndOfFrame();
+                var now = Time.realtimeSinceStartup;
+                if (ts.IsLive && liveAt < 0) liveAt = now;
+                if (ts.Raw < 21.2 && !ts.IsLive) continue;
+                var held = GameObject.Find("GenesisVideo");
+                var heldImg = held != null ? held.GetComponent<RawImage>() : null;
+                var since = liveAt < 0 ? -1f : now - liveAt;
+                if (!ts.IsLive && ts.Raw >= 21.45 && !pre)
+                {
+                    pre = true;
+                    Shot("genesis_" + lay + "_cut_pre_raw" + ts.Raw.ToString("0.00", CultureInfo.InvariantCulture), 1);
+                }
+                else if (since >= .2f && !post2)
+                {
+                    post2 = true;
+                    Shot("genesis_" + lay + "_cut_live+0.20", 1);
+                }
+                else if (since >= .45f && !post45)
+                {
+                    post45 = true;
+                    Shot("genesis_" + lay + "_cut_live+0.45", 1);
+                }
+
+                Frame(Path.Combine(seq, "f" + n.ToString("000") + ".jpg"));
+                csv.Append(n).Append(',').Append(since.ToString("0.000", CultureInfo.InvariantCulture)).Append(',')
+                    .Append(ts.Raw.ToString("0.000", CultureInfo.InvariantCulture)).Append(',').Append(ts.IsLive ? 1 : 0).Append(',')
+                    .Append(heldImg != null ? heldImg.color.a.ToString("0.000", CultureInfo.InvariantCulture) : "-").Append('\n');
+                n++;
+                if (since >= .8f) break;
+            }
+
+            File.WriteAllText(Path.Combine(seq, "t.csv"), csv.ToString());
+            if (liveAt < 0) _notes.Add(lay + " genesis cut: the title never went live in 26 s (" + n + " frames)");
+            if (tc != null) Destroy(tc.gameObject);
+            yield return null;
+        }
+
+        /// <summary>
+        /// P3: for 1920×1080 and 1080×2340 — each Stone sheet held at fixed sheet times (StoneSheet.ShowAt; the Stone's clock
+        /// frozen at 2.8): CHOOSE YOUR DUEL u .35 / .8 / 1.3 / 1.9 / 2.6 / 4 (the frame chunks, the cards dealt and turned:
+        /// v63_menu_03 / 03b, v63_portrait_00b), the five ledgers at rest u 3 and STORY's opening u .5 / 1 / 1.6 (v63_menu_08,
+        /// v63_relics_03, v63_portrait_00c), the Ring seek u .4 / .9 / 1.5 / 2 / 2.35 (never past RingSheet.GoAt: it would leave
+        /// the scene; v63_relics_04 / 04b / 04c), QUIT u .6 / 3; each sheet's close at v .4 / .9 / 1.5 (DUEL) or .15 / .45 / .9
+        /// (the 1.35x sheets; StoneSheet.ShowCloseAt) and the Stone once it is gone ("_closed": must equal the t2.8 still); DUEL's
+        /// open + close as a 30 fps sequence (land, the pop scan); then on a live clock the BAZAAR CTA's overlay in the false door
+        /// at rest and SETTINGS at rest and .25 s into its close (the FrameGhost). The menu is rebuilt at rest afterwards.
+        /// </summary>
+        IEnumerator P3Shots()
+        {
+            foreach (var (w, h, lay) in new[] { (1920, 1080, "land"), (1080, 2340, "port") })
+            {
+                yield return SetSize(w, h);
+                MenuV6Clock.Freeze(2.8f);
+                var menu = Rebuild();
+                yield return Wait(.6f);
+                if (!menu.IsMenuV6)
+                {
+                    _notes.Add("p3 " + lay + ": the legacy menu built; no sheet shots");
+                    continue;
+                }
+
+                var plan = new (string control, string id, double[] us)[]
+                {
+                    ("Hero", "duel", new[] { .35, .8, 1.3, 1.9, 2.6, 4.0 }),
+                    ("Dest_DECK", "deck", new[] { 3.0 }),
+                    ("Dest_BAG", "bag", new[] { 3.0 }),
+                    ("Dest_STORY", "story", new[] { .5, 1.0, 1.6, 3.0 }),
+                    ("Dest_BAZAAR", "bazaar", new[] { 3.0 }),
+                    ("Tert_VIEW", "view", new[] { 3.0 }),
+                    ("MapBack", "ring", new[] { .4, .9, 1.5, 2.0, 2.35 }),
+                    ("Quit", "quit", new[] { .6, 3.0 })
+                };
+                foreach (var (control, id, us) in plan)
+                {
+                    var c = Find(menu.MenuCanvas, control);
+                    if (c == null)
+                    {
+                        _notes.Add("p3 " + lay + " " + id + ": control " + control + " missing");
+                        continue;
+                    }
+
+                    Click(c.gameObject);
+                    yield return null;
+                    var sheet = menu.Sheet;
+                    if (sheet == null)
+                    {
+                        _notes.Add("p3 " + lay + " " + id + ": no sheet opened");
+                        Close(menu);
+                        continue;
+                    }
+
+                    foreach (var u in us)
+                    {
+                        if (id == "ring" && u >= RingSheet.GoAt) continue;
+                        sheet.ShowAt(u);
+                        yield return null;
+                        yield return new WaitForEndOfFrame();
+                        Shot("p3_" + lay + "_" + id + "_u" + u.ToString("0.00", CultureInfo.InvariantCulture), 1);
+                    }
+
+                    // DUEL (land): the open u 0 -> 2.6 and the close v 0 -> 1.9 as a 30 fps sequence, for the pop scan (§6 P3 verify)
+                    if (id == "duel" && lay == "land")
+                    {
+                        var dseq = Path.Combine(_out, "p3_land_duel_30fps");
+                        Directory.CreateDirectory(dseq);
+                        var fi = 0;
+                        for (var i = 0; i <= 78; i++)
+                        {
+                            sheet.ShowAt(i / 30.0);
+                            yield return null;
+                            yield return new WaitForEndOfFrame();
+                            Frame(Path.Combine(dseq, "f" + (fi++).ToString("000") + ".jpg"));
+                        }
+
+                        for (var i = 1; i <= 57; i++)
+                        {
+                            sheet.ShowCloseAt(2.6 + i / 30.0, i / 30.0);
+                            yield return null;
+                            yield return new WaitForEndOfFrame();
+                            Frame(Path.Combine(dseq, "f" + (fi++).ToString("000") + ".jpg"));
+                        }
+                    }
+
+                    // the close at fixed close times (frozen clock), then the Stone once the sheet is gone (it must equal the
+                    // t2.8 still: keystone, room DOM, torch and the door all back at rest)
+                    var uRest = us[us.Length - 1];
+                    if (id == "ring" && uRest >= RingSheet.GoAt) uRest = RingSheet.GoAt - .05;
+                    foreach (var v in id == "duel" ? new[] { .4, .9, 1.5 } : new[] { .15, .45, .9 })
+                    {
+                        sheet.ShowCloseAt(id == "ring" ? uRest : uRest + v, v);   // the Ring closes from its held frame
+                        yield return null;
+                        yield return new WaitForEndOfFrame();
+                        Shot("p3_" + lay + "_" + id + "_close_v" + v.ToString("0.00", CultureInfo.InvariantCulture), 1);
+                    }
+
+                    Close(menu);
+                    yield return null;
+                    yield return new WaitForEndOfFrame();
+                    Shot("p3_" + lay + "_" + id + "_closed", 1);
+                }
+
+                // on a live clock: the false door over an overlay (the BAZAAR ledger's CTA), SETTINGS and its close
+                MenuV6Clock.Unfreeze();
+                var bz = Find(menu.MenuCanvas, "Dest_BAZAAR");
+                if (bz != null)
+                {
+                    Click(bz.gameObject);
+                    yield return null;
+                    var cta = Find(menu.MenuCanvas, "Cta");
+                    if (cta != null)
+                    {
+                        var b = cta.GetComponent<Button>();
+                        if (b != null) b.onClick.Invoke();
+                        yield return Wait(2.6f);
+                        yield return new WaitForEndOfFrame();
+                        Shot("p3_" + lay + "_bazaar_overlay_rest", 1);
+                    }
+                    else _notes.Add("p3 " + lay + ": the BAZAAR ledger has no Cta");
+
+                    Close(menu);
+                    yield return null;
+                }
+
+                var set = Find(menu.MenuCanvas, "Tert_SET");
+                if (set != null)
+                {
+                    Click(set.gameObject);
+                    yield return Wait(2.6f);
+                    yield return new WaitForEndOfFrame();
+                    Shot("p3_" + lay + "_settings_rest", 1);
+                    Transform close = null;
+                    foreach (var shell in FindObjectsByType<MenuShell>())
+                        if (shell != null && shell.OverlayOnly && shell.ModalHost != null && close == null)
+                            close = Find(shell.ModalHost, "Close");
+                    var cb = close != null ? close.GetComponent<Button>() : null;
+                    if (cb != null)
+                    {
+                        cb.onClick.Invoke();
+                        yield return Wait(.25f);
+                        yield return new WaitForEndOfFrame();
+                        Shot("p3_" + lay + "_settings_close_0.25", 1);
+                        yield return Wait(2.3f);
+                    }
+                    else _notes.Add("p3 " + lay + ": SETTINGS has no Close");
+
+                    Close(menu);
                 }
 
                 MenuV6Clock.Unfreeze();
@@ -727,6 +982,20 @@ namespace WRLDZ.EditorTools
                 yield return null;
                 yield return null;
                 table[name] = Describe(menu);
+                // P3: a recess ledger's CTA is today's route (the legacy menu takes it at once)
+                if (table[name].StartsWith("sheet Recess_", StringComparison.Ordinal))
+                {
+                    var cta = Find(menu.MenuCanvas, "Cta");
+                    var cb = cta != null ? cta.GetComponent<Button>() : null;
+                    if (cb != null)
+                    {
+                        cb.onClick.Invoke();
+                        yield return null;
+                        yield return null;
+                        table[name] += " → " + Describe(menu);
+                    }
+                }
+
                 Close(menu);
                 yield return null;
             }
@@ -737,6 +1006,10 @@ namespace WRLDZ.EditorTools
             foreach (var pop in new[] { "Popover_DuelChoice", "Popover_QuitConfirm" })
                 if (Find(menu.MenuCanvas, pop) != null)
                     return "popover " + pop.Substring("Popover_".Length);
+            // P3: a ledger / Ring sheet over the Stone
+            var sheet = menu.Sheet;
+            if (sheet != null && sheet.Host != null)
+                return "sheet " + sheet.Host.name.Replace("Popover_", "");
             foreach (var shell in FindObjectsByType<MenuShell>())
             {
                 if (shell == null || !shell.OverlayOnly || shell.ModalHost == null || shell.ModalHost.childCount == 0) continue;
@@ -751,11 +1024,15 @@ namespace WRLDZ.EditorTools
 
         static void Close(DuelDiskMenuUI menu)
         {
-            foreach (var pop in new[] { "Popover_DuelChoice", "Popover_QuitConfirm" })
-            {
-                var p = Find(menu.MenuCanvas, pop);
-                if (p != null) DestroyImmediate(p.gameObject);
-            }
+            // every popover / v6.3 sheet host (P3: Popover_Recess_*, Popover_WorldMap); a sheet put back the Stone as it goes
+            var pops = new List<GameObject>();
+            var root = menu != null ? menu.MenuCanvas : null;
+            if (root != null)
+                foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                    if (t != null && t.name.StartsWith("Popover_", StringComparison.Ordinal))
+                        pops.Add(t.gameObject);
+            foreach (var p in pops)
+                if (p != null) DestroyImmediate(p);
 
             foreach (var shell in FindObjectsByType<MenuShell>())
                 if (shell != null && shell.OverlayOnly)

@@ -233,7 +233,10 @@ namespace WRLDZ.UI.MenuV6
             foreach (var layer in L.Layers)
             {
                 var id = layer.Id ?? "";
-                if (!id.StartsWith("reg_rule") && !id.StartsWith("cap_rule")) continue;
+                // only the register rules (.pyl .reg:after, the border under each of the pylon's own children): a caption's
+                // rule (.cap:after) sits inside its register, so counting it put NEWS' rows, EVENTS and QUIT one to two rows
+                // late (the P2 landing's cold open at 0.9 s showed EVENTS without its row and no QUIT yet)
+                if (!id.StartsWith("reg_rule")) continue;
                 var y = layer.Rect.center.y;
                 if (!land || layer.Rect.center.x < 960f) rulesL.Add(y);
                 else rulesR.Add(y);
@@ -329,9 +332,15 @@ namespace WRLDZ.UI.MenuV6
         void Apply(double t)
         {
             var E = EntranceE.At(_enter, t);
+            // the cold open fades its layers in over the dark backdrop: the page's sRGB opacity a is a linear-light a^2.2
+            // here (MenuV6Linear.Fade; the P2 landing's 0.3 s frame was 28.3 vs the still's 22.1 mean, the room's ratio
+            // .83 vs .70 = a^(1/2.2) vs a). The boot handoff fades over the kept title canvas, not black: unchanged.
             foreach (var (g, f) in _alpha)
                 if (g != null)
-                    g.alpha = Mathf.Clamp01((float)f(t, E));
+                {
+                    var a = Mathf.Clamp01((float)f(t, E));
+                    g.alpha = _enter ? a : MenuV6Linear.Fade(a);
+                }
             foreach (var (rt, basePos, dy) in _rise)
                 if (rt != null)
                     rt.anchoredPosition = basePos - new Vector2(0f, (float)dy(t, E));
@@ -668,7 +677,9 @@ namespace WRLDZ.UI.MenuV6
             if (r._mask != null) r._qFront = gfx.Quads(r._face, "Front_glow", frame, r._mask);
             var inset = new Rect(r._stoneRect.x + 20, r._stoneRect.y + 20, r._stoneRect.width - 40, r._stoneRect.height - 40);
             var clip = gfx.Clip(r._face, "CarveRimClip", inset, frame);
-            r._rim = gfx.Shapes(clip, "Carve_rim", frame);
+            // the graphic is stretched over its clip, so it maps the CLIP's stage rect (as the niche's do); mapping the whole
+            // stage into the inset squeezed the carve's circle into an ellipse round the door (the P2 landing's u 1.7-1.95)
+            r._rim = gfx.Shapes(clip, "Carve_rim", inset);
             r._rim.Feather = (float)(6 * r._k1);
 
             // ---- the dust and the Items, right after the Ring echo (menu.js:664)

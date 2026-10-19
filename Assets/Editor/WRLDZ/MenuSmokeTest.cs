@@ -321,6 +321,93 @@ namespace WRLDZ.EditorTools
                     });
             });
 
+            // P3 (BUILD_PLAN §6 P3): the Stone's own sheets build over it in both plans and close (synchronously in edit mode):
+            // CHOOSE YOUR DUEL (its cards, STAY), each recess ledger (its CTA label and the hint), the Ring seek, QUIT (the fold
+            // question and the sign-out line; FOLD is never pressed: it signs out); SETTINGS opens SettingsScreen in the false
+            // door with its CREDITS row (the boot's credit text).
+            Check("MenuV6 sheets over the Stone: DUEL, the recess ledgers, the Ring seek, QUIT, SETTINGS -> CREDITS (1920x1080, 1080x2340)", () =>
+            {
+                foreach (var (w, h) in new[] { (1920, 1080), (1080, 2340) })
+                    WithHub("HubSmokeV6Sheets", w, h, menu =>
+                    {
+                        var stone = menu.Stone;
+                        var tag = w + "x" + h + ": ";
+                        if (stone == null) throw new Exception(tag + "v6 path not taken");
+                        if (!SheetData.Has(stone.Kind)) throw new Exception(tag + "sheet data missing (the P3 art set is not installed)");
+                        var canvas = menu.MenuCanvas;
+
+                        Press(canvas, "Hero");
+                        var duel = menu.Sheet as ModeCards;
+                        if (duel == null) throw new Exception(tag + "DUEL did not open CHOOSE YOUR DUEL");
+                        foreach (var l in new[] { ModeCards.TitleText, "YOU", "STAY", "OPP" }) RequireLabel(canvas, l);
+                        foreach (var n in new[] { "Card0_VSAI", "Card1_VSPLAYER", "Card2_ZONEMODE" })
+                            if (FindNamed(canvas, n) == null) throw new Exception(tag + "mode card " + n + " missing");
+                        var states = duel.CardStates();
+                        foreach (var st in states)
+                            if (st.op < .99) throw new Exception(tag + "a mode card is not dealt at rest");
+                        Press(canvas, "Stay");
+                        if (menu.Sheet != null || FindNamed(canvas, "Popover_DuelChoice") != null)
+                            throw new Exception(tag + "STAY did not close CHOOSE YOUR DUEL");
+
+                        foreach (var (control, id) in new[]
+                                 {
+                                     ("Dest_DECK", "deck"), ("Dest_BAG", "bag"), ("Dest_STORY", "story"), ("Dest_BAZAAR", "bazaar"),
+                                     ("Tert_VIEW", "view")
+                                 })
+                        {
+                            Press(canvas, control);
+                            var rs = menu.Sheet as RecessSheet;
+                            if (rs == null || rs.Id != id) throw new Exception(tag + control + " did not open its ledger sheet");
+                            RequireLabel(canvas, RecessSheet.CtaLabel(id));
+                            RequireLabel(canvas, RecessSheet.Hint);
+                            if (rs.Frame == null || rs.Frame.Body == null) throw new Exception(tag + id + ": no false door");
+                            var dim = FindNamed(canvas, "Popover_Recess_" + id);
+                            var dimBtn = CompAt<Button>(Kid(dim, "Dim"));
+                            if (dimBtn == null) throw new Exception(tag + id + ": no dim to tap outside");
+                            dimBtn.onClick.Invoke();
+                            if (menu.Sheet != null || FindNamed(canvas, "Popover_Recess_" + id) != null)
+                                throw new Exception(tag + id + ": tapping outside did not close the sheet");
+                        }
+
+                        Press(canvas, "MapBack");
+                        var ring = menu.Sheet as RingSheet;
+                        if (ring == null) throw new Exception(tag + "WORLD MAP did not open the Ring seek");
+                        RequireLabel(canvas, "BATTLE CITY · NIGHT");
+                        ring.Close();
+                        if (FindNamed(canvas, "Popover_WorldMap") != null) throw new Exception(tag + "the Ring sheet did not close");
+
+                        Press(canvas, "Quit");
+                        var quit = menu.Sheet as QuitSheet;
+                        if (quit == null) throw new Exception(tag + "QUIT did not open the fold sheet");
+                        RequireLabel(canvas, QuitSheet.Title);
+                        RequireLabel(canvas, QuitSheet.Body);
+                        RequireLabel(canvas, "FOLD");
+                        Press(canvas, "Stay");   // never FOLD: it signs out
+                        if (FindNamed(canvas, "Popover_QuitConfirm") != null) throw new Exception(tag + "STAY did not close QUIT");
+
+                        // SETTINGS over the Stone: MenuShell's ModalHost (marked Stone by DuelDiskMenuUI.EnsureHubShell) mounts
+                        // SettingsScreen in the false door at the Stone's contract rect, its CREDITS row opens the boot's credit
+                        // text; built on a marked host here (MenuShell.CreateOverlay needs play mode: ScreenRouter's DDOL)
+                        var modal = SmokeModalHost("HubSmokeV6SheetsModal", SanctuaryHost.Stone);
+                        if (!SanctuaryChrome.OverStone(modal)) throw new Exception(tag + "a Stone-marked host is not over the live Stone");
+                        var settings = SettingsScreen.Build(modal, null, () => { });
+                        if (settings == null) throw new Exception(tag + "SettingsScreen did not build");
+                        var door = settings.GetComponent<FalseDoorFrame>();
+                        if (door == null) throw new Exception(tag + "SETTINGS is not in the false door");
+                        if (door.Cracks == null) throw new Exception(tag + "the false door over the Stone has no crack net");
+                        if (Kid(settings, "BodyWell") == null) throw new Exception(tag + "SETTINGS lost its direct BodyWell");
+                        if (!SheetCredits.AddRow(settings, modal)) throw new Exception(tag + "SETTINGS has no list for the CREDITS row");
+                        RequireLabel(settings, SheetCredits.RowLabel);
+                        var credits = SheetCredits.Open(modal);
+                        RequireLabel(credits, "Story & design");
+                        var cclose = CompAt<Button>(FindNamed(credits, "Close"));
+                        if (cclose == null) throw new Exception(tag + "CREDITS has no Close");
+                        cclose.onClick.Invoke();
+                        if (credits.gameObject.activeSelf) throw new Exception(tag + "CREDITS did not close at once (D19)");
+                        DestroyNamed("HubSmokeV6SheetsModal");
+                    });
+            });
+
             Check("DesktopLabApp.Open", () =>
             {
                 DesktopLabApp.Open();
@@ -349,6 +436,69 @@ namespace WRLDZ.EditorTools
                         throw new Exception("overlay opened with empty modal host");
                 });
             }
+
+            // P3 (D5 / §11 F5, D19): an overlay sheet wears the false door, its rows the Sanctuary look — also rows built after
+            // ShowOverlay returned (SystemsSheets' Refresh closures) — its close is synchronous, and the same painters outside a
+            // marker (the duel HUD, the Overworld) keep today's look; the deck builder keeps today's frame until P4.
+            Check("MenuV6 sheets: the false door over the map, painters behind the marker, synchronous close", () =>
+            {
+                if (!SheetData.Has(MenuLayoutKind.Landscape)) throw new Exception("sheet data missing (the P3 art set is not installed)");
+                try
+                {
+                    MenuAspect.Force(1920, 1080);
+                    // an overlay shell's ModalHost (MenuShell marks it; CreateOverlay itself needs play mode)
+                    var modal = SmokeModalHost("HubSmokeV6SheetsModal", SanctuaryHost.Overlay);
+                    if (SanctuaryChrome.OverStone(modal)) throw new Exception("an Overlay-marked host claims the Stone");
+                    var closed = false;
+                    var bazaar = SystemsSheets.BuildBazaar(modal, () => closed = true);
+                    if (bazaar == null || bazaar.name != "PhoneMenu_BAZAAR") throw new Exception("BAZAAR missing");
+                    var door = bazaar.GetComponent<FalseDoorFrame>();
+                    if (door == null) throw new Exception("BAZAAR is not in the false door");
+                    if (Kid(bazaar, "BodyWell") == null) throw new Exception("BAZAAR lost its direct BodyWell");
+                    if (FindNamed(bazaar, "Close") == null) throw new Exception("BAZAAR lost its Close");
+                    if (bazaar.GetComponentsInChildren<SanctuaryPainted>(true).Length == 0)
+                        throw new Exception("nothing in the BAZAAR wears the Sanctuary look");
+                    // a row built after the sheet returned (SystemsSheets' Refresh closures) is painted too: the marker is read
+                    // when the painter runs (§11 F5)
+                    var list = FindNamed(bazaar, "List");
+                    var later = HubChrome.ListRow(list != null ? list : (Transform)door.Body, "smoke row rebuilt later", null);
+                    if (later == null || later.GetComponent<SanctuaryPainted>() == null)
+                        throw new Exception("a row built after the sheet returned lost the Sanctuary look (§11 F5)");
+                    // outside any marker (the duel HUD, the Overworld's own panels) the same painter keeps today's look
+                    var outside = HubChrome.ListRow(host, "smoke row outside a marker", null);
+                    if (outside == null || outside.GetComponent<SanctuaryPainted>() != null)
+                        throw new Exception("a painter outside any marker painted the Sanctuary look");
+                    UnityEngine.Object.DestroyImmediate(outside.gameObject);
+                    var close = CompAt<Button>(FindNamed(bazaar, "Close"));
+                    if (close == null) throw new Exception("BAZAAR Close missing");
+                    close.onClick.Invoke();
+                    if (!closed) throw new Exception("BAZAAR Close did not reach its handler");
+                    // BAZAAR hands its close to the host (MenuShell.CloseCurrent hides every false door at once, then clears the
+                    // host); a sheet that closes itself goes through DualMenuPresenter.Dismiss: ARTIFACTS, in the false door, is
+                    // inactive at once and reaches its handler (D19)
+                    var artClosed = false;
+                    var art = ArtifactBoxScreen.Build(modal, () => artClosed = true, UiPresentation.NonArPortrait);
+                    if (art == null || art.GetComponent<FalseDoorFrame>() == null) throw new Exception("ARTIFACTS is not in the false door");
+                    var aclose = CompAt<Button>(FindNamed(art, "Close"));
+                    if (aclose == null) throw new Exception("ARTIFACTS Close missing");
+                    aclose.onClick.Invoke();
+                    if (art != null && art.gameObject.activeSelf) throw new Exception("ARTIFACTS still visible after Close (D19)");
+                    if (!artClosed) throw new Exception("ARTIFACTS Close did not reach its handler");
+                    // the deck builder keeps today's frame until P4 (MenuShell unmarks the host for it; §11 F3)
+                    SanctuaryChrome.Mark(modal.gameObject, false, SanctuaryHost.Overlay);
+                    DeckCollectionScreen.Build(modal, () => { }, UiPresentation.NonArPortrait);
+                    var deckRoot = FindNamed(modal, "PhoneMenu_DECK");
+                    if (deckRoot == null) throw new Exception("DECK missing");
+                    if (deckRoot.GetComponent<FalseDoorFrame>() != null) throw new Exception("the deck builder took the false door (P4)");
+                    if (deckRoot.GetComponentsInChildren<SanctuaryPainted>(true).Length > 0)
+                        throw new Exception("the deck builder took the Sanctuary look (P4)");
+                }
+                finally
+                {
+                    MenuAspect.ClearForce();
+                    DestroyNamed("HubSmokeV6SheetsModal");
+                }
+            });
 
             Check("DeckCollection phone", () =>
             {
@@ -853,7 +1003,8 @@ namespace WRLDZ.EditorTools
                              "HubSmokeV6", "HubSmokeV6Local", "HubSmokeV6NoArt", "HubSmokeLegacy",
                              "MenuV6NoArtCanvas", "HubPropWorld", "HubSmokeV6LocalPort", "MenuV6NoArtCanvasPort",
                              "HubSmokeV6Port", "HubSmokeV6Rigs",
-                             "BootCanvas", "BootFlowHostSmoke", "HubSmokeV6Entrance"
+                             "BootCanvas", "BootFlowHostSmoke", "HubSmokeV6Entrance",
+                             "HubSmokeV6Sheets", "HubSmokeV6SheetsModal", FrameGhost.GhostName
                          })
                     DestroyNamed(n);
             }
@@ -1168,6 +1319,26 @@ namespace WRLDZ.EditorTools
         // destroyed object is non-null to C#; both pass ?? and ?. and then throw)
         static T CompAt<T>(Transform t) where T : Component => t != null ? t.GetComponent<T>() : null;
         static Transform Kid(Transform t, string name) => t != null ? t.Find(name) : null;
+        /// <summary>A canvas with a "ModalHost" marked as MenuShell marks its own (P3), for the sheet checks.</summary>
+        static RectTransform SmokeModalHost(string name, SanctuaryHost hostKind)
+        {
+            DestroyNamed(name);
+            var canvas = WrldzTheme.Canvas(name, 92, true);
+            var modal = new GameObject("ModalHost", typeof(RectTransform)).GetComponent<RectTransform>();
+            modal.SetParent(canvas, false);
+            FloatingPanel.Stretch(modal);
+            SanctuaryChrome.Mark(modal.gameObject, true, hostKind);
+            return modal;
+        }
+
+        /// <summary>Invoke the Button of the control named <paramref name="name"/> under <paramref name="root"/> (a tap).</summary>
+        static void Press(Transform root, string name)
+        {
+            var b = CompAt<Button>(FindNamed(root, name));
+            if (b == null) throw new Exception("no control " + name);
+            b.onClick.Invoke();
+        }
+
         static RectTransform AsRect(Transform t)
         {
             if (t == null) return null;

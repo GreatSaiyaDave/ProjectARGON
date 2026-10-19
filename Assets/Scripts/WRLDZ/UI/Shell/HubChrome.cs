@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using WRLDZ.Presentation;
 using WRLDZ.UI;
 using WRLDZ.UI.Eldritch;
+using WRLDZ.UI.MenuV6;
 
 namespace WRLDZ.UI.Shell
 {
@@ -13,6 +14,11 @@ namespace WRLDZ.UI.Shell
     /// sandstone rim); capsules are <see cref="ArcaneButton"/> energy tiles; section caps and
     /// headers carry a hieroglyph read-head strip. Every public signature here is frozen — ~35
     /// screens call into it.
+    /// <para>P3 (BUILD_PLAN D5 / §11 F5): under a <see cref="SanctuaryChrome"/> marker (the Stone, the overlay shells'
+    /// ModalHost) HeaderBar, BodyWell, FooterBack, OverlayDim, QuietFill, FilamentRim, ListRow, Capsule and PaintWell paint the
+    /// v6.3 sanctuary look instead (<see cref="SanctuaryPaint"/>: the false door's own chrome and type). The check runs every
+    /// time a painter runs, so a row rebuilt later keeps its look; the duel HUD and the Overworld build outside any marker.
+    /// </para>
     /// </summary>
     public static class HubChrome
     {
@@ -126,7 +132,8 @@ namespace WRLDZ.UI.Shell
         public static void FilamentRim(Transform parent, Color color, float px = 2f)
         {
             if (parent == null) return;
-            color = ThemeEdge(color);
+            // v6.3 (under a SanctuaryChrome marker): the false door's own gold line, the same four edges
+            color = SanctuaryPaint.On(parent) ? SanctuaryPaint.Rim() : ThemeEdge(color);
             void Edge(string name, Vector2 aMin, Vector2 aMax, Vector2 pivot, Vector2 size, Vector2 pos)
             {
                 var t = parent.Find(name);
@@ -275,6 +282,8 @@ namespace WRLDZ.UI.Shell
             img.color = new Color(EldritchPalette.Abyss.r, EldritchPalette.Abyss.g, EldritchPalette.Abyss.b,
                 MenuChromePrefs.DimAlpha);
             img.raycastTarget = true;
+            // v6.3: the page's flat dim (over the Stone at the sheets' own rest opacity, over the map at the menu's budget)
+            if (SanctuaryPaint.On(parent)) SanctuaryPaint.Dim(img, parent);
             var btn = dim.GetComponent<Button>();
             btn.targetGraphic = img;
             btn.transition = Selectable.Transition.None;
@@ -293,6 +302,14 @@ namespace WRLDZ.UI.Shell
             string blurb = null, bool centerTitle = true, int titleSize = 20,
             bool plated = true)
         {
+            if (SanctuaryPaint.On(parent))
+            {
+                // v6.3: a quiet face (no tier shader) over the page's plate; the Title / Blurb children and the touch target stay
+                var sb = SanctuaryPaint.CreateQuiet(parent, title, onClick, kind, blurb, centerTitle, titleSize);
+                if (sb != null) SanctuaryPaint.Capsule(sb, kind);
+                return sb;
+            }
+
             var btn = MenuCommandButton.Create(parent, title, onClick, kind, blurb,
                 centerTitle, plated);
             Dress(btn, kind, titleSize, displayTitle: true);
@@ -343,6 +360,12 @@ namespace WRLDZ.UI.Shell
             var ol = img.GetComponent<Outline>();
             if (ol != null) ol.enabled = false;
             if (img.GetComponent<ArcaneButton>() != null) return;   // MenuCommandButton faces
+            if (SanctuaryPaint.On(img.transform))
+            {
+                // v6.3: the ledger strip's cel at the caller's alpha (its readability budget); never L-ticks
+                SanctuaryPaint.Fill(img, fill);
+                return;
+            }
 
             img.sprite = UiFoundation.WhiteSprite();
             img.type = Image.Type.Simple;
@@ -358,7 +381,8 @@ namespace WRLDZ.UI.Shell
         public static void PaintWell(Image img, bool flatten = false)
         {
             // No HideFilament here: wells are painted onto panels that own a RiftWash, and the
-            // old code never struck it.
+            // old code never struck it. (v6.3: QuietFill paints the ledger strip under a SanctuaryChrome marker.)
+            if (img != null && SanctuaryPaint.On(img.transform)) SanctuaryPainted.Tag(img, "PaintWell");
             QuietFill(img, MenuChromePrefs.PanelColor,
                 EldritchPalette.WithAlpha(EldritchPalette.Sandstone, 0.55f));
         }
@@ -452,10 +476,13 @@ namespace WRLDZ.UI.Shell
         /// <summary>Header X — gold cartouche nugget, 56 px touch target.</summary>
         public static Button CloseChip(Transform parent, Action onClose, string label = "X")
         {
-            var btn = MenuCommandButton.Create(parent, label, onClose,
-                MenuCommandButton.Kind.Gold, centerTitle: true);
+            var v6 = SanctuaryPaint.On(parent);
+            var btn = v6
+                ? SanctuaryPaint.CreateQuiet(parent, label, onClose, MenuCommandButton.Kind.Gold, null, true, 18)
+                : MenuCommandButton.Create(parent, label, onClose, MenuCommandButton.Kind.Gold, centerTitle: true);
             btn.name = "Close";
-            Dress(btn, MenuCommandButton.Kind.Gold, 18, displayTitle: true);
+            if (v6) SanctuaryPaint.Capsule(btn, MenuCommandButton.Kind.Gold);   // the gold CTA plate, its ink
+            else Dress(btn, MenuCommandButton.Kind.Gold, 18, displayTitle: true);
             var rt = btn.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(1f, 1f);
             rt.anchorMax = new Vector2(1f, 1f);
@@ -485,23 +512,35 @@ namespace WRLDZ.UI.Shell
             Place(go.GetComponent<RectTransform>(), 0.03f, 0.90f, 0.97f, 0.995f);
             var img = go.GetComponent<Image>();
             img.raycastTarget = false;
-            QuietFill(img, new Color(0f, 0f, 0f, 0.22f), EldritchPalette.MillenniumGold, millennia: true);
+            var v6 = SanctuaryPaint.On(parent);
+            if (v6)
+            {
+                // v6.3: the title sits on the false door's lintel (the frame paints it): no plate, no rule, no glyph strip
+                img.sprite = UiFoundation.WhiteSprite();
+                img.color = new Color(0f, 0f, 0f, 0f);
+                SanctuaryPainted.Tag(img, "HeaderBar");
+            }
+            // P3: no L-ticks on the header in either look (AGENTS.md "No L-ticks"; the guard pins it)
+            else QuietFill(img, new Color(0f, 0f, 0f, 0.22f), EldritchPalette.MillenniumGold);
 
-            var rule = new GameObject("GoldRule", typeof(RectTransform), typeof(Image));
-            rule.transform.SetParent(go.transform, false);
-            Place(rule.GetComponent<RectTransform>(), 0.04f, 0.00f, 0.50f, 0.06f);
-            var rimg = rule.GetComponent<Image>();
-            rimg.sprite = UiFoundation.WhiteSprite();
-            rimg.color = EldritchPalette.WithAlpha(EldritchPalette.MillenniumGold, 0.85f);
-            rimg.raycastTarget = false;
+            if (!v6)
+            {
+                var rule = new GameObject("GoldRule", typeof(RectTransform), typeof(Image));
+                rule.transform.SetParent(go.transform, false);
+                Place(rule.GetComponent<RectTransform>(), 0.04f, 0.00f, 0.50f, 0.06f);
+                var rimg = rule.GetComponent<Image>();
+                rimg.sprite = UiFoundation.WhiteSprite();
+                rimg.color = EldritchPalette.WithAlpha(EldritchPalette.MillenniumGold, 0.85f);
+                rimg.raycastTarget = false;
 
-            // Glyph run along the header's lower right — the close chip owns the upper right.
-            var strip = new GameObject("HeaderGlyphs", typeof(RectTransform), typeof(LayoutElement));
-            strip.transform.SetParent(go.transform, false);
-            strip.GetComponent<LayoutElement>().ignoreLayout = true;
-            Place(strip.GetComponent<RectTransform>(), 0.54f, 0.02f, 0.96f, 0.26f);
-            HieroglyphBorder.Create(strip.transform, HieroglyphBorder.Edge.Top, 22f,
-                EldritchPalette.WithAlpha(EldritchPalette.Sandstone, 0.85f), 2f);
+                // Glyph run along the header's lower right — the close chip owns the upper right.
+                var strip = new GameObject("HeaderGlyphs", typeof(RectTransform), typeof(LayoutElement));
+                strip.transform.SetParent(go.transform, false);
+                strip.GetComponent<LayoutElement>().ignoreLayout = true;
+                Place(strip.GetComponent<RectTransform>(), 0.54f, 0.02f, 0.96f, 0.26f);
+                HieroglyphBorder.Create(strip.transform, HieroglyphBorder.Edge.Top, 22f,
+                    EldritchPalette.WithAlpha(EldritchPalette.Sandstone, 0.85f), 2f);
+            }
 
             var hasSub = !string.IsNullOrEmpty(subtitle);
             titleT = FloatingPanel.Title(go.transform, title ?? "", 24);
@@ -525,6 +564,14 @@ namespace WRLDZ.UI.Shell
                 Place(subT.rectTransform, 0.05f, 0.08f, 0.78f, 0.48f);
             }
 
+            if (v6)
+            {
+                // the sheet header type (texts.quit .h / texts.recess .sub), centred on the lintel
+                Place(titleT.rectTransform, 0.10f, hasSub ? 0.46f : 0.10f, 0.90f, 0.95f);
+                if (subT != null) Place(subT.rectTransform, 0.10f, 0.04f, 0.90f, 0.46f);
+                SanctuaryPaint.HeaderType(titleT, subT);
+            }
+
             if (onClose != null)
                 CloseChip(go.transform, onClose);
             return go.GetComponent<RectTransform>();
@@ -538,6 +585,16 @@ namespace WRLDZ.UI.Shell
             Place(go.GetComponent<RectTransform>(), x0, y0, x1, y1);
             var img = go.GetComponent<Image>();
             img.raycastTarget = true;
+            if (SanctuaryPaint.On(parent))
+            {
+                // v6.3: the false door's own fill is the body's ground; the well only clips (still the raycast target)
+                img.sprite = UiFoundation.WhiteSprite();
+                img.type = Image.Type.Simple;
+                img.color = new Color(0f, 0f, 0f, 0f);
+                SanctuaryPainted.Tag(img, "BodyWell");
+                return go.GetComponent<RectTransform>();
+            }
+
             QuietFill(img, MenuChromePrefs.InsetColor,
                 EldritchPalette.WithAlpha(EldritchPalette.Sandstone, 0.45f));
             return go.GetComponent<RectTransform>();
@@ -570,7 +627,10 @@ namespace WRLDZ.UI.Shell
                 : onClick != null
                     ? MenuCommandButton.Kind.Primary
                     : MenuCommandButton.Kind.Secondary;
-            var btn = Capsule(host, text ?? "", onClick, kind, centerTitle: false, titleSize: 16);
+            var v6 = SanctuaryPaint.On(host);
+            var btn = v6
+                ? SanctuaryPaint.CreateQuiet(host, text ?? "", onClick, kind, null, false, 16)
+                : Capsule(host, text ?? "", onClick, kind, centerTitle: false, titleSize: 16);
             var le = btn.GetComponent<LayoutElement>();
             var tall = text != null && text.IndexOf('\n') >= 0;
             le.minHeight = tall ? 76f : 64f;
@@ -587,9 +647,13 @@ namespace WRLDZ.UI.Shell
             if (onClick == null)
             {
                 btn.interactable = false;
-                // Dim the energy line too, or a dead row still races gold.
-                btn.GetComponent<ArcaneButton>()?.SetInteractable(false);
+                // Dim the energy line too, or a dead row still races gold. (No ?.: GetComponent hands back Unity's fake null.)
+                var ab = btn.GetComponent<ArcaneButton>();
+                if (ab != null) ab.SetInteractable(false);
             }
+
+            // v6.3: the page's chapter chip (lit for a gold row, dark for a dead one) and its row type
+            if (v6) SanctuaryPaint.Capsule(btn, kind, row: true, gold: gold);
 
             var titleRt = btn.transform.Find("Title") as RectTransform;
             if (titleRt != null)
@@ -600,7 +664,8 @@ namespace WRLDZ.UI.Shell
                 title.alignment = TextAnchor.MiddleLeft;
                 title.horizontalOverflow = HorizontalWrapMode.Wrap;
                 title.verticalOverflow = VerticalWrapMode.Truncate;
-                title.color = gold ? EldritchPalette.GoldHot : EldritchPalette.TextCream;
+                if (v6) title.color = gold ? SanctuaryPaint.Gold : onClick != null ? SanctuaryPaint.Cream : SanctuaryPaint.Muted;
+                else title.color = gold ? EldritchPalette.GoldHot : EldritchPalette.TextCream;
             }
 
             return btn;

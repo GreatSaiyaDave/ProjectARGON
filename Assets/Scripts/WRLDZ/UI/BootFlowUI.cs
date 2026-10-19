@@ -1024,6 +1024,12 @@ namespace WRLDZ.UI
                 Go(next);
         }
 
+        /// <summary>The credit text (the legacy cascade's credits step; P3, D9: SETTINGS → CREDITS shows it too).</summary>
+        public const string CreditsText =
+            "DUEL MONSTERS: WRLDZ\n\n" +
+            "Story & design\nGreat SaiyaDave\n\n" +
+            "Indie prototype\nTCG rules · AR GPS";
+
         void BuildCredits()
         {
             Header("CREDITS", "Project ARGON · Great SaiyaDave");
@@ -1034,9 +1040,7 @@ namespace WRLDZ.UI
             if (seal != null) seal.PlayOpen(0.55f);
 
             var body = FlowChrome.Label(box, "B",
-                "DUEL MONSTERS: WRLDZ\n\n" +
-                "Story & design\nGreat SaiyaDave\n\n" +
-                "Indie prototype\nTCG rules · AR GPS\n\n" +
+                CreditsText + "\n\n" +
                 "Touch to continue",
                 16, FlowChrome.Soft, TextAnchor.MiddleCenter, false);
             FlowChrome.Place(body.rectTransform, 0.08f, 0.1f, 0.92f, 0.9f);

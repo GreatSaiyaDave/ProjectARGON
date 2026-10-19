@@ -49,6 +49,17 @@ namespace WRLDZ.UI.MenuV6
             return (float)Math.Pow(a, g);
         }
 
+        /// <summary>P3: a layer fading in over the dark room / night (the cold open's E table, the title's DOM twins): the
+        /// page's sRGB blend of opacity <paramref name="a"/> over near-black is a linear blend at a^2.2 (exact over black,
+        /// within a few % over the dark slates); 1 stays 1, 0 stays 0.</summary>
+        public static float Fade(double a)
+        {
+            if (Off) return (float)(a < 0 ? 0 : a > 1 ? 1 : a);
+            if (a <= 0) return 0f;
+            if (a >= 1) return 1f;
+            return (float)Math.Pow(a, 2.2);
+        }
+
         /// <summary>A dark "over" op (a shadow, the scan lines' ink) of page alpha <paramref name="a"/>: in linear light a
         /// dark layer darkens less, so its alpha rises to 1 − (1 − a)^2.2 (exact for black over any background).</summary>
         public static float Shade(double a)

@@ -53,6 +53,10 @@ def main() -> int:
     header = HUB.read_text(encoding="utf-8").split("public static RectTransform HeaderBar", 1)[-1].split("public static RectTransform BodyWell", 1)[0]
     if "CornerTicks" in header:
         fail("overlay HeaderBar still paints L-corner ticks")
+    # P3 (BUILD_PLAN §3, §11 F25): HeaderBar painted its L-ticks through QuietFill(..., millennia: true); a regex, so the
+    # spelling millennia:true (no space) cannot slip past a literal needle
+    if re.search(r"millennia\s*:\s*true", header):
+        fail("overlay HeaderBar still paints L-corner ticks (QuietFill millennia: true)")
     if "TileHub" in header or "PaintPlate" in header:
         fail("overlay HeaderBar still uses dest-tile art")
 
@@ -262,6 +266,42 @@ def main() -> int:
     must_contain(smoke, '"BootCanvas"', "MenuSmokeTest no longer cleans up the boot canvas (§11 F18)")
     must_contain(smoke, "BuildAndRun", "MenuSmokeTest lost the edit-mode title build check (§11 F18)")
 
+    # P3 (BUILD_PLAN §6 P3, D5 / §11 F5, D12, D14, D19): the Sanctuary painters behind the marker (not a static scope), every
+    # overlay sheet in the false door with its synchronous close + FrameGhost, the Stone's own sheets, the QUIT fold copy with
+    # the sign-out line, SETTINGS -> CREDITS, the deck builder kept as it is until P4, AvatarCustomizerUI never in the shared frame
+    hub_src = HUB.read_text(encoding="utf-8")
+    for painter in ("HeaderBar", "BodyWell", "FooterBack", "OverlayDim", "QuietFill", "FilamentRim", "ListRow", "Capsule", "PaintWell"):
+        if not re.search(r"public static \w+ " + painter + r"\(", hub_src):
+            fail(f"HubChrome lost the painter {painter} (names and signatures are frozen)")
+    if hub_src.count("SanctuaryPaint.On(") < 6:
+        fail("HubChrome painters no longer check the SanctuaryChrome marker (§11 F5)")
+    if "using (HubChrome.Sanctuary" in hub_src or "static IDisposable Sanctuary" in hub_src:
+        fail("HubChrome uses a static Sanctuary scope (§11 F5: the marker component, never a static scope)")
+    must_contain(MENU_V6 / "SanctuaryChrome.cs", "GetComponentInParent<SanctuaryChrome>", "the Sanctuary marker is not a GetComponentInParent check")
+    shell = ROOT / "Assets/Scripts/WRLDZ/UI/Shell/MenuShell.cs"
+    must_contain(shell, "SanctuaryChrome.Mark(ModalHost.gameObject", "the overlay ModalHost lost its SanctuaryChrome marker")
+    must_contain(shell, "id != MenuId.DeckCollection", "the deck builder no longer keeps today's look in P3 (§11 F3: its switch is P4)")
+    must_contain(shell, "SheetCredits.AddRow", "SETTINGS lost its CREDITS row (D9)")
+    must_contain(PRESENTER, "FalseDoorFrame.AnyRect", "the overlay sheets lost the v6.3 false door")
+    must_contain(PRESENTER, "FrameGhost.Play", "a closing sheet no longer plays its FrameGhost (D19)")
+    must_contain(PRESENTER, "FloatingPanel.DestroyDeferred(frame.Root.gameObject)", "DualMenuPresenter.Dismiss no longer closes the frame at once (D19)")
+    for name in ("FalseDoorFrame", "FrameGhost", "ModeCards", "RecessSheet", "RingSheet", "SanctuaryChrome"):
+        if not (MENU_V6 / f"{name}.cs").is_file():
+            fail(f"missing Assets/Scripts/WRLDZ/UI/MenuV6/{name}.cs (P3)")
+    for build in ("ModeCards.Build", "RecessSheet.Build", "RingSheet.Build", "QuitSheet.Build"):
+        must_contain(MENU_UI, build, f"the Stone lost its {build.split('.')[0]} sheet")
+    quit_src = (MENU_V6 / "RecessSheet.cs").read_text(encoding="utf-8")
+    for needle, why in (('"Fold your Spirit Dueler?"', "QUIT lost its fold question (D14)"),
+                        ('"Your progress is saved. The Duel Disk powers down and you return to the gate."', "QUIT lost the sign-out line (§11 F15)"),
+                        ('"STAY"', "QUIT lost STAY"), ('"FOLD"', "QUIT lost FOLD")):
+        if needle not in quit_src:
+            fail(why)
+    must_contain(title, "public const string CreditsText", "the boot's credit text is not shared with SETTINGS -> CREDITS")
+    must_contain(MENU_V6 / "SheetCredits.cs", "BootFlowUI.CreditsText", "SETTINGS -> CREDITS does not show the boot's own credit text")
+    if "DualMenuPresenter.BuildFrame" in av_src:
+        fail("AvatarCustomizerUI takes the shared frame (§12: it belongs to the Player customization session)")
+    must_contain(smoke, "MenuV6 sheets", "MenuSmokeTest lost the P3 sheet checks")
+
     print("hub overlay chrome")
     print("  HubChrome header / well / BACK present")
     print("  DualMenuPresenter compact Solid Vision slates (map visible)")
@@ -269,6 +309,7 @@ def main() -> int:
     print("  main menu: v6.3 Stone labels + legacy fallback; MenuV6Local only via MenuV6Art, gitignored")
     print("  main menu: portrait plan, rigs on UI/Default (no own shader), P1a stills kept as the rigs' fallback")
     print("  boot: v6.3 title gate + legacy cascade, D8 handoff, entry token, live cracks, edit-mode title smoke")
+    print("  sheets: Sanctuary painters behind the marker, false door + FrameGhost, the Stone's sheets, QUIT fold, CREDITS")
     print("PASS")
     return 0
 

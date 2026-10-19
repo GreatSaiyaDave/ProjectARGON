@@ -89,9 +89,31 @@ namespace WRLDZ.UI.MenuV6
 
         public void Fit(float k) => transform.localScale = new Vector3(k, k, 1f);
 
+        float _fadeT0 = float.NaN, _fadeDur;
+
+        /// <summary>P3: keep the last decoded frame on screen and fade it out over <paramref name="dur"/> s of real time, then
+        /// destroy this object (TitleStage's video → live handover: the decoder's shadow loss eases out instead of
+        /// stepping). The player is left as it ended (no Stop / Pause: either can blank or rewind the target texture).
+        /// False when nothing has been shown yet (the caller then destroys it at once).</summary>
+        public bool HoldAndFade(float dur)
+        {
+            if (!_shown || _img == null || dur <= 0f) return false;
+            _fadeT0 = Time.unscaledTime;
+            _fadeDur = dur;
+            return true;
+        }
+
         void Update()
         {
             if (_vp == null) return;
+            if (!float.IsNaN(_fadeT0))
+            {
+                var k = (float)MenuV6Math.InOut((Time.unscaledTime - _fadeT0) / _fadeDur);
+                if (_img != null) _img.color = new Color(1f, 1f, 1f, 1f - k);
+                if (k >= 1f) Destroy(gameObject);
+                return;
+            }
+
             if (!_shown)
             {
                 if (_vp.isPlaying && _vp.frame >= 0)

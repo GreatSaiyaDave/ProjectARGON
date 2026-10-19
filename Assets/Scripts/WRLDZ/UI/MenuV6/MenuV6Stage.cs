@@ -167,7 +167,7 @@ namespace WRLDZ.UI.MenuV6
             rootGo.transform.SetParent(canvas, false);
             var root = rootGo.GetComponent<RectTransform>();
             UiTheme.Stretch(root);
-            rootGo.AddComponent<SanctuaryChrome>();
+            rootGo.AddComponent<SanctuaryChrome>().Host = SanctuaryHost.Stone;   // P3: the painters under the Stone paint its sheets
             var stage = rootGo.AddComponent<MenuV6Stage>();
             stage.Root = root;
             stage.Layout = layout;
@@ -1735,6 +1735,68 @@ namespace WRLDZ.UI.MenuV6
             p.Force(MenuV6Clock.Now, 0, 1, since, pressAge);
             if (Life != null) Life.TickNow();
             return true;
+        }
+
+        // ------------------------------------------------------------------ P3: what a sheet does to the Stone
+
+        readonly List<CanvasGroup> _keystoneGroups = new();
+        CanvasGroup _slatesGroup, _tilesGroup, _statusGroup;
+
+        /// <summary>The Puzzle-lock takes the keystone out of the door while its pieces are away (P3 sheets): hide / show the
+        /// keystone rig and its P1a stills (the cold open's KeystoneAssembly hides the same set).</summary>
+        public void SetKeystoneShown(bool on)
+        {
+            if (_keystoneGroups.Count == 0)
+            {
+                if (Parts.Hosts != null && Parts.Hosts.TryGetValue("keystone", out var h) && h != null)
+                    _keystoneGroups.Add(SheetDraw.Group(h.gameObject));
+                if (Parts.Static != null)
+                    foreach (var id in new[] { "keystone_over_f0", "keystone_over_f1", "keystone_add_flick0" })
+                        if (Parts.Static.TryGetValue(id, out var img) && img != null)
+                            _keystoneGroups.Add(SheetDraw.Group(img.gameObject));
+                if (Parts.Flip != null)
+                    foreach (var id in new[] { "keystone_over_f0", "keystone_over_f1" })
+                        if (Parts.Flip.TryGetValue(id, out var go) && go != null)
+                            _keystoneGroups.Add(SheetDraw.Group(go));
+            }
+
+            foreach (var g in _keystoneGroups)
+                if (g != null)
+                    g.alpha = on ? 1f : 0f;
+        }
+
+        /// <summary>The room's DOM under a sheet's dim keeps a (1 − .78 dim) (menu.js:1035): the slates, the controls' own
+        /// chrome and the status line; 0 = at rest. Raycasts are untouched (the sheet's dim takes the taps).</summary>
+        public void SetSheetDim(double dim)
+        {
+            if (_slatesGroup == null && Parts.Slates != null) _slatesGroup = SheetDraw.Group(Parts.Slates.gameObject);
+            if (_tilesGroup == null && Tiles != null) _tilesGroup = SheetDraw.Group(Tiles.gameObject);
+            if (_statusGroup == null && Status != null) _statusGroup = SheetDraw.Group(Status.gameObject);
+            var a = MenuV6Linear.Fade(SheetMath.RoomDom(MenuV6MathF.Clamp01(dim)));
+            SheetDraw.SetA(_slatesGroup, a);
+            SheetDraw.SetA(_tilesGroup, a);
+            SheetDraw.SetA(_statusGroup, a);
+        }
+
+        readonly List<CanvasGroup> _torchGroups = new();
+
+        /// <summary>The flame's strength under a sheet (QUIT: the torch gutters as the door closes): the flame rig, its P1a
+        /// stills and the motes take k (1 = at rest).</summary>
+        public void SetTorchGutter(double k)
+        {
+            if (_torchGroups.Count == 0)
+            {
+                if (Parts.Hosts != null)
+                    foreach (var id in new[] { "flame", "motes" })
+                        if (Parts.Hosts.TryGetValue(id, out var h) && h != null)
+                            _torchGroups.Add(SheetDraw.Group(h.gameObject));
+                if (Parts.Static != null)
+                    foreach (var id in new[] { "flame_glow_add", "flame_tongues", "motes_add" })
+                        if (Parts.Static.TryGetValue(id, out var img) && img != null)
+                            _torchGroups.Add(SheetDraw.Group(img.gameObject));
+            }
+
+            foreach (var g in _torchGroups) SheetDraw.SetA(g, MenuV6MathF.Clamp01(k));
         }
 
         /// <summary>P2: the torch pool's swing gain about its P1b mean (TorchFlicker.DrivePool; torch_fit.py).</summary>

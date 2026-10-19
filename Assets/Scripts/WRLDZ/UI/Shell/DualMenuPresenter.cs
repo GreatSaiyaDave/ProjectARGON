@@ -5,6 +5,7 @@ using WRLDZ.Core;
 using WRLDZ.Presentation;
 using WRLDZ.UI;
 using WRLDZ.UI.Eldritch;
+using WRLDZ.UI.MenuV6;
 
 namespace WRLDZ.UI.Shell
 {
@@ -20,6 +21,11 @@ namespace WRLDZ.UI.Shell
     /// Frozen contract — 18 call sites destructure <see cref="Frame"/> and MenuSmokeTest looks the
     /// panels up by name: the roots stay "PhoneMenu_"/"ArHoloMenu_" + title, the sheet keeps a
     /// direct child "BodyWell" (SettingsScreen recolors it) and a Button named "Close".
+    ///
+    /// P3 (BUILD_PLAN §6 P3 step 4): under a SanctuaryChrome marker (the overlay shells' ModalHost) the phone sheet is the
+    /// v6.3 false door (<see cref="FalseDoorFrame"/>, revealed by the Puzzle-lock) at the window anchors over the map and at
+    /// the Stone's contract rect over the Stone; the same names, the same Frame, the same HubChrome header / well / BACK.
+    /// The deck builder (dense) and the AR frame keep today's look until P4.
     /// </summary>
     public static class DualMenuPresenter
     {
@@ -48,6 +54,9 @@ namespace WRLDZ.UI.Shell
         /// </summary>
         public static void Dismiss(Frame frame)
         {
+            // P3 (D19): the frame still goes at once; a content-free copy of the false door plays its close
+            if (frame.Root != null && frame.Root.TryGetComponent(out FalseDoorFrame door))
+                FrameGhost.Play(door, frame.Dim != null ? frame.Dim.GetComponent<Image>() : null);
             if (frame.Dim != null)
                 FloatingPanel.DestroyDeferred(frame.Dim.gameObject);
             if (frame.Root != null)
@@ -70,9 +79,9 @@ namespace WRLDZ.UI.Shell
             UiPresentation? force = null,
             bool dense = false)
         {
-            var presentation = force
-                               ?? ScreenRouter.Instance?.Presentation
-                               ?? UiPresentation.NonArPortrait;
+            // explicit != null, not ?.: ScreenRouter is a MonoBehaviour (Unity null)
+            var router = ScreenRouter.Instance;
+            var presentation = force ?? (router != null ? router.Presentation : UiPresentation.NonArPortrait);
 
             return presentation == UiPresentation.ArDiskHolo
                 ? BuildArFrame(modalHost, title, subtitle, onClose, dense)
@@ -83,12 +92,26 @@ namespace WRLDZ.UI.Shell
         public static void HideTransientMenus()
         {
             var av = UnityEngine.Object.FindAnyObjectByType<AvatarCustomizerUI>();
-            av?.HideAll();
+            if (av != null) av.HideAll();
         }
 
         public static Frame BuildPhoneFrame(
             Transform modalHost, string title, string subtitle, Action onClose, bool dense = false)
         {
+            // P3: the v6.3 false door under a SanctuaryChrome marker (never the dense deck builder: P4, §11 F3)
+            if (!dense && SanctuaryChrome.Under(modalHost))
+            {
+                try
+                {
+                    var v6 = BuildSanctuaryFrame(modalHost, title, subtitle, onClose);
+                    if (v6.Root != null) return v6;
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning("[WRLDZ MenuV6] false-door sheet " + title + " fell back to today's frame: " + ex.Message);
+                }
+            }
+
             // Overlay shells keep the map / hub visible. Full hub already has canvas atmosphere.
             // Attaching another night sky here painted dunes over the previous screen (glitch).
             var dimImg = HubChrome.OverlayDim(modalHost, onClose);
@@ -105,6 +128,8 @@ namespace WRLDZ.UI.Shell
             var root = panel != null ? panel.Root : null;
             if (root == null)
                 return default;
+            // today's look for everything inside it, even under a v6.3 host (the deck builder until P4)
+            if (SanctuaryChrome.Of(modalHost) != null) SanctuaryChrome.Mark(root.gameObject, false);
 
             MenuChromePrefs.GetWindowAnchors(UiPresentation.NonArPortrait,
                 out var x0, out var y0, out var x1, out var y1);
@@ -148,6 +173,8 @@ namespace WRLDZ.UI.Shell
             var root = panel != null ? panel.Root : null;
             if (root == null)
                 return default;
+            // the AR holo keeps its own look (BUILD_PLAN §6 P3: the AR frame is not touched)
+            if (SanctuaryChrome.Of(modalHost) != null) SanctuaryChrome.Mark(root.gameObject, false);
 
             // Dense grid tools need the volume even in AR; everything else stays glanceable
             // so the field behind the sheet is still readable.
@@ -178,6 +205,130 @@ namespace WRLDZ.UI.Shell
             };
         }
 
+        // ------------------------------------------------------------------ the v6.3 false door (P3)
+
+        /// <summary>
+        /// The false-door sheet: the dusk dim (HubChrome.OverlayDim, v6.3 under the marker), the root "PhoneMenu_" + title at
+        /// F grown by the frame's margin (over the map: GetWindowAnchors of the menu's size; over the Stone: the contract rect
+        /// of the Stone's stage, SPEC §9.3), the frame (FalseDoorFrame.AnyRect), the HubChrome header on the lintel, the body
+        /// well below it (a direct child "BodyWell") and the BACK footer.
+        /// </summary>
+        static Frame BuildSanctuaryFrame(Transform modalHost, string title, string subtitle, Action onClose)
+        {
+            var overStone = SanctuaryChrome.OverStone(modalHost);
+            var lay = SanctuaryPaint.Lay(modalHost);
+            var json = SheetData.Root(lay);
+            if (json == null) return default;
+            var k = SheetDraw.CanvasK(modalHost);
+            var stage = SheetData.Stage(json, lay);
+
+            var dimImg = HubChrome.OverlayDim(modalHost, onClose);
+            var go = new GameObject("PhoneMenu_" + title, typeof(RectTransform));
+            go.transform.SetParent(modalHost, false);
+            var root = go.GetComponent<RectTransform>();
+            // nothing half-built stays under the host when this throws (BuildPhoneFrame then builds today's frame instead:
+            // a stray dim would still take every tap and a second PhoneMenu_ root would confuse the name lookups)
+            try
+            {
+                var hosts = RJ.D(RJ.D(json, "frames"), "hosts");
+                string crackKey;
+                Rect F;
+                float lh;
+                var m = FalseDoorFrame.Margin;
+                if (overStone)
+                {
+                    // the Stone's contract rect (the DUEL sheet's frame), centred in the canvas as the Stone's stage is
+                    F = SheetData.Frame(RJ.D(RJ.D(RJ.D(json, "geo"), "cf"), "frame"));
+                    lh = (float)RJ.N(RJ.D(hosts, "host_compact"), "lh", lay == MenuLayoutKind.Landscape ? 108 : 150);
+                    crackKey = "stone_contract";
+                    root.anchorMin = root.anchorMax = new Vector2(.5f, .5f);
+                    root.pivot = new Vector2(.5f, .5f);
+                    root.sizeDelta = new Vector2((F.width + 2 * m) * k, (F.height + 2 * m) * k);
+                    root.anchoredPosition = new Vector2((F.center.x - stage.x / 2) * k, -(F.center.y - stage.y / 2) * k);
+                }
+                else
+                {
+                    MenuChromePrefs.GetWindowAnchors(UiPresentation.NonArPortrait, out var x0, out var y0, out var x1, out var y1);
+                    var key = MenuChromePrefs.Size switch
+                    {
+                        MenuChromePrefs.SizeLevel.Medium => "host_medium",
+                        MenuChromePrefs.SizeLevel.Large => "host_large",
+                        _ => "host_compact"
+                    };
+                    crackKey = key;
+                    var host = RJ.D(hosts, key);
+                    lh = (float)RJ.N(host, "lh", lay == MenuLayoutKind.Landscape ? 108 : 150);
+                    F = HostRect(modalHost, x0, y0, x1, y1, k, stage, SheetData.Frame(RJ.D(host, "F")));
+                    HubChrome.Place(root, x0, y0, x1, y1);
+                    root.offsetMin = new Vector2(-m * k, -m * k);
+                    root.offsetMax = new Vector2(m * k, m * k);
+                }
+
+                var door = FalseDoorFrame.AnyRect(root, lay, F, lh, crackKey, dimImg, k);
+                if (door == null)
+                {
+                    FloatingPanel.DestroyNow(go);
+                    if (dimImg != null) FloatingPanel.DestroyNow(dimImg.gameObject);
+                    return default;
+                }
+
+                var hasSub = !string.IsNullOrEmpty(subtitle);
+                var header = HubChrome.HeaderBar(root, title, subtitle, onClose, out var titleT, out var subT);
+                // the header sits on the lintel (lh stage px under the frame's top line), the well right under it
+                header.anchorMin = new Vector2(0f, 1f);
+                header.anchorMax = new Vector2(1f, 1f);
+                header.pivot = new Vector2(.5f, 1f);
+                header.offsetMin = new Vector2((m + 30f) * k, -(m + lh) * k);
+                header.offsetMax = new Vector2(-(m + 30f) * k, -(m + 4f) * k);
+
+                // Body well stays a DIRECT child named "BodyWell": SettingsScreen recolors it when the
+                // user cycles chrome opacity (frame.Root.Find("BodyWell")). RectMask2D clips content.
+                var well = MountWell(root, 0.055f, 0.118f, 0.945f, hasSub ? 0.850f : 0.878f, 0.52f);
+                if (well != null)
+                {
+                    well.anchorMax = new Vector2(well.anchorMax.x, 1f);
+                    well.offsetMax = new Vector2(well.offsetMax.x, -(m + lh + 14f) * k);
+                }
+
+                var back = MountFooterBack(root, onClose);
+                var body = new GameObject("BodyHost", typeof(RectTransform)).GetComponent<RectTransform>();
+                body.SetParent(well != null ? well : root, false);
+                FloatingPanel.Stretch(body);
+                door.Track(header.gameObject);
+                if (well != null) door.Track(well.gameObject);
+                if (back != null) door.Track(back.gameObject);
+                Debug.Log("[WRLDZ MenuV6] sheet · PhoneMenu_" + title + " · false door " + (overStone ? "over the Stone" : crackKey) + " · " + WrldzBuild.Stamp);
+
+                return new Frame
+                {
+                    Root = root,
+                    BodyHost = body,
+                    Dim = dimImg != null ? dimImg.rectTransform : null,
+                    Title = titleT,
+                    Subtitle = subT,
+                    Presentation = UiPresentation.NonArPortrait
+                };
+            }
+            catch
+            {
+                FloatingPanel.DestroyNow(go);
+                if (dimImg != null) FloatingPanel.DestroyNow(dimImg.gameObject);
+                throw;
+            }
+        }
+
+        /// <summary>The window anchors' rect in stage px for this canvas (its stage fit); the host's recorded F when the canvas
+        /// has no size yet (an edit-mode build).</summary>
+        static Rect HostRect(Transform modalHost, float x0, float y0, float x1, float y1, float k, Vector2 stage, Rect fallback)
+        {
+            var cv = modalHost != null ? modalHost.GetComponentInParent<Canvas>() : null;
+            var rt = cv != null && cv.rootCanvas != null ? cv.rootCanvas.transform as RectTransform : null;
+            if (rt == null || rt.rect.width <= 1f || rt.rect.height <= 1f || k <= 0f) return fallback;
+            float W = rt.rect.width, H = rt.rect.height;
+            float ox = (W - stage.x * k) * .5f, oy = (H - stage.y * k) * .5f;
+            return new Rect((x0 * W - ox) / k, ((1f - y1) * H - oy) / k, (x1 - x0) * W / k, (y1 - y0) * H / k);
+        }
+
         // ------------------------------------------------------------------ shared chrome
 
         /// <summary>
@@ -191,7 +342,7 @@ namespace WRLDZ.UI.Shell
             var well = HubChrome.BodyWell(root, x0, y0, x1, y1);
             if (well == null) return null;
             var img = well.GetComponent<Image>();
-            if (img != null)
+            if (img != null && !SanctuaryChrome.Under(root))   // v6.3: the false door's own fill is the ground
             {
                 img.sprite = UiFoundation.WhiteSprite();
                 img.type = Image.Type.Simple;

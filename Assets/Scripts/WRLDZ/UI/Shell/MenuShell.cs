@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using WRLDZ.Core;
 using WRLDZ.Presentation;
 using WRLDZ.UI;
+using WRLDZ.UI.MenuV6;
 
 namespace WRLDZ.UI.Shell
 {
@@ -14,6 +15,8 @@ namespace WRLDZ.UI.Shell
     /// <item><see cref="Create"/> — full hub shell (bottom nav + HUD + atmosphere)</item>
     /// <item><see cref="CreateOverlay"/> — map/hub modal only (no second nav bar)</item>
     /// </list>
+    /// P3 (BUILD_PLAN D5 / §11 F5): the ModalHost carries a SanctuaryChrome marker, so every sheet mounted here wears the v6.3
+    /// false door and the HubChrome painters paint its rows in the sanctuary look (the deck builder keeps today's until P4).
     /// </summary>
     public class MenuShell : MonoBehaviour
     {
@@ -112,6 +115,8 @@ namespace WRLDZ.UI.Shell
             ModalHost.SetParent(canvas, false);
             FloatingPanel.Stretch(ModalHost);
             ModalHost.SetAsLastSibling();
+            // P3: every sheet mounted here is a v6.3 sheet (DualMenuPresenter's false door, the Sanctuary painters)
+            SanctuaryChrome.Mark(ModalHost.gameObject, true, SanctuaryHost.Overlay);
 
             ToastHost = new GameObject("ToastHost", typeof(RectTransform)).GetComponent<RectTransform>();
             ToastHost.SetParent(canvas, false);
@@ -132,7 +137,8 @@ namespace WRLDZ.UI.Shell
             nav.transform.SetParent(canvas, false);
             FloatingPanel.Place(nav.GetComponent<RectTransform>(), 0f, 0f, 1f, 0.10f);
             var nimg = nav.GetComponent<Image>();
-            nimg.sprite = ImagineAssets.BarBottom() ?? UiFoundation.WhiteSprite();
+            var bar = ImagineAssets.BarBottom();   // explicit == null, not ??: Unity null
+            nimg.sprite = bar != null ? bar : UiFoundation.WhiteSprite();
             nimg.type = nimg.sprite != null && nimg.sprite.border.sqrMagnitude > 0
                 ? Image.Type.Sliced
                 : Image.Type.Simple;
@@ -151,7 +157,9 @@ namespace WRLDZ.UI.Shell
             // Duel start stays on the Eye's DUEL row. Profile is the trainer portrait.
             NavBtn(row.transform, "DECK", DuelystUi.IconDeck(), () => ScreenRouter.Ensure(this).OpenDeck());
             NavBtn(row.transform, "BAG", DuelystUi.IconBag(), () => ScreenRouter.Ensure(this).OpenInventory());
-            NavBtn(row.transform, "MAP", ImagineAssets.IconCompass() ?? DuelystUi.IconMenu(),
+            var mapIcon = ImagineAssets.IconCompass();
+            if (mapIcon == null) mapIcon = DuelystUi.IconMenu();
+            NavBtn(row.transform, "MAP", mapIcon,
                 () => ScreenRouter.Ensure(this).GoHome(), gold: true);
             NavBtn(row.transform, "STORY", DuelystUi.IconStory(), () => ScreenRouter.Ensure(this).OpenStory());
         }
@@ -207,10 +215,22 @@ namespace WRLDZ.UI.Shell
                 ToastHost.gameObject.SetActive(false);
         }
 
+        SanctuaryHost _host = SanctuaryHost.Overlay;
+
+        /// <summary>P3: the main menu's own shell sits over the Stone (its false doors take the Stone's contract rect and the
+        /// sheets' own dim); the Overworld's sits over the map (the window anchors, the menu's dim budget).</summary>
+        public void SetSanctuaryHost(SanctuaryHost host)
+        {
+            _host = host;
+            if (ModalHost != null) SanctuaryChrome.Mark(ModalHost.gameObject, true, host);
+        }
+
         /// <summary>Show a real screen for a menu id (PvAI create / formats mount full UIs).</summary>
         public void ShowOverlay(MenuId id)
         {
             DualMenuPresenter.HideTransientMenus();
+            // P3: the deck builder keeps today's look until P4 (§11 F3); every other sheet is a v6.3 sheet
+            if (ModalHost != null) SanctuaryChrome.Mark(ModalHost.gameObject, id != MenuId.DeckCollection, _host);
 
             // Overlay shells hide when empty — show canvas when opening a sheet
             if (OverlayOnly && Root != null)
@@ -274,7 +294,10 @@ namespace WRLDZ.UI.Shell
                 // Avatar uses its own canvas — hide this empty overlay so it cannot block ×
                 if (OverlayOnly && Root != null)
                     Root.gameObject.SetActive(false);
-                AvatarCustomizerUI.Ensure().OpenProfile(() => Hud?.RefreshFromSession());
+                AvatarCustomizerUI.Ensure().OpenProfile(() =>
+                {
+                    if (Hud != null) Hud.RefreshFromSession();   // HudTokens is a MonoBehaviour: no ?. (Unity null)
+                });
                 return;
             }
 
@@ -285,6 +308,8 @@ namespace WRLDZ.UI.Shell
                     ClearOverlays();
                     ScreenRouter.Ensure(this).Back();
                 });
+                // P3 (D9): the boot's credit text leaves the automatic path; SETTINGS carries it as a CREDITS row
+                SheetCredits.AddRow(settingsPanel, ModalHost);
                 _overlays[id] = settingsPanel.gameObject;
                 PresentMounted();
                 return;
@@ -400,9 +425,18 @@ namespace WRLDZ.UI.Shell
 
         void PresentMounted()
         {
-            Hud?.RefreshFromSession();
+            if (Hud != null) Hud.RefreshFromSession();   // no ?.: Unity null
             if (ModalHost == null) return;
             var g = MenuMotion.EnsureGroup(ModalHost.gameObject);
+            if (ModalHost.GetComponentInChildren<FalseDoorFrame>() != null)
+            {
+                // P3: a v6.3 sheet reveals itself (the Puzzle-lock clip, its own dim and content fades): no slide / fade
+                g.alpha = 1f;
+                g.blocksRaycasts = true;
+                g.interactable = true;
+                return;
+            }
+
             g.alpha = 0f;
             g.blocksRaycasts = false;
             MenuMotion.Play(this, MenuMotion.SheetIn(ModalHost.gameObject));
@@ -410,13 +444,34 @@ namespace WRLDZ.UI.Shell
 
         void CloseCurrent()
         {
-            if (isActiveAndEnabled && ModalHost != null && ModalHost.childCount > 0)
+            // P3 (D19): v6.3 sheets close at once; a content-free copy of each false door plays its close
+            if (ModalHost != null)
+                foreach (var door in ModalHost.GetComponentsInChildren<FalseDoorFrame>())
+                {
+                    if (door == null || !door.isActiveAndEnabled) continue;
+                    var dim = ModalHost.Find("Dim");
+                    FrameGhost.Play(door, dim != null ? dim.GetComponent<Image>() : null);
+                    door.gameObject.SetActive(false);
+                }
+
+            if (isActiveAndEnabled && ModalHost != null && HasVisibleSheet())
                 StartCoroutine(CloseCurrentCo());
             else
             {
                 ClearOverlays();
                 ScreenRouter.Ensure(this).Back();
             }
+        }
+
+        bool HasVisibleSheet()
+        {
+            for (var i = 0; i < ModalHost.childCount; i++)
+            {
+                var c = ModalHost.GetChild(i);
+                if (c != null && c.gameObject.activeSelf && c.GetComponent<FollowRect>() == null && c.name != "Dim") return true;
+            }
+
+            return false;
         }
 
         IEnumerator CloseCurrentCo()

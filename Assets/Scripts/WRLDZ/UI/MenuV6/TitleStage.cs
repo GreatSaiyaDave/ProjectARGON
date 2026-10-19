@@ -610,7 +610,19 @@ namespace WRLDZ.UI.MenuV6
         {
             var el = RJ.D(RJ.D(RJ.D(_json, "dom"), "elements"), id);
             var file = RJ.S(el, "full");
-            var sp = string.IsNullOrEmpty(file) ? null : MenuV6Art.Sprite(file);
+            // P3 (the P2 landing's look): TOUCH TO BEGIN and the credit line come out ~12 % / ~1.5x too bright, because
+            // UGUI here blends linear light where the page blends sRGB, so their soft edges and glow over the dark ground
+            // brighten. Their <name>_lin twins carry a per-pixel corrected alpha (unity_build/p3_code/gen_lin_dom.py) and
+            // take their opacity as a^2.2 (MenuV6Linear.Fade); without the twin the sprite is drawn as before.
+            Sprite sp = null;
+            var linear = false;
+            if (!string.IsNullOrEmpty(file) && (id == "touch" || id == "copy"))
+            {
+                sp = MenuV6Art.Sprite(file + "_lin");
+                linear = sp != null;
+            }
+
+            if (sp == null) sp = string.IsNullOrEmpty(file) ? null : MenuV6Art.Sprite(file);
             if (sp == null)
             {
                 Missing.Add("dom " + id);
@@ -621,7 +633,17 @@ namespace WRLDZ.UI.MenuV6
             var sz = StageSize(sp);
             var img = MakeImage(parent, "Dom_" + id, sp, new Rect(clip.x, clip.y, sz.x, sz.y));
             img.color = new Color(1, 1, 1, 0);
+            if (linear) _linearDom.Add(img);
             return img;
+        }
+
+        /// <summary>The DOM sprites drawn with the Linear-space correction (their opacity is a^2.2).</summary>
+        readonly HashSet<Graphic> _linearDom = new();
+
+        void SetDom(Graphic g, double a)
+        {
+            if (g == null) return;
+            SetA(g, _linearDom.Contains(g) ? MenuV6Linear.Fade(a) : a);
         }
 
         RectTransform _over;
@@ -650,7 +672,14 @@ namespace WRLDZ.UI.MenuV6
 
         // ------------------------------------------------------------------ clock
 
-        void GoLive(double raw)
+        void GoLive(double raw) => GoLive(raw, false);
+
+        /// <param name="holdVideo">P3 (the P2 landing's look): Unity decodes the VP8 clip ~3 levels darker in the shadows
+        /// than the source (probe B: f648 |d| 3.2), and the live title is the source's own frame, so a hard cut brightens in
+        /// one step. At the clip's natural end its last decoded frame is held over the live title and fades out over
+        /// <see cref="VideoHandover"/> s (eased), so the step becomes ~12 sub-level ones. A skip, a capture freeze or a
+        /// failed clip still cut at once.</param>
+        void GoLive(double raw, bool holdVideo)
         {
             _live = true;
             _liveRaw0 = raw;
@@ -658,13 +687,23 @@ namespace WRLDZ.UI.MenuV6
             if (_stageGroup != null) _stageGroup.alpha = 1f;
             if (Video != null)
             {
-                Video.Stop();
-                Destroy(Video.gameObject);
-                Video = null;
+                if (holdVideo && !Video.Failed && Video.HoldAndFade(VideoHandover))
+                {
+                    Video = null;   // it fades and destroys itself (GenesisVideo.HoldAndFade)
+                }
+                else
+                {
+                    Video.Stop();
+                    Destroy(Video.gameObject);
+                    Video = null;
+                }
             }
 
             Raw = raw;
         }
+
+        /// <summary>The video → live title handover (s of real time): the held last frame's fade-out.</summary>
+        public const float VideoHandover = .4f;
 
         /// <summary>Captures and tests: hold the raw clock (the page's #freeze&amp;t=). Without a clip the title is live.</summary>
         public void Freeze(double raw)
@@ -747,7 +786,7 @@ namespace WRLDZ.UI.MenuV6
                         var k = SkipK();
                         if (k >= 1) GoLive(GenEndRaw);
                     }
-                    else if (Video.Ended || Raw >= GenEndRaw - 1e-3) GoLive(GenEndRaw);
+                    else if (Video.Ended || Raw >= GenEndRaw - 1e-3) GoLive(GenEndRaw, true);
                 }
             }
             else
@@ -811,8 +850,8 @@ namespace WRLDZ.UI.MenuV6
             // the chrome (anime_v61_title.js:182-190, title.js:482-488; schedules in title_<layout>.json)
             TitleMath.Chrome(raw, _leaving, out var cap, out var touch, out var copy, out var skip, out var art, out var gen);
             SetA(_cap, _live ? cap : 0);
-            SetA(_touch, _live ? touch : 0);
-            SetA(_copy, _live ? copy : 0);
+            SetDom(_touch, _live ? touch : 0);
+            SetDom(_copy, _live ? copy : 0);
             SetA(_skip, skip);
             SetA(_ph5Art, art);
             SetA(_ph5Gen, gen);

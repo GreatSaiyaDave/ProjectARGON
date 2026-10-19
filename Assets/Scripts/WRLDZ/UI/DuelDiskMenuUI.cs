@@ -16,6 +16,10 @@ namespace WRLDZ.UI
     /// build error: the legacy Eldritch Solid Vision hierarchy (ELDRITCH_CONTRACT §6) — Identity slate → DUEL hero (Solid
     /// Vision disk) → COMMAND 2×2 → VIEW/SET → WORLD MAP | QUIT. Both paths use the same handlers and routes.
     /// Boot lands here; WORLD MAP leaves for the Overworld.
+    /// <para>P3 (BUILD_PLAN §6 P3): on the Stone, DUEL opens CHOOSE YOUR DUEL (<see cref="ModeCards"/>), a recess opens its
+    /// ledger sheet (<see cref="RecessSheet"/>, its CTA into today's screen; SETTINGS opens SettingsScreen directly, D12),
+    /// WORLD MAP plays the Ring seek (<see cref="RingSheet"/>) into the Overworld, QUIT asks "Fold your Spirit Dueler?"
+    /// (<see cref="QuitSheet"/>). Every route is today's. The legacy menu keeps its popovers.</para>
     /// </summary>
     public class DuelDiskMenuUI : MonoBehaviour
     {
@@ -36,6 +40,11 @@ namespace WRLDZ.UI
         HieroglyphPanel _popover;
         // The v6.3 Stone when it was built (null on the legacy path).
         MenuV6Stage _v6;
+        // P3: the v6.3 sheet open over the Stone (and one still closing, killed if another opens meanwhile)
+        StoneSheet _sheet, _closingSheet;
+
+        /// <summary>The v6.3 sheet open over the Stone (null when none), for tests and captures.</summary>
+        public StoneSheet Sheet => _sheet != null && !_sheet.Closing ? _sheet : null;
         GameObject _v6Canvas;
 
         /// <summary>True when the last <see cref="Build"/> took the v6.3 path.</summary>
@@ -99,16 +108,18 @@ namespace WRLDZ.UI
             var canvas = WrldzTheme.Canvas("DiskMenuCanvas", 50, aspect: true);
             _v6Canvas = canvas.gameObject;
             MenuCanvas = canvas;
+            // P3: a recess opens its ledger sheet (its CTA = today's handler); SETTINGS opens SettingsScreen directly (D12);
+            // WORLD MAP plays the Ring seek, then today's GoOverworld
             var handlers = new MenuV6Stage.Handlers
             {
-                OpenDeckHub = OpenDeckHub,
-                ShowInventory = ShowInventory,
-                OpenStory = OpenStory,
-                OpenBazaar = OpenBazaar,
-                OpenFreeView = OpenFreeView,
+                OpenDeckHub = () => OpenRecess("deck", OpenDeckHub),
+                ShowInventory = () => OpenRecess("bag", ShowInventory),
+                OpenStory = () => OpenRecess("story", OpenStory),
+                OpenBazaar = () => OpenRecess("bazaar", OpenBazaar),
+                OpenFreeView = () => OpenRecess("view", OpenFreeView),
                 OpenSettings = OpenSettings,
                 OpenDuelChoice = OpenDuelChoice,
-                GoOverworld = GoOverworld,
+                GoOverworld = OpenWorldMap,
                 OpenQuitConfirm = OpenQuitConfirm,
                 OpenAvatarMenus = OpenAvatarMenus
             };
@@ -138,6 +149,34 @@ namespace WRLDZ.UI
         {
             FreeUiKit.PlayConfirm();
             AppSession.Ensure().GoOverworld();
+        }
+
+        /// <summary>WORLD MAP on the Stone: the Ring seek sheet plays to FOUND, holds, then today's GoOverworld (§11 F10).</summary>
+        void OpenWorldMap()
+        {
+            if (_v6 == null)
+            {
+                GoOverworld();
+                return;
+            }
+
+            FreeUiKit.PlaySelect();
+            var sheet = OpenV6Sheet("WorldMap", (h, d) => RingSheet.Build(_v6, h, d, GoOverworld), false);
+            if (sheet == null) GoOverworld();
+        }
+
+        /// <summary>A recess on the Stone: its ledger sheet (BUILD_PLAN D12); the CTA runs <paramref name="route"/> (today's).</summary>
+        void OpenRecess(string id, Action route)
+        {
+            if (_v6 == null)
+            {
+                route();
+                return;
+            }
+
+            FreeUiKit.PlaySelect();
+            var sheet = OpenV6Sheet("Recess_" + id, (h, d) => RecessSheet.Build(_v6, h, d, id, route), true);
+            if (sheet == null) route();   // no sheet data: straight to the screen, as before
         }
 
         /// <summary>Today's menu, unchanged: the kill switch and the v6 fallback.</summary>
@@ -436,6 +475,8 @@ namespace WRLDZ.UI
         void OpenDuelChoice()
         {
             FreeUiKit.PlaySelect();
+            // P3: on the Stone, CHOOSE YOUR DUEL is the v6.3 contract (the routes below are the same)
+            if (_v6 != null && OpenV6Sheet("DuelChoice", (h, d) => ModeCards.Build(_v6, h, d, RouteDuelPick), false) != null) return;
             var panel = OpenPopover("DuelChoice", EldritchTier.Primary, "CHOOSE YOUR DUEL", 0.30f, 0.80f);
             if (panel == null) return;
             var body = panel.Body;
@@ -476,11 +517,37 @@ namespace WRLDZ.UI
             panel.Open();
         }
 
+        /// <summary>A mode card picked in CHOOSE YOUR DUEL (after its duel-begins beat): today's routes.</summary>
+        void RouteDuelPick(int i)
+        {
+            switch (i)
+            {
+                case 0:
+                    OpenPlayerVsAi();
+                    break;
+                case 1:
+                    OpenPlayerVsPlayer();
+                    break;
+                case 2:
+                    FreeUiKit.PlayConfirm();
+                    ZoneModeSession.EnterFromHub(transform);
+                    break;
+            }
+        }
+
+        void Fold()
+        {
+            var s = AppSession.Ensure();
+            s.Logout();
+            s.GoBoot();
+        }
+
         /// <summary>QUIT folds the disk (BUILD_PLAN D14): "Fold your Spirit Dueler?" STAY / FOLD. FOLD signs out and
         /// returns to Boot, so the body keeps the accurate line (§11 F15).</summary>
         void OpenQuitConfirm()
         {
             FreeUiKit.PlaySelect();
+            if (_v6 != null && OpenV6Sheet("QuitConfirm", (h, d) => QuitSheet.Build(_v6, h, d, Fold), true) != null) return;
             var panel = OpenPopover("QuitConfirm", EldritchTier.Danger, "Fold your Spirit Dueler?", 0.38f, 0.62f);
             if (panel == null) return;
             var body = panel.Body;
@@ -497,9 +564,7 @@ namespace WRLDZ.UI
             {
                 FreeUiKit.PlayConfirm();
                 ClosePopover();
-                var s = AppSession.Ensure();
-                s.Logout();
-                s.GoBoot();
+                Fold();
             }, EldritchTier.Danger, null, null, 24, true, false);
             GoTheme.Place(quit.Rect, 0.06f, 0.06f, 0.48f, 0.46f);
             HardenLabel(quit.Title, 24, display: true);
@@ -545,8 +610,55 @@ namespace WRLDZ.UI
             return panel;
         }
 
+        /// <summary>P3: a v6.3 sheet over the Stone in its own host (the page's dim, its crack copy, the sheet). Replaces any
+        /// live popover; null (nothing left behind) when the sheet cannot build.</summary>
+        StoneSheet OpenV6Sheet(string name, Func<RectTransform, Image, StoneSheet> build, bool tapOutsideCloses)
+        {
+            if (_root == null || _v6 == null) return null;
+            if (_popoverHost != null) DestroyPopoverNow();
+            if (_closingSheet != null)
+            {
+                _closingSheet.Kill();
+                _closingSheet = null;
+            }
+
+            var host = new GameObject("Popover_" + name, typeof(RectTransform));
+            host.transform.SetParent(_root, false);
+            GoTheme.Stretch(host.GetComponent<RectTransform>());
+            _popoverHost = host;
+            var dimImg = HubChrome.OverlayDim(host.transform, tapOutsideCloses ? ClosePopover : null);
+            if (dimImg != null)
+            {
+                try { _v6.DimCopy(host.transform, MenuMotion.EnsureGroup(dimImg.gameObject), dimImg.transform.GetSiblingIndex() + 1); }
+                catch (Exception ex) { Debug.LogWarning("[WRLDZ] Main menu v6: the dim's crack copy skipped: " + ex.Message); }
+            }
+
+            StoneSheet sheet = null;
+            try { sheet = build(host.GetComponent<RectTransform>(), dimImg); }
+            catch (Exception ex) { Debug.LogWarning("[WRLDZ] Main menu v6: sheet " + name + " failed: " + ex); }
+            if (sheet == null)
+            {
+                DestroyPopoverNow();
+                return null;
+            }
+
+            _sheet = sheet;
+            return sheet;
+        }
+
         void ClosePopover()
         {
+            if (_sheet != null)
+            {
+                // the v6.3 sheet runs its own close and removes its host at the page's sheet end
+                var s = _sheet;
+                _sheet = null;
+                _popoverHost = null;
+                _closingSheet = s;
+                s.Close();
+                return;
+            }
+
             if (_popoverHost == null) return;
             var host = _popoverHost;
             var panel = _popover;
@@ -577,6 +689,12 @@ namespace WRLDZ.UI
 
         void DestroyPopoverNow()
         {
+            if (_sheet != null)
+            {
+                _sheet.Kill();
+                _sheet = null;
+            }
+
             var host = _popoverHost;
             _popoverHost = null;
             _popover = null;
@@ -615,6 +733,9 @@ namespace WRLDZ.UI
 
         MenuShell _hubShell;
 
+        /// <summary>The overlay shell the hub opened its screens in (null before the first), for tests.</summary>
+        public MenuShell HubShell => _hubShell;
+
         MenuShell EnsureHubShell()
         {
             if (_hubShell != null) return _hubShell;
@@ -624,11 +745,14 @@ namespace WRLDZ.UI
                 if (s != null && s.OverlayOnly)
                 {
                     _hubShell = s;
+                    _hubShell.SetSanctuaryHost(_v6 != null ? SanctuaryHost.Stone : SanctuaryHost.Overlay);
                     return _hubShell;
                 }
             }
 
             _hubShell = MenuShell.CreateOverlay(80);
+            // P3: over the Stone the shell's false doors take the Stone's contract rect and the sheets' own dim
+            _hubShell.SetSanctuaryHost(_v6 != null ? SanctuaryHost.Stone : SanctuaryHost.Overlay);
             return _hubShell;
         }
 
