@@ -16,7 +16,7 @@ namespace WRLDZ.UI.MenuV6
     {
         readonly List<(Graphic g, float gain)> _flickAlpha = new();
         Graphic _poolB0;
-        float _poolGain = 1f;
+        float _poolGain = 1f, _poolSwing = float.NaN;
         double[] _noise;
         float _last = -1f;
 
@@ -44,13 +44,30 @@ namespace WRLDZ.UI.MenuV6
             _poolGain = gain;
         }
 
+        /// <summary>P2 (the P1b landing review: the torch's light swing on the wall was too small to see): the pool keeps the
+        /// P1b fit's MEAN (gain × .2 × .95) but swings with its own gain about it, a0 = gain .19 + swing .06 (flick − .5).
+        /// unity_build/p2_code/torch_fit.py (Linear model, flick 0 → 1 on the torch wall): the page 3.39 levels, P1b 2.36,
+        /// swing .6 → 3.54 (p95 8.5 vs the page's 7.4); a page render at flick .00 / .95 measures 2.39 levels.</summary>
+        public void DrivePool(Graphic g, float gain, float swing)
+        {
+            _poolB0 = g;
+            _poolGain = gain;
+            _poolSwing = swing;
+        }
+
         public void Apply(float t)
         {
             var flick = (float)MenuV6Math.Flick(t, _noise);
             Flick = flick;
             for (var i = 0; i < _flickAlpha.Count; i++)
                 SetAlpha(_flickAlpha[i].g, Mathf.Clamp01(flick * _flickAlpha[i].gain));
-            if (_poolB0 != null) SetAlpha(_poolB0, Mathf.Clamp01((float)MenuV6Math.TorchPoolA0(flick) * _poolGain));
+            if (_poolB0 != null)
+            {
+                var a0 = float.IsNaN(_poolSwing)
+                    ? (float)MenuV6Math.TorchPoolA0(flick) * _poolGain
+                    : _poolGain * .2f * .95f + _poolSwing * .2f * .3f * (flick - .5f);
+                SetAlpha(_poolB0, Mathf.Clamp01(a0));
+            }
         }
 
         static void SetAlpha(Graphic g, float a)

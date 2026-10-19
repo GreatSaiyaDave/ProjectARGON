@@ -433,6 +433,11 @@ namespace WRLDZ.EditorTools
                 fail = (fail == null ? "" : fail + "; ") + "routes differ: " + string.Join(" | ", differ);
             }
 
+            // P2 (BUILD_PLAN §6 P2 verify): the title stills, the boot handoff stills + a 30 fps handoff sequence (hrpop.py),
+            // and the cold open, both plans
+            if (!string.IsNullOrEmpty(_phase) && _phase.StartsWith("p2"))
+                yield return P2Shots();
+
             // 4. WORLD MAP last: it leaves the scene
             yield return SetSize(1920, 1080);
             menu = Rebuild();
@@ -472,6 +477,122 @@ namespace WRLDZ.EditorTools
             try { File.WriteAllText(Path.Combine(_out, "session.json"), j.ToString()); }
             catch (Exception ex) { _notes.Add("session.json: " + ex.Message); }
             Finish(ok, fail);
+        }
+
+        /// <summary>
+        /// P2: for 1920×1080 and 1080×2340 — the live title (TitleStage on its own canvas, the clock frozen, the menu torn
+        /// down first: its opaque canvas sorts above the title's 49) at raw 21.6 (the live title's first frame = the Genesis
+        /// clip's last, frame 648: the video-end check), 22.2 (the Tears start), 22.9 / 24.8 / 24.9 (land; port 21.6 / 24.9:
+        /// the approved stills v63_title_16b / 17 / 18, v63_portrait_05; out_p2/probe title_land_page_*.png); the boot handoff as
+        /// the page's boot cut composes it (the title left at raw 24.6, frozen at 24.6 + u, gone from u 1.5; the menu in its
+        /// #enter mode at u) at u 0 / .6 / 1 / 1.5 / 1.8 / 2.3 / 2.6 / 2.95 (out_p2/handoff/&lt;layout&gt;/ref_u*.png,
+        /// v63_handoff_02 / 02b / 02c / 03) and as a 30 fps sequence u 0 → 3.2; the cold open at .3 / .9 / 1.6 / 2.8
+        /// (v63_menu_00a / b / c). The menu is rebuilt at rest afterwards.
+        /// </summary>
+        IEnumerator P2Shots()
+        {
+            foreach (var (w, h, lay) in new[] { (1920, 1080, "land"), (1080, 2340, "port") })
+            {
+                yield return SetSize(w, h);
+                var kind = w >= h ? MenuLayoutKind.Landscape : MenuLayoutKind.Portrait;
+                ClearMenu();   // the menu's canvas (sort 50, opaque) would cover the title canvas (49)
+                RectTransform tc = null;
+                TitleStage ts = null;
+                try
+                {
+                    tc = WrldzTheme.Canvas("TitleCaptureCanvas", 49, aspect: true);
+                    ts = TitleStage.Build(tc, kind, new TitleStage.Options { Video = false, StartRaw = TitleStage.GenEndRaw });
+                }
+                catch (Exception ex)
+                {
+                    _notes.Add(lay + " title: " + ex.Message);
+                }
+
+                if (ts != null)
+                {
+                    foreach (var raw in lay == "land" ? new[] { 21.6, 22.2, 22.9, 24.8, 24.9 } : new[] { 21.6, 24.9 })
+                    {
+                        ts.Freeze(raw);
+                        yield return null;
+                        yield return new WaitForEndOfFrame();
+                        Shot("title_" + lay + "_raw" + raw.ToString("0.0", CultureInfo.InvariantCulture), 1);
+                    }
+
+                    if (ts.Missing.Count > 0) _notes.Add(lay + " title missing: " + string.Join(", ", ts.Missing));
+                }
+
+                // the boot handoff (D8): the kept title under the menu's #enter mode
+                if (ts != null) ts.Leave(24.6);
+                MenuV6Clock.Freeze(0f);   // an entrance built on a clock frozen past its end finishes on its first frame
+                var menu = RebuildWith(MenuEntry.Mode.FromTitle);
+                yield return Wait(.6f);
+                foreach (var u in new[] { 0, .6f, 1f, 1.5f, 1.8f, 2.3f, 2.6f, 2.95f })
+                {
+                    MenuV6Clock.Freeze(u);
+                    if (ts != null) ts.Freeze(24.6 + u);
+                    if (tc != null) tc.gameObject.SetActive(u < 1.5f);
+                    yield return null;
+                    yield return new WaitForEndOfFrame();
+                    Shot("handoff_" + lay + "_u" + u.ToString("0.00", CultureInfo.InvariantCulture), 1);
+                }
+
+                var seq = Path.Combine(_out, "handoff_" + lay + "_30fps");
+                Directory.CreateDirectory(seq);
+                for (var i = 0; i <= 96; i++)
+                {
+                    var u = i / 30f;
+                    MenuV6Clock.Freeze(u);
+                    if (ts != null) ts.Freeze(24.6 + u);
+                    if (tc != null) tc.gameObject.SetActive(u < 1.5f);
+                    yield return null;
+                    yield return new WaitForEndOfFrame();
+                    Frame(Path.Combine(seq, "f" + i.ToString("000") + ".jpg"));
+                }
+
+                if (tc != null) Destroy(tc.gameObject);
+                // the cold open (D10: the first-time path's world load, a duel's return); the clock was left frozen at the
+                // handoff's 3.2 s, past the cold open's 3.0 s end: start it at 0
+                MenuV6Clock.Freeze(0f);
+                menu = RebuildWith(MenuEntry.Mode.ColdOpen);
+                yield return Wait(.6f);
+                foreach (var t in new[] { .3f, .9f, 1.6f, 2.8f })
+                {
+                    MenuV6Clock.Freeze(t);
+                    yield return null;
+                    yield return new WaitForEndOfFrame();
+                    Shot("cold_" + lay + "_t" + t.ToString("0.0", CultureInfo.InvariantCulture), 1);
+                }
+
+                MenuV6Clock.Unfreeze();
+                Rebuild();
+                yield return Wait(.4f);
+            }
+        }
+
+        /// <summary>Tear the menu down (its overlays, host and canvas), as <see cref="Rebuild"/> does before it builds.</summary>
+        static void ClearMenu()
+        {
+            foreach (var shell in FindObjectsByType<MenuShell>())
+                if (shell != null && shell.OverlayOnly)
+                    shell.ClearOverlays();
+            foreach (var n in new[] { "MainMenuHost", "DiskMenuCanvas" })
+                for (var guard = 0; guard < 8; guard++)
+                {
+                    var go = GameObject.Find(n);
+                    if (go == null) break;
+                    DestroyImmediate(go);
+                }
+        }
+
+        /// <summary>Rebuild the menu entered by <paramref name="entry"/> (P2: the handoff / the cold open).</summary>
+        static DuelDiskMenuUI RebuildWith(MenuEntry.Mode entry)
+        {
+            ClearMenu();
+            var host = new GameObject("MainMenuHost");
+            var menu = host.AddComponent<DuelDiskMenuUI>();
+            menu.Entry = entry;
+            menu.Build();
+            return menu;
         }
 
         void Finish(bool ok, string fail)
@@ -824,7 +945,7 @@ namespace WRLDZ.EditorTools
             try
             {
                 var v = View();
-                var p = v?.GetType().GetProperty("selectedSizeIndex", Any);
+                var p = v != null ? v.GetType().GetProperty("selectedSizeIndex", Any) : null;
                 return p != null ? (int)p.GetValue(v) : -1;
             }
             catch

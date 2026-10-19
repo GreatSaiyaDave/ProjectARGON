@@ -13,6 +13,7 @@ namespace WRLDZ.UI.MenuV6
         static float _origin = float.NaN;
         static bool _frozen;
         static float _frozenAt;
+        static int _holdFrame = -1;
 
         /// <summary>Seconds of menu time: frozen value, else unscaled time since <see cref="Restart"/>.</summary>
         public static float Now
@@ -20,15 +21,34 @@ namespace WRLDZ.UI.MenuV6
             get
             {
                 if (_frozen) return _frozenAt;
-                if (float.IsNaN(_origin)) _origin = Time.unscaledTime;
+                if (float.IsNaN(_origin))
+                {
+                    // P2 (D8): the build frame holds t = 0; the clock starts with the next frame
+                    if (_holdFrame >= 0 && Application.isPlaying && Time.frameCount <= _holdFrame) return 0f;
+                    _origin = Time.unscaledTime;
+                    _holdFrame = -1;
+                }
+
                 return Mathf.Max(0f, Time.unscaledTime - _origin);
             }
         }
 
         public static bool Frozen => _frozen;
 
-        /// <summary>t = 0 now (the stage calls this when it is built). A frozen clock stays frozen.</summary>
-        public static void Restart() => _origin = Time.unscaledTime;
+        /// <summary>t = 0 now (the stage calls this when it is built). A frozen clock stays frozen.
+        /// <para>P2 (D8): in play mode t stays 0 for the rest of this frame and starts with the NEXT frame. Time.unscaledTime
+        /// is the frame's START, so a menu built in a long frame (MainMenuBootstrap.Start after the boot handoff or the world
+        /// load) would otherwise open at t = the build time, skipping the entrance's first beats in one frame; held, the
+        /// freeze shows the entrance's first frame.</para></summary>
+        public static void Restart()
+        {
+            if (Application.isPlaying)
+            {
+                _origin = float.NaN;
+                _holdFrame = Time.frameCount;
+            }
+            else _origin = Time.unscaledTime;
+        }
 
         /// <summary>Hold the clock at <paramref name="t"/> seconds (captures, tests).</summary>
         public static void Freeze(float t)
@@ -43,6 +63,7 @@ namespace WRLDZ.UI.MenuV6
             if (!_frozen) return;
             _frozen = false;
             _origin = Time.unscaledTime - _frozenAt;
+            _holdFrame = -1;
         }
     }
 

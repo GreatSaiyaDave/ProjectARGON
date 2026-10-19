@@ -20,6 +20,11 @@ namespace WRLDZ.UI
     public class DuelDiskMenuUI : MonoBehaviour
     {
         public string duelSceneName = "DuelSlice";
+
+        /// <summary>P2: how the menu is entered (MainMenuBootstrap sets it from MenuEntry: the boot handoff from the title,
+        /// else the cold open; None = at rest, e.g. an edit-mode build).</summary>
+        public MenuEntry.Mode Entry = MenuEntry.Mode.None;
+
         public const string GameTitle = "Duel Monsters: WRLDZ";
         public const string ProjectCode = "ProjectARGON";
 
@@ -107,7 +112,7 @@ namespace WRLDZ.UI
                 OpenQuitConfirm = OpenQuitConfirm,
                 OpenAvatarMenus = OpenAvatarMenus
             };
-            var stage = MenuV6Stage.Build(canvas, handlers, kind);
+            var stage = MenuV6Stage.Build(canvas, handlers, kind, Entry);
             _v6 = stage;
             _root = stage.Root;
             _status = stage.Status;
@@ -210,9 +215,12 @@ namespace WRLDZ.UI
 
             // WORLD MAP | QUIT (QUIT = right 28% of the width).
             // contract note: "Primary-outline" has no tier of its own; Primary tier carries the gold line.
+            var mapIcon = ImagineAssets.IconCompass();   // explicit == null, not ??: Unity null (fake / destroyed Sprite)
+            if (mapIcon == null) mapIcon = WrldzPresentation.SpiritEye();
+            if (mapIcon == null) mapIcon = DuelystUi.IconDeck();
             var mapBtn = ArcaneButton.Create(tiles, "WORLD MAP", GoOverworld, EldritchTier.Primary,
                 "Return to the Battle City streets",
-                ImagineAssets.IconCompass() ?? WrldzPresentation.SpiritEye() ?? DuelystUi.IconDeck(),
+                mapIcon,
                 24, false, false);
             mapBtn.name = "MapBack";
             EldritchDressing.SealFace(mapBtn, SealState.Intact);
@@ -253,7 +261,8 @@ namespace WRLDZ.UI
             faceHost.transform.SetParent(header, false);
             GoTheme.Place(faceHost.GetComponent<RectTransform>(), 0.02f, 0.08f, 0.18f, 0.92f);
             var faceImg = faceHost.GetComponent<Image>();
-            faceImg.sprite = DuelystUi.OrbRing() ?? DuelystUi.BtnCircle();
+            var faceSprite = DuelystUi.OrbRing();
+            faceImg.sprite = faceSprite != null ? faceSprite : DuelystUi.BtnCircle();
             faceImg.color = Color.white;
             faceImg.preserveAspect = true;
             // The avatar frame is a plain Image, not an Eldritch surface, so it has no shader edge
@@ -514,7 +523,13 @@ namespace WRLDZ.UI
             GoTheme.Stretch(host.GetComponent<RectTransform>());
             _popoverHost = host;
 
-            HubChrome.OverlayDim(host.transform, ClosePopover);
+            var dimImg = HubChrome.OverlayDim(host.transform, ClosePopover);
+            // P2 (#crkB): the same breaks over the dim at 30 %, a little less dimmed than the room; they fade with the dim
+            if (_v6 != null && dimImg != null)
+            {
+                try { _v6.DimCopy(host.transform, MenuMotion.EnsureGroup(dimImg.gameObject), dimImg.transform.GetSiblingIndex() + 1); }
+                catch (Exception ex) { Debug.LogWarning("[WRLDZ] Main menu v6: the dim's crack copy skipped: " + ex.Message); }
+            }
 
             var panel = HieroglyphPanel.Create(host.transform, name, tier, title, true, true);
             if (panel == null)

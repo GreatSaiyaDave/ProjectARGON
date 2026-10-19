@@ -244,6 +244,83 @@ namespace WRLDZ.EditorTools
                 }
             });
 
+            // P2 (BUILD_PLAN §6 P2, §11 F18): the boot builds the v6.3 title's settled idle in edit mode without throwing
+            // (no coroutine, no video, no RenderTexture), with and without the local-only art; the legacy cascade still
+            // builds; the Stone draws its live cracks and its entrance (cold open, boot handoff) runs and returns to rest.
+            Check("Boot title v6: BootFlowUI.BuildAndRun builds the settled idle (1920x1080, 1080x2340)", () =>
+            {
+                foreach (var (w, h) in new[] { (1920, 1080), (1080, 2340) })
+                {
+                    var kind = w >= h ? MenuLayoutKind.Landscape : MenuLayoutKind.Portrait;
+                    if (TitleStage.WhyNot(kind) != null)
+                        throw new Exception(kind + ": " + TitleStage.WhyNot(kind) + " (the P2 art set is not installed)");
+                    foreach (var noLocal in new[] { false, true })
+                    {
+                        try
+                        {
+                            MenuAspect.Force(w, h);
+                            MenuV6Art.ForceNoLocal = noLocal;
+                            MenuV6Art.ClearCache();
+                            DestroyNamed("BootCanvas");
+                            var go = new GameObject("BootFlowHostSmoke");
+                            go.AddComponent<BootFlowUI>().BuildAndRun();
+                            var bc = GameObject.Find("BootCanvas");
+                            if (bc == null) throw new Exception("no BootCanvas");
+                            var ts = bc.GetComponentInChildren<TitleStage>(true);
+                            if (ts == null) throw new Exception(kind + (noLocal ? " ForceNoLocal" : "") + ": no TitleStage (the legacy cascade ran)");
+                            if (!ts.IsLive || Math.Abs(ts.Raw - TitleStage.SettledRaw) > 1e-3)
+                                throw new Exception("the title is not the settled idle (raw " + ts.Raw + ")");
+                            if (ts.Tears == null || ts.Tears.VertexCount <= 0) throw new Exception("the Tears did not draw");
+                            if (FindNamed(ts.transform, "Dom_touch") == null) throw new Exception("TOUCH TO BEGIN missing");
+                            if (ts.Missing.Count > 0) throw new Exception("missing: " + string.Join(", ", ts.Missing));
+                        }
+                        finally
+                        {
+                            MenuV6Art.ForceNoLocal = false;
+                            MenuV6Art.ClearCache();
+                            MenuAspect.ClearForce();
+                            DestroyNamed("BootCanvas");
+                            DestroyNamed("BootFlowHostSmoke");
+                        }
+                    }
+                }
+            });
+
+            Check("Boot legacy cascade (v6 title off) still builds", () =>
+            {
+                try
+                {
+                    TitleStage.ForceLegacy = true;
+                    var go = new GameObject("BootFlowHostSmoke");
+                    go.AddComponent<BootFlowUI>().BuildAndRun();
+                    var bc = GameObject.Find("BootCanvas");
+                    if (bc == null) throw new Exception("no BootCanvas");
+                    if (bc.GetComponentInChildren<TitleStage>(true) != null) throw new Exception("v6 title built with the v6 path off");
+                }
+                finally
+                {
+                    TitleStage.ForceLegacy = false;
+                    DestroyNamed("BootCanvas");
+                    DestroyNamed("BootFlowHostSmoke");
+                }
+            });
+
+            Check("Main menu v6 live cracks + the entrance (cold open, boot handoff) return to rest", () =>
+            {
+                foreach (var (w, h) in new[] { (1920, 1080), (1080, 2340) })
+                    WithHub("HubSmokeV6Entrance", w, h, menu =>
+                    {
+                        var stone = menu.Stone;
+                        if (stone == null) throw new Exception(w + "x" + h + ": v6 path not taken");
+                        if (stone.Cracks == null || stone.Cracks.VertexCount <= 0)
+                            throw new Exception(w + "x" + h + ": the live cracks did not draw (the baked plate is showing)");
+                        stone.ProbeEntrance(false, 0, .3, .9, 1.2, 1.6, 1.95, 2.3, 2.9);
+                        stone.ProbeEntrance(true, 0, .2, .5, .9, 1.1, 1.4, 1.7, 1.9, 2.2, 2.5, 2.9, 3.1, 3.3);
+                        if (stone.Entrance != null) throw new Exception("the entrance did not finish");
+                        RequireMainMenu(menu.MenuCanvas, MainMenuV6Labels);
+                    });
+            });
+
             Check("DesktopLabApp.Open", () =>
             {
                 DesktopLabApp.Open();
@@ -487,7 +564,7 @@ namespace WRLDZ.EditorTools
                 var choice = FindNamed(drag.transform, "DropChoice");
                 if (choice == null)
                     throw new Exception("drop choice missing");
-                var frame = FindNamed(choice, "Frame")?.GetComponent<Image>();
+                var frame = CompAt<Image>(FindNamed(choice, "Frame"));   // no ?.: Unity null (fake / destroyed)
                 if (frame == null || !IsFilamentSprite(frame.sprite))
                     throw new Exception("drop choice is a raw plate — needs inspect glass");
                 if (FindNamed(drag.transform, "Exit") == null)
@@ -517,10 +594,10 @@ namespace WRLDZ.EditorTools
                     throw new Exception("missing Imagine hud_island_glass");
                 if (ImagineAssets.HudChipCyan() == null || ImagineAssets.HudFabOrb() == null)
                     throw new Exception("missing Imagine arena chip/orb");
-                var youFrame = hud.Root.Find("YouScore")?.Find("Frame")?.GetComponent<Image>();
+                var youFrame = CompAt<Image>(Kid(hud.Root.Find("YouScore"), "Frame"));
                 if (youFrame == null || !IsFilamentSprite(youFrame.sprite))
                     throw new Exception("YouScore is not the filament island sprite");
-                var oppFrame = hud.Root.Find("OppScore")?.Find("Frame")?.GetComponent<Image>();
+                var oppFrame = CompAt<Image>(Kid(hud.Root.Find("OppScore"), "Frame"));
                 if (oppFrame == null || !IsFilamentSprite(oppFrame.sprite))
                     throw new Exception("OppScore is not the filament island sprite");
             });
@@ -617,7 +694,8 @@ namespace WRLDZ.EditorTools
                 var back = vis.transform.Find("SpellTrapArtworkBack");
                 if (art == null || back == null)
                     throw new Exception("S/T holo missing art/back quads");
-                var mat = art.GetComponent<MeshRenderer>()?.sharedMaterial;
+                var artMr = art.GetComponent<MeshRenderer>();
+                var mat = artMr != null ? artMr.sharedMaterial : null;
                 if (mat != null && mat.HasProperty("_Cull") && mat.GetFloat("_Cull") < 1.5f)
                     throw new Exception("S/T art is double-sided — controller would see art, not the back");
                 if (back.localPosition.z >= -0.004f)
@@ -626,7 +704,8 @@ namespace WRLDZ.EditorTools
                 if (Mathf.Abs(Mathf.DeltaAngle(yaw, ArArenaCardVisual.SpellControllerYaw(true))) > 8f)
                     throw new Exception(
                         "player S/T yaw must put the card back toward the controller, got " + yaw);
-                var backMat = back.GetComponent<MeshRenderer>()?.sharedMaterial;
+                var backMr = back.GetComponent<MeshRenderer>();
+                var backMat = backMr != null ? backMr.sharedMaterial : null;
                 Texture backTex = null;
                 if (backMat != null)
                 {
@@ -713,7 +792,8 @@ namespace WRLDZ.EditorTools
 
             Check("OverworldUI deck switcher pops off MenuGlass", () =>
             {
-                if (AppSession.Ensure()?.Account == null)
+                var switcherSession = AppSession.Ensure();
+                if (switcherSession == null || switcherSession.Account == null)
                     throw new Exception("no session account for overworld switcher");
                 DestroyNamed("OverworldHudCanvas");
                 DestroyNamed("OverworldMapCanvas");
@@ -752,7 +832,8 @@ namespace WRLDZ.EditorTools
                 DeckCollectionScreen.Build(host, () => { }, UiPresentation.NonArPortrait);
                 var caret = FindNamed(host, "Caret");
                 if (caret == null) throw new Exception("Caret missing");
-                var es = EventSystem.current ?? UnityEngine.Object.FindAnyObjectByType<EventSystem>();
+                var es = EventSystem.current;
+                if (es == null) es = UnityEngine.Object.FindAnyObjectByType<EventSystem>();
                 var ped = new PointerEventData(es);
                 ExecuteEvents.Execute(caret.gameObject, ped, ExecuteEvents.pointerDownHandler);
                 ExecuteEvents.Execute(caret.gameObject, ped, ExecuteEvents.pointerUpHandler);
@@ -771,7 +852,8 @@ namespace WRLDZ.EditorTools
                              "OwSmoke", "OverworldHudCanvas", "OverworldMapCanvas",
                              "HubSmokeV6", "HubSmokeV6Local", "HubSmokeV6NoArt", "HubSmokeLegacy",
                              "MenuV6NoArtCanvas", "HubPropWorld", "HubSmokeV6LocalPort", "MenuV6NoArtCanvasPort",
-                             "HubSmokeV6Port", "HubSmokeV6Rigs"
+                             "HubSmokeV6Port", "HubSmokeV6Rigs",
+                             "BootCanvas", "BootFlowHostSmoke", "HubSmokeV6Entrance"
                          })
                     DestroyNamed(n);
             }
@@ -1000,7 +1082,7 @@ namespace WRLDZ.EditorTools
         static void AssertDetachedEmpty(Transform hud)
         {
             var bar = MakeSwitchGlass(hud);
-            var list = OnHandDeckSwitchMenu.Build(hud as RectTransform ?? hud.GetComponent<RectTransform>(),
+            var list = OnHandDeckSwitchMenu.Build(AsRect(hud),
                 null, _ => { });
             if (list == null || list.name != OnHandDeckSwitchMenu.HostName)
                 throw new Exception("missing DeckSwitchList");
@@ -1019,7 +1101,7 @@ namespace WRLDZ.EditorTools
             inv.carryDeckBoxSlots = 2;
             inv.pockets.pocketCount = 2;
             inv.pockets.pocketDeckBoxIndex = new[] { 0, 1 };
-            var list = OnHandDeckSwitchMenu.Build(hud as RectTransform ?? hud.GetComponent<RectTransform>(),
+            var list = OnHandDeckSwitchMenu.Build(AsRect(hud),
                 inv, _ => { });
             RequireLabel(list.transform, "Beatdown Box");
             RequireLabel(list.transform, "Control Box");
@@ -1046,7 +1128,7 @@ namespace WRLDZ.EditorTools
             inv.carryDeckBoxSlots = 1;
             inv.pockets.pocketCount = 1;
             inv.pockets.pocketDeckBoxIndex = new[] { 0 };
-            var list = OnHandDeckSwitchMenu.Build(hud as RectTransform ?? hud.GetComponent<RectTransform>(),
+            var list = OnHandDeckSwitchMenu.Build(AsRect(hud),
                 inv, _ => { });
             LayoutRebuilder.ForceRebuildLayoutImmediate(list.GetComponent<RectTransform>());
             var row = FindNamed(list.transform, "D0");
@@ -1080,6 +1162,17 @@ namespace WRLDZ.EditorTools
             }
 
             return list;
+        }
+
+        // Unity-null-safe helpers (no ?? / ?. on UnityEngine.Object: a missing component is a fake null in the Editor and a
+        // destroyed object is non-null to C#; both pass ?? and ?. and then throw)
+        static T CompAt<T>(Transform t) where T : Component => t != null ? t.GetComponent<T>() : null;
+        static Transform Kid(Transform t, string name) => t != null ? t.Find(name) : null;
+        static RectTransform AsRect(Transform t)
+        {
+            if (t == null) return null;
+            var rt = t as RectTransform;
+            return rt != null ? rt : t.GetComponent<RectTransform>();
         }
 
         static Transform FindNamed(Transform root, string name)

@@ -87,6 +87,15 @@ namespace WRLDZ.UI
             Screen.autorotateToLandscapeRight = false;
         }
 
+        /// <summary>BUILD_PLAN D1 (P2): the boot canvas opting in to the aspect plan (the v6.3 title is the 1920×1080 stage at
+        /// a landscape surface); BootFlowUI switches each FlowChrome step back to the portrait phone scaler.</summary>
+        public static RectTransform CreateCanvas(string name, int sort, bool aspect)
+        {
+            var rt = CreateCanvas(name, sort);
+            if (aspect) UiTheme.ApplyForAspect(rt.GetComponent<CanvasScaler>(), WRLDZ.UI.MenuV6.MenuAspect.Surface);
+            return rt;
+        }
+
         public static RectTransform CreateCanvas(string name, int sort = 40)
         {
             UiFoundation.EnsureEventSystem();
@@ -869,7 +878,7 @@ namespace WRLDZ.UI
             var go = new GameObject(name, typeof(RectTransform), typeof(Image));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
-            img.sprite = sp ?? UiFoundation.WhiteSprite();
+            img.sprite = sp != null ? sp : UiFoundation.WhiteSprite();   // not ??: Unity null
             img.color = color;
             img.raycastTarget = false;
             return go.GetComponent<RectTransform>();

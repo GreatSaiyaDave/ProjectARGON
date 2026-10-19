@@ -85,6 +85,20 @@ namespace WRLDZ.UI.MenuV6
         /// <summary>The rigs that could not build (their layers keep the P1a still).</summary>
         public readonly List<string> RigsKept = new();
 
+        /// <summary>How this build was entered (P2): the boot handoff, the cold open, or None (at rest).</summary>
+        public MenuEntry.Mode Entry { get; private set; }
+
+        /// <summary>The live crack layers (P2, D11): #crkU and Nut's sky fracture (null = the P1a baked plates).</summary>
+        public CrackLayer Cracks { get; private set; }
+
+        public CrackLayer NutCracks { get; private set; }
+
+        /// <summary>The entrance (P2: cold open / boot handoff); null at rest and once it is over.</summary>
+        public MenuEntrance Entrance { get; internal set; }
+
+        /// <summary>What the entrance drives (P2).</summary>
+        internal readonly StageParts Parts = new();
+
         Handlers _h;
         Rect _stageRect;
         Vector2 _lastRootSize;
@@ -128,7 +142,12 @@ namespace WRLDZ.UI.MenuV6
         // ------------------------------------------------------------------ build
 
         /// <summary>Build the Stone into <paramref name="canvas"/>. Throws on a real error (the caller falls back).</summary>
-        public static MenuV6Stage Build(RectTransform canvas, Handlers handlers, MenuLayoutKind kind)
+        public static MenuV6Stage Build(RectTransform canvas, Handlers handlers, MenuLayoutKind kind) =>
+            Build(canvas, handlers, kind, MenuEntry.Mode.None);
+
+        /// <summary>P2: the same, entered by <paramref name="entry"/> (the boot handoff from the title, the cold open, or
+        /// None = the Stone at rest: edit mode, captures).</summary>
+        public static MenuV6Stage Build(RectTransform canvas, Handlers handlers, MenuLayoutKind kind, MenuEntry.Mode entry)
         {
             if (canvas == null) throw new ArgumentNullException(nameof(canvas));
             MenuV6Art.ClearCache();
@@ -141,6 +160,8 @@ namespace WRLDZ.UI.MenuV6
             bimg.sprite = UiFoundation.WhiteSprite();
             bimg.color = WrldzAnimePalette.RoomBase;
             bimg.raycastTarget = false;
+            if (entry == MenuEntry.Mode.FromTitle && Application.isPlaying)
+                bimg.color = new Color(bimg.color.r, bimg.color.g, bimg.color.b, 0f);   // the title shows through until the room rises
 
             var rootGo = new GameObject("Root", typeof(RectTransform));
             rootGo.transform.SetParent(canvas, false);
@@ -152,6 +173,9 @@ namespace WRLDZ.UI.MenuV6
             stage.Layout = layout;
             stage.Kind = kind;
             stage._h = handlers ?? new Handlers();
+            stage.Entry = Application.isPlaying ? entry : MenuEntry.Mode.None;
+            stage.Parts.Canvas = canvas;
+            stage.Parts.Backdrop = backdrop.GetComponent<RectTransform>();
             stage.BuildInto(canvas);
             return stage;
         }
@@ -175,6 +199,12 @@ namespace WRLDZ.UI.MenuV6
             var cracks = Group("CracksU");
             var fx = Group("Fx");
             var slates = Group("Slates");
+            Parts.Root = Root;
+            Parts.Stage = Stage;
+            Parts.Room = room;
+            Parts.CracksGroup = cracks;
+            Parts.Fx = fx;
+            Parts.Slates = slates;
             RectTransform slateL, slateR;
             if (Land)
             {
@@ -190,6 +220,11 @@ namespace WRLDZ.UI.MenuV6
             Tiles = Group("Tiles");
             var fx2 = Group("Fx2");
             var ph5 = Group("Placeholder");
+            Parts.Tiles = Tiles;
+            Parts.Fx2 = fx2;
+            Parts.Ph5 = ph5;
+            Parts.SlateL = slateL;
+            Parts.SlateR = slateR;
 
             // controls first, so their own chrome can be parented to them
             var controls = BuildControls();
@@ -205,7 +240,7 @@ namespace WRLDZ.UI.MenuV6
                         StaticLayer(room, _stageRect, L);
                         break;
                     case "crkU":
-                        StaticLayer(cracks, _stageRect, L);
+                        if (!LiveCracks(cracks)) StaticLayer(cracks, _stageRect, L);
                         break;
                     case "fx":
                         FxLayer(fx, L);
@@ -243,7 +278,24 @@ namespace WRLDZ.UI.MenuV6
 
             if (Torch != null) Torch.Apply(MenuV6Clock.Now);
             BuildRigs(controls);
-            if (Application.isPlaying)
+            Parts.Static = _static;
+            Parts.Hosts = _hosts;
+            Parts.Flip = _flip;
+            Parts.Ctx = _ctx;
+            Parts.Hero = controls.Hero;
+            Parts.HeroRect = controls.HeroRect;
+            Parts.MapBack = controls.MapBack;
+            Parts.Quit = controls.Quit;
+            Parts.DeckPlaque = controls.DeckPlaque;
+            foreach (var kv in controls.Recess) Parts.Recess[kv.Key] = kv.Value.btn;
+            Parts.Layout = Layout;
+            Parts.Kind = Kind;
+            Parts.Eyes = Eyes;
+            // P2: the entrance (the boot handoff over the kept title canvas, or the cold open). It replaces the old Tiles
+            // stagger: the page's own entrance staggers the labels, DUEL, the bezels and the pylon rows.
+            if (Application.isPlaying && Entry != MenuEntry.Mode.None)
+                Entrance = MenuEntrance.Attach(this, Entry == MenuEntry.Mode.FromTitle);
+            if (Application.isPlaying && Entrance == null)
                 MenuMotion.PlayOn(Tiles.gameObject, MenuMotion.StaggerChildren(Tiles, 0.26f, 0.045f));
         }
 
@@ -261,6 +313,122 @@ namespace WRLDZ.UI.MenuV6
             n.SetParent(parent, false);
             MenuV6Layout.Place(n, r, parentRect);
             return n;
+        }
+
+        // ------------------------------------------------------------------ the live cracks (P2, D11)
+
+        CrackSet _crackSet;
+        bool _crackTried;
+
+        CrackSet CrackSetOf()
+        {
+            if (_crackTried) return _crackSet;
+            _crackTried = true;
+            _crackSet = CrackData.Load("menu", Kind);
+            return _crackSet;
+        }
+
+        /// <summary>Edit mode (MenuSmokeTest) and a frozen capture draw the cracks at rest (the approved still's 2.8 s).</summary>
+        static double CrackClockNow() => Application.isPlaying || MenuV6Clock.Frozen ? MenuV6Clock.Now : Math.Max(MenuV6Clock.Now, 2.8);
+
+        /// <summary>#crkU (the walls, pylons, cornice, floor, panels, sky): grow in, creep by time only, breathe, the spasm,
+        /// the time stutter and the black lightning; false = keep the P1a baked plate.</summary>
+        bool LiveCracks(RectTransform group)
+        {
+            var set = CrackSetOf();
+            if (set == null || set.Nets.Count == 0) return false;
+            try
+            {
+                var drv = new MenuCrackDriver(set.Nets, Entry == MenuEntry.Mode.FromTitle) { Rest = Entry == MenuEntry.Mode.None };
+                Cracks = CrackLayer.Create(group, "CracksU_live", _stageRect, set, set.Nets, drv, CrackClockNow);
+                if (Cracks == null) return false;
+                Cracks.Render(CrackClockNow());
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ MenuV6] live cracks kept the baked plate: " + ex.Message);
+                if (Cracks != null) DestroyNow(Cracks.gameObject);
+                Cracks = null;
+                return false;
+            }
+        }
+
+        bool LiveNutCrack(RectTransform group, MenuV6Layout.Layer plate)
+        {
+            var set = CrackSetOf();
+            if (set?.Nut == null) return false;
+            try
+            {
+                // clipped to the baked plate's own rect (+8 px): the page clips the fracture to Nut's body (N.body); the
+                // dread ladder that runs it further is P5
+                var clipRect = new Rect(plate.Rect.x - 8f, plate.Rect.y - 8f, plate.Rect.width + 16f, plate.Rect.height + 16f);
+                var clip = new GameObject("NutCrackClip", typeof(RectTransform), typeof(RectMask2D)).GetComponent<RectTransform>();
+                clip.SetParent(group, false);
+                MenuV6Layout.Place(clip, clipRect, _stageRect);
+                var full = new GameObject("Full", typeof(RectTransform)).GetComponent<RectTransform>();
+                full.SetParent(clip, false);
+                MenuV6Layout.Place(full, _stageRect, clipRect);
+                var drv = new NutCrackDriver(set.Nut, set.RiftRun, Entry == MenuEntry.Mode.FromTitle);
+                NutCracks = CrackLayer.Create(full, "NutCrack_live", _stageRect, set, new[] { set.Nut }, drv, CrackClockNow,
+                    nestedCanvas: false);
+                if (NutCracks == null)
+                {
+                    DestroyNow(clip.gameObject);
+                    return false;
+                }
+
+                NutCracks.Render(CrackClockNow());
+                Parts.NutDriver = drv;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ MenuV6] Nut's live fracture kept the baked plate: " + ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>Tests (MenuSmokeTest, edit mode): run the entrance (the boot handoff or the cold open) at a few times on
+        /// this Stone and put it back at rest; throws what a frame throws.</summary>
+        public void ProbeEntrance(bool enter, params double[] times) => MenuEntrance.Probe(this, enter, times);
+
+        /// <summary>The through-the-dim copy (#crkB, anime_v61_cracks.js:673): the same breaks over a sheet's dim at 30 %
+        /// (floor breaks at sp.lit), no light, no bolts. <paramref name="dimGroup"/> fades it with its dim.</summary>
+        public CrackLayer DimCopy(Transform host, CanvasGroup dimGroup, int siblingIndex)
+        {
+            var set = CrackSetOf();
+            if (set == null || Cracks == null || host == null) return null;
+            var mirror = new GameObject("CracksDim", typeof(RectTransform)).GetComponent<RectTransform>();
+            mirror.SetParent(host, false);
+            if (siblingIndex >= 0) mirror.SetSiblingIndex(siblingIndex);
+            mirror.anchorMin = mirror.anchorMax = new Vector2(.5f, .5f);
+            mirror.pivot = new Vector2(.5f, .5f);
+            mirror.sizeDelta = Layout.Stage;
+            mirror.localScale = Stage.localScale;
+            mirror.gameObject.AddComponent<StageMirror>().Source = Stage;
+            var drv = new MenuCrackDriver(set.Nets, Entry == MenuEntry.Mode.FromTitle)
+            {
+                DimCopy = true,
+                Rest = Entry == MenuEntry.Mode.None,
+                AlphaK = () => .3 * (dimGroup != null ? dimGroup.alpha : 1f)
+            };
+            var L = CrackLayer.Create(mirror, "CracksDim_live", _stageRect, set, set.Nets, drv, CrackClockNow);
+            if (L != null) L.Render(CrackClockNow());
+            return L;
+        }
+
+        /// <summary>Keeps a node in the Stage's own frame (a popover's dim copy follows the stage's fit).</summary>
+        sealed class StageMirror : MonoBehaviour
+        {
+            public RectTransform Source;
+
+            void LateUpdate()
+            {
+                if (Source == null) return;
+                var rt = (RectTransform)transform;
+                if (rt.localScale != Source.localScale) rt.localScale = Source.localScale;
+            }
         }
 
         // ------------------------------------------------------------------ controls
@@ -351,6 +519,7 @@ namespace WRLDZ.UI.MenuV6
         // ------------------------------------------------------------------ layers
 
         readonly Dictionary<string, Image> _static = new();
+        readonly Dictionary<string, GameObject> _flip = new();
 
         Image StaticLayer(Transform parent, Rect parentRect, MenuV6Layout.Layer L, string name = null)
         {
@@ -378,7 +547,7 @@ namespace WRLDZ.UI.MenuV6
             if (Torch != null)
             {
                 if (L.Id == "stone_B" || L.Id == "keystone_over_f1") Torch.DriveAlpha(img, gain);
-                else if (L.Id == "torch_pool_b0") Torch.DrivePool(img, gain);
+                else if (L.Id == "torch_pool_b0") Torch.DrivePool(img, gain, TorchPoolSwing);
             }
 
             if (!string.IsNullOrEmpty(L.Id)) _static[L.Id] = img;
@@ -409,6 +578,7 @@ namespace WRLDZ.UI.MenuV6
             var schedule = new EyeBlinkSchedule(L.Flipbook, EyeReveals(L.Flipbook));
             var eye = EyeFlipbook.Attach(raw, tex, fb.Frames, L.Flipbook, schedule);
             if (eye != null) Eyes.Add(eye);
+            if (!string.IsNullOrEmpty(L.Id)) _flip[L.Id] = go;
             return null;
         }
 
@@ -433,6 +603,8 @@ namespace WRLDZ.UI.MenuV6
 
         void FxLayer(RectTransform group, MenuV6Layout.Layer L)
         {
+            // P2: Nut's sky fracture as a live break (anime_v61_cracks.js:592-602) in the baked plate's place
+            if (L.Id == "nut_crack" && LiveNutCrack(group, L)) return;
             // the recesses' hover / press draw after the live pictos, before the Ring echo (anime_menu_v6.js:97)
             if (L.Id == "ring_refract" && !_hosts.ContainsKey("recess")) Host(group, "recess", _stageRect);
             var img = StaticLayer(group, _stageRect, L);
@@ -965,6 +1137,11 @@ namespace WRLDZ.UI.MenuV6
                     // the line boxes start (39 - 33.75) / 2 above the .q box; the Text's lines are the .q's line height
                     box = new Rect((float)RJ.N(b, "x"), (float)RJ.N(b, "y"), (float)RJ.N(b, "w"), (float)RJ.N(b, "h"));
                 }
+
+                // P2 (the P1b landing review: the voice block sat ~3 px low): the captures' row profiles match the stills best
+                // 3 stage px up in both layouts (land 7.1 vs 8.6 levels at 0, port 5.1 vs 9.1): legacy Text puts the first
+                // line's ascent lower than the CSS line box
+                box.y -= VoiceRaise;
             }
 
             var t = TextFx.Label(parent, "Voice", slot, shown, parentRect);
@@ -1559,6 +1736,12 @@ namespace WRLDZ.UI.MenuV6
             if (Life != null) Life.TickNow();
             return true;
         }
+
+        /// <summary>P2: the torch pool's swing gain about its P1b mean (TorchFlicker.DrivePool; torch_fit.py).</summary>
+        public const float TorchPoolSwing = .6f;
+
+        /// <summary>P2: the voice block's lift (stage px), see VoiceLine.</summary>
+        public const float VoiceRaise = 3f;
 
         static Sprite _disc;
 

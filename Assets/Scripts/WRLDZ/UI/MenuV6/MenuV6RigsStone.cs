@@ -264,8 +264,9 @@ namespace WRLDZ.UI.MenuV6
             // the page's flick at this t (menu.js:653): the same curve TorchFlicker drives Stone B with
             var flick = MenuV6Math.Flick(t, Ctx.Noise);
             var hovD = Ctx.Door != null ? MenuV6RigMath.Clamp01(Ctx.Door.Value(t)) : 0;
-            _p.Draw(t, flick, MenuV6RigMath.KeystoneEye(t, hovD), MenuV6RigMath.KeystoneGlint(t),
-                MenuV6RigMath.KeystoneHot(t), MenuV6RigMath.KeystoneIris(t));
+            var eye = MenuV6RigMath.KeystoneEye(t, hovD);
+            if (Ctx.KeystoneEye != null) eye = Ctx.KeystoneEye(t, eye);
+            _p.Draw(t, flick, eye, MenuV6RigMath.KeystoneGlint(t), MenuV6RigMath.KeystoneHot(t), MenuV6RigMath.KeystoneIris(t));
         }
     }
 
@@ -517,6 +518,34 @@ namespace WRLDZ.UI.MenuV6
         public ShapeLayer Rays;
         public float Gamma = MenuV6Linear.RingBlue;
 
+        /// <summary>P2 (the P1b landing review: the Ring echo's bright blue pointer tips and its white specular arc were lost):
+        /// the page ADDS these small highlights over the bright ring and pointers, so they saturate to white; drawn "over"
+        /// in Linear light at the page's alpha (or its a^g) they stay dim. They take a plain gain instead (1 = the P1b look,
+        /// the WORLD MAP niche's Ring; 2.2 = the echo, the title's Ring and its flight: the tips' / rim's peaks back at
+        /// ~235-240 against the still's 245-255, the region's mean unchanged).</summary>
+        public double TipGain = 1, RimGain = 1;
+
+        /// <summary>The echo's / the title Ring's highlight gain (TipGain, RimGain).</summary>
+        public const double EchoBright = 2.2;
+
+        Color Bright(double a, double gain)
+        {
+            if (gain == 1 || MenuV6Linear.Off) return W(a);
+            return new Color(1, 1, 1, (float)MenuV6MathF.Clamp01(a * gain));
+        }
+
+        void SprB(QuadLayer q, MenuV6Glow.Kind k, double x, double y, double size, double a, double gain)
+        {
+            if (gain == 1 || MenuV6Linear.Off)
+            {
+                Spr(q, k, x, y, size, a);
+                return;
+            }
+
+            if (a <= .003) return;
+            q.Sprite(x, y, size, size, MenuV6Glow.Uv(k), new Color(1, 1, 1, (float)MenuV6MathF.Clamp01(a * gain)));
+        }
+
         public struct State
         {
             public double A, I, Seed, Sweep, Aura;
@@ -624,9 +653,9 @@ namespace WRLDZ.UI.MenuV6
                     double sp2 = pass == 0 ? .55 : -.9, amp = pass == 0 ? .55 : .35 * st.Sweep;
                     if (amp <= .01) continue;
                     var an = t * sp2 + st.Seed * 2;
-                    Rim?.Sprite(X, Y, 2 * RimHalf, 2 * RimHalf, UvRim, W(amp * I), an);
-                    Spr(Glow2, MenuV6Glow.Kind.BlueHot, X + Math.Cos(an + .7) * R, Y + Math.Sin(an + .7) * R,
-                        14 * Math.Max(.6, S), .7 * amp * I);
+                    Rim?.Sprite(X, Y, 2 * RimHalf, 2 * RimHalf, UvRim, Bright(amp * I, RimGain), an);
+                    SprB(Glow2, MenuV6Glow.Kind.BlueHot, X + Math.Cos(an + .7) * R, Y + Math.Sin(an + .7) * R,
+                        14 * Math.Max(.6, S), .7 * amp * I, RimGain);
                 }
 
                 if (Notch != null)
@@ -658,7 +687,7 @@ namespace WRLDZ.UI.MenuV6
                         Pointers.Pivoted(px, py, -(PtrPad + PtrWid / 2), -PtrPad, PtrW, PtrH, UvPtr, W(.95 * I), rot);
                         var tg = st.Glow != null && i < st.Glow.Length ? st.Glow[i] : 0;
                         double tx = px - Math.Sin(rot) * PtrLen, ty = py + Math.Cos(rot) * PtrLen;
-                        Spr(Glow3, MenuV6Glow.Kind.BlueHot, tx, ty, 9 * Math.Max(.6, S), (.35 + .65 * tg) * a);
+                        SprB(Glow3, MenuV6Glow.Kind.BlueHot, tx, ty, 9 * Math.Max(.6, S), (.35 + .65 * tg) * a, TipGain);
                         if (tg > .01) Spr(Glow3, MenuV6Glow.Kind.Blue, tx, ty, 30 * Math.Max(.6, S), .7 * tg * a);
                     }
                 }
@@ -768,6 +797,7 @@ namespace WRLDZ.UI.MenuV6
             _d = RingDraw.From(ctx.Gfx, host, frame, RJ.D(r, "parts"), "RingEcho");
             if (_d == null) return false;
             _d.SetGamma(MenuV6Linear.RingBlue);
+            _d.TipGain = _d.RimGain = RingDraw.EchoBright;
             var c = RJ.V(r, "centre");
             _d.X = c.x;
             _d.Y = c.y;

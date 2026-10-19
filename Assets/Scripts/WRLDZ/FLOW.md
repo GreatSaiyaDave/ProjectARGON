@@ -15,8 +15,11 @@ Boot  (scene 0 — entry only)
          └─ ENGINE STRESS       → headless AI-vs-AI
   (Lab doors — Desktop Lab, TEST DUEL, admin grants — exist only in the Editor and Development
    builds: WrldzLab.LabDoorsEnabled = UNITY_EDITOR || DEVELOPMENT_BUILD. Owner rule 2026-09-23 #5.)
-  Full cascade (device / release builds):
-  Splash (auto 3.5 s or tap) → Credits (auto 2.6 s or tap) → Title (touch to begin)
+  Full cascade (device / release builds; v6.3 boot, BUILD_PLAN P2):
+  Genesis (the approved cut, a local VP8 clip; TAP TO SKIP = a 0.4 s dip) → Title (live: the Tears, TOUCH TO BEGIN)
+    → returning player (signed in, terms accepted, onboarding complete): straight into MainMenu (the D8 handoff:
+      the title canvas kept under the rising menu for 1.5 s)
+    (legacy fallback — no v6 title data, kill switch WRLDZ_MenuV6Off, or a build error: Splash → Credits → Title as before)
     → BootLoad (session / age / terms check)
     → DOB?          [if age gate not passed]
     → AuthChoice    [if not logged in]
@@ -106,7 +109,7 @@ DuelSlice  (scene 3 — always AR stage)
 ### Full cascade / device
 
 1. Build Settings: **Boot** first (0), then Overworld, MainMenu, DuelSlice.
-2. Play **Boot** → splash → DOB (if needed) → Create → **Terms** → load → map.
+2. Play **Boot** → Genesis → title → DOB (if needed) → Create → **Terms** → load (a 0.3 s fade) → MainMenu (its cold open).
 3. Map: **Eye (MENU)** → a destination tile (DECK, BAG, …) → close the sheet to return to the map.
 4. Tear pin, or **VS AI → PRACTICE** → duel → **Map** → overworld (a rewarded duel left early is a forfeit).
 5. **QUIT** logs out → Boot. Second launch auto-logs in if session exists.

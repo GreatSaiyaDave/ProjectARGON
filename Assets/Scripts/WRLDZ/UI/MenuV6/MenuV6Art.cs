@@ -73,6 +73,11 @@ namespace WRLDZ.UI.MenuV6
 
         public static Texture2D Texture(string path) => IsLocalPath(path) ? null : Load<Texture2D>(path);
 
+        /// <summary>A local-only asset of another type (P2: the Genesis VideoClip, the lock click AudioClip): null when the
+        /// local folder is absent or <see cref="ForceNoLocal"/> is set, so every caller keeps its fallback.</summary>
+        public static T LocalAsset<T>(string localPath) where T : Object =>
+            !ForceNoLocal && IsLocalPath(localPath) ? Load<T>(localPath) : null;
+
         /// <summary>A Data/*.json TextAsset (layout_land, schedules, manifest).</summary>
         public static TextAsset Data(string name) => Load<TextAsset>(DataRoot + name);
 

@@ -10,15 +10,19 @@ using WRLDZ.Data;
 using WRLDZ.Duel.Rules;
 using WRLDZ.Presentation;
 using WRLDZ.UI.Eldritch;
+using WRLDZ.UI.MenuV6;
 
 namespace WRLDZ.UI
 {
     /// <summary>
-    /// Opening cascade (short):
-    /// Splash → Credits → Title → BootLoad → DOB? → Auth → Terms? →
-    /// Prologue* → PickKuriboh* → GiftSummary* → SpiritMagic* → TutorialAsk* → WorldLoad →
-    /// MainMenu (Duel Disk).
-    /// * first-time only. Returning users skip to WorldLoad after auth.
+    /// Opening cascade (BUILD_PLAN §6 P2, D8-D10): the v6.3 boot — the approved Genesis cut (a local VP8 clip) into the
+    /// live title (<see cref="TitleStage"/>: Nut, the carved Stone, the Items, the Puzzle, the Tears clawing open, TOUCH
+    /// TO BEGIN). On TOUCH a returning player goes into the main menu in one shot (the D8 handoff over the kept title
+    /// canvas); everyone else takes today's steps: BootLoad → DOB? → Auth → Terms? → Prologue* → PickKuriboh* →
+    /// GiftSummary* → SpiritMagic* → TutorialAsk* → WorldLoad (a 0.3 s fade to Void) → MainMenu (its cold open).
+    /// * first-time only. Splash and Credits leave the automatic path (their code stays: the legacy fallback of a build
+    /// without the v6 title data, the kill switch WRLDZ_MenuV6Off, or a v6 build error, runs the old cascade Genesis →
+    /// Splash → Credits → Title).
     /// The Overworld is reached from the Duel Disk via WORLD MAP.
     ///
     /// Materially the cascade is the barrier-stone seal's own history, read in one arc: the stone
@@ -115,15 +119,155 @@ namespace WRLDZ.UI
             // Editor art hot-reload only: on device this re-decodes every boot backdrop each boot.
             StreamingSprite.ClearCache("WRLDZ/Imagine/bg/");
 #endif
-            var canvas = FlowChrome.CreateCanvas("BootCanvas", 60);
+            // D1: the canvas opts in to the aspect plan (the title is the 1920×1080 stage at a landscape surface); the
+            // FlowChrome steps switch it back to today's portrait phone scaler (Go → ApplyScaler)
+            var canvas = FlowChrome.CreateCanvas("BootCanvas", 60, aspect: true);
+            _canvas = canvas;
             _root = FlowChrome.RootAtmosphere(canvas);
             _panelHost = new GameObject("Panels", typeof(RectTransform));
             _panelHost.transform.SetParent(_root, false);
             FlowChrome.Stretch(_panelHost.GetComponent<RectTransform>());
 
-            // Genesis is a coroutine cinematic, and coroutines never tick in edit mode — an
-            // editor preview or smoke build would park on an empty Genesis step forever.
-            Go(Application.isPlaying ? Step.Genesis : Step.Splash);
+            _titleKind = MenuAspect.Current;
+            var why = TitleStage.WhyNot(_titleKind);
+            _v6Title = why == null;
+            if (!_v6Title) Debug.Log("[WRLDZ] Boot: legacy cascade (" + why + ").");
+
+            // Genesis is a coroutine cinematic (legacy) / a video (v6), and neither ticks in edit mode: an editor preview
+            // or smoke build builds the v6 title's settled idle statically (D9), or the legacy Splash.
+            if (Application.isPlaying) Go(Step.Genesis);
+            else Go(_v6Title ? Step.Title : Step.Splash);
+        }
+
+        RectTransform _canvas;
+        MenuLayoutKind _titleKind;
+        bool _v6Title;
+        TitleStage _title;
+
+        /// <summary>The v6.3 title (Genesis video + live title, D9) owns this step.</summary>
+        bool IsV6TitleStep(Step step) => _v6Title && (step == Step.Genesis || step == Step.Title);
+
+        /// <summary>D1 per step: the v6 title lays out on the aspect plan; every FlowChrome step keeps today's portrait
+        /// phone scaler (so DOB, Auth, Terms and onboarding look exactly as before, D10).</summary>
+        void ApplyScaler(Step step)
+        {
+            var scaler = _canvas != null ? _canvas.GetComponent<CanvasScaler>() : null;
+            if (scaler == null) return;
+            if (IsV6TitleStep(step)) UiTheme.ApplyForAspect(scaler, MenuAspect.Surface);
+            else UiTheme.ApplyPortraitPhone(scaler);
+        }
+
+        /// <summary>The FlowChrome dressing (tentacles, rails, the ambient motes) is not in the v6.3 title.</summary>
+        void ShowBootDressing(bool on)
+        {
+            var dress = _panelHost != null ? _panelHost.transform.Find("BootDressing") : null;
+            if (dress != null) dress.gameObject.SetActive(on);
+            var field = _canvas != null ? _canvas.Find("EmberField") : null;
+            if (field != null) field.gameObject.SetActive(on);
+            if (!on)
+            {
+                var sky = _panelHost != null ? _panelHost.transform.Find("LivingSky") : null;
+                if (sky != null) sky.gameObject.SetActive(false);
+            }
+        }
+
+        /// <summary>The v6.3 boot (D9): the Genesis clip (play mode, when the local clip exists) into the live title, or the
+        /// settled idle (edit mode). A build error falls back to the legacy step (never a blank screen).</summary>
+        void BuildTitleV6(Step step)
+        {
+            try
+            {
+                _title = TitleStage.Build(_stepHost.GetComponent<RectTransform>(), _titleKind, new TitleStage.Options
+                {
+                    Video = step == Step.Genesis && Application.isPlaying,
+                    StartRaw = Application.isPlaying ? TitleStage.GenEndRaw : TitleStage.SettledRaw,
+                    OnTouch = OnTitleTouch
+                });
+                if (_title.Missing.Count > 0)
+                    Debug.LogWarning("[WRLDZ] Boot title v6: " + _title.Missing.Count + " part(s) not found: " + string.Join(", ", _title.Missing));
+                WrldzBuild.Log();
+                // the session check runs synchronously as the title settles (§6 P2): it decides TOUCH's route. Play mode
+                // only: an edit-mode build (MenuSmokeTest) never touches, and must not refresh the account store
+                if (Application.isPlaying) SessionCheck();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("[WRLDZ] Boot title v6 failed; showing the legacy cascade. " + ex);
+                _title = null;
+                _v6Title = false;
+                ShowBootDressing(true);   // the legacy steps wear the FlowChrome dressing the v6 title hid
+                Go(step);
+            }
+        }
+
+        bool _sessionChecked, _returning;
+
+        /// <summary>BootLoadRoutine's session check, synchronous: a returning player (age gate passed, signed in, terms
+        /// accepted, onboarding complete) goes into the menu by the D8 handoff; anyone else takes today's steps.</summary>
+        bool SessionCheck()
+        {
+            try
+            {
+                LocalAccountStore.EnsureLoaded();
+                AppSession.Ensure().RefreshFromStore();
+                var s = AppSession.Ensure();
+                var acc = s.Account;
+                acc?.EnsureProgress();
+                _returning = LocalAccountStore.AgeGatePassed && s.IsLoggedIn && LocalAccountStore.TermsAccepted &&
+                             acc != null && acc.progress != null && acc.progress.onboardingComplete;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ] Boot session check: " + ex.Message);
+                _returning = false;
+            }
+
+            _sessionChecked = true;
+            return _returning;
+        }
+
+        /// <summary>TOUCH TO BEGIN on the v6 title (raw ≥ 21.2; TitleStage handles TAP TO SKIP before that).</summary>
+        void OnTitleTouch()
+        {
+            if (_step == Step.Done) return;
+            if (!_sessionChecked) SessionCheck();
+            if (_returning && HandoffToMenu()) return;
+            FreeUiKit.PlayConfirm();
+            Go(Step.BootLoad);
+        }
+
+        /// <summary>
+        /// D8, a returning player: the onboarding / world persistence first (nothing after GoMainMenu may be relied on),
+        /// the Millennium Eye (title.js:153), the title fades its touch line and its Tears under the rising room, the boot
+        /// canvas is kept alive across the scene load (DontDestroyOnLoad, raycasts off, sort 49), the token is set, and
+        /// <c>AppSession.GoMainMenu()</c> runs as today (its audio switch included).
+        /// </summary>
+        bool HandoffToMenu()
+        {
+            var session = AppSession.Ensure();
+            var acc = session.Account;
+            if (acc == null || !session.IsLoggedIn || _canvas == null) return false;
+            try
+            {
+                acc.EnsureProgress();
+                ErazProgress.GrantTutorialBadgeIfOnboarded(acc.progress);
+                if (acc.progress.onboardingTutorialDuelDone || acc.progress.onboardingComplete)
+                    ProgressionService.Persist(acc);
+                PersistForWorld(acc);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ] Boot handoff persistence: " + ex.Message);
+            }
+
+            StopStepCoroutines();
+            _step = Step.Done;
+            try { WrldzAudio.PlayMillenniumEye(); }
+            catch { /* audio optional */ }
+            if (_title != null) _title.Leave();
+            MenuEntry.KeepTitle(_canvas.gameObject, _title);
+            session.GoMainMenu();
+            return true;
         }
 
         void Go(Step step)
@@ -131,11 +275,31 @@ namespace WRLDZ.UI
             _step = step;
             StopStepCoroutines();
             ClearPanels();
+            ApplyScaler(step);
 
             // Seal context first: the scrim tint, every panel/button default and the ember rate all
             // read it, so it has to be parked before the backdrop or any primitive runs.
             _stepSeal = SealFor(step);
             FlowChrome.BeginStep(_stepSeal, _root);
+
+            if (IsV6TitleStep(step))
+            {
+                // the v6.3 title paints the whole screen itself: no FlowChrome backdrop, dressing, living sky or motes.
+                // The boot's Scarab bed plays under the Genesis and the title (survey_boot §5.7: kept).
+                ApplyBootMusic(Step.Genesis);
+                ShowBootDressing(false);
+                _stepHost = new GameObject("Step", typeof(RectTransform));
+                _stepHost.transform.SetParent(_panelHost.transform, false);
+                FlowChrome.Stretch(_stepHost.GetComponent<RectTransform>());
+                BuildTitleV6(step);
+                return;
+            }
+
+            if (_title != null)
+            {
+                _title = null;   // its step host was retired by ClearPanels
+                ShowBootDressing(true);
+            }
 
             ApplyBootMusic(step);
             ApplyBootBackdrop(step);
@@ -410,7 +574,7 @@ namespace WRLDZ.UI
         void RevealChrome()
         {
             // Genesis animates itself on an exact timeline; a stagger fighting it would pop.
-            if (!Application.isPlaying || _stepHost == null || _step == Step.Genesis) return;
+            if (!Application.isPlaying || _stepHost == null || _step == Step.Genesis || IsV6TitleStep(_step)) return;
             _revealCo = StartCoroutine(MenuMotion.StaggerChildren(_stepHost.transform, 0.30f, 0.035f));
         }
 
@@ -421,6 +585,7 @@ namespace WRLDZ.UI
         /// </summary>
         static void ApplyBootMusic(Step step)
         {
+            if (!Application.isPlaying) return;   // edit-mode builds (MenuSmokeTest) touch no audio (DontDestroyOnLoad)
             try
             {
                 WrldzAudio.Ensure();
@@ -817,11 +982,12 @@ namespace WRLDZ.UI
                     EldritchPalette.MillenniumGold, 0f, 0.4f);
             }
 
-            var emblem = ImagineAssets.EmblemSpiritEye()
-                         ?? WrldzPresentation.SpiritEye()
-                         ?? DuelystUi.OrbRing();
-            var disk = FlowChrome.MakeImage(Panels, "Emblem",
-                emblem ?? DuelystUi.BtnCircle(), Color.white);
+            // explicit == null, not ??: a destroyed / fake-null Sprite is non-null to C# (Unity null)
+            var emblem = ImagineAssets.EmblemSpiritEye();
+            if (emblem == null) emblem = WrldzPresentation.SpiritEye();
+            if (emblem == null) emblem = DuelystUi.OrbRing();
+            if (emblem == null) emblem = DuelystUi.BtnCircle();
+            var disk = FlowChrome.MakeImage(Panels, "Emblem", emblem, Color.white);
             FlowChrome.Place(disk, 0.34f, 0.20f, 0.66f, 0.38f);
             disk.GetComponent<Image>().preserveAspect = true;
             MenuHoloPulse.AttachFeel(disk.gameObject, press: false, sheen: true);
@@ -903,9 +1069,9 @@ namespace WRLDZ.UI
             }
 
             // Title art already holds a dark lower band; keep chrome off the Tear.
-            var spirit = ImagineAssets.EmblemSpiritEye()
-                         ?? WrldzPresentation.SpiritEye()
-                         ?? DuelystUi.BtnCircle();
+            var spirit = ImagineAssets.EmblemSpiritEye();
+            if (spirit == null) spirit = WrldzPresentation.SpiritEye();
+            if (spirit == null) spirit = DuelystUi.BtnCircle();
             var emblem = FlowChrome.MakeImage(Panels, "Emblem", spirit, Color.white);
             FlowChrome.Place(emblem, 0.34f, 0.22f, 0.66f, 0.40f);
             emblem.GetComponent<Image>().preserveAspect = true;
@@ -1260,7 +1426,7 @@ namespace WRLDZ.UI
 
         void OnLogin()
         {
-            if (!LocalAccountStore.TryLogin(_user?.text, _pass?.text, out var acc, out var err))
+            if (!LocalAccountStore.TryLogin(Txt(_user), Txt(_pass), out var acc, out var err))
             {
                 SetError(err ?? "Login failed.");
                 FlashFieldError(_user, _pass);
@@ -1425,11 +1591,11 @@ namespace WRLDZ.UI
 
         void OnCreate()
         {
-            var user = _user?.text?.Trim() ?? "";
-            var pass = _pass?.text ?? "";
-            var pass2 = _pass2?.text ?? "";
-            var display = _display?.text?.Trim() ?? "";
-            var email = _email?.text?.Trim() ?? "";
+            var user = Txt(_user)?.Trim() ?? "";
+            var pass = Txt(_pass) ?? "";
+            var pass2 = Txt(_pass2) ?? "";
+            var display = Txt(_display)?.Trim() ?? "";
+            var email = Txt(_email)?.Trim() ?? "";
 
             if (string.IsNullOrEmpty(user))
             {
@@ -1707,7 +1873,7 @@ namespace WRLDZ.UI
             ring.GetComponent<Image>().preserveAspect = true;
 
             var port = FlowChrome.MakeImage(ab.transform, "Port",
-                portrait ?? WrldzPresentation.SpiritEye(), Color.white);
+                portrait != null ? portrait : WrldzPresentation.SpiritEye(), Color.white);
             FlowChrome.Place(port, 0.06f, 0.18f, 0.27f, 0.82f);
             port.GetComponent<Image>().preserveAspect = true;
 
@@ -1940,7 +2106,8 @@ namespace WRLDZ.UI
             var ticks = new GameObject[presets.Length];
             // Must be a RING, not a fallback white quad — a solid block of the player's colour
             // would cover the stone it is supposed to be lighting.
-            var ring = EldritchAssets.RuneRing() ?? DuelystUi.OrbRing();
+            var ring = EldritchAssets.RuneRing();
+            if (ring == null) ring = DuelystUi.OrbRing();
 
             for (var i = 0; i < presets.Length; i++)
             {
@@ -2121,64 +2288,43 @@ namespace WRLDZ.UI
         IEnumerator WorldLoadRoutine()
         {
             var acc = AppSession.Ensure().Account;
-            if (acc != null)
-            {
-                acc.EnsureProgress();
-                if (acc.progress.onboardingKuribohChosen && !acc.progress.onboardingStarterGranted)
-                    StarterKitService.GrantIfNeeded(acc);
-                if (acc.progress.onboardingStarterGranted && !acc.progress.onboardingComplete)
-                {
-                    acc.progress.onboardingComplete = true;
-                    ErazProgress.GrantTutorialBadge(acc.progress);
-                    ProgressionService.Persist(acc);
-                }
-                else
-                {
-                    ErazProgress.GrantTutorialBadgeIfOnboarded(acc.progress);
-                    if (acc.progress.onboardingTutorialDuelDone || acc.progress.onboardingComplete)
-                        ProgressionService.Persist(acc);
-                }
-            }
+            // Everything persists before the first yield, so it is never at the mercy of the fade below. Nothing may
+            // yield AFTER GoMainMenu(): the scene load destroys this MonoBehaviour and a trailing yield is dropped.
+            PersistForWorld(acc);
 
-            // Everything above runs before the first yield, so persistence is never at the mercy of
-            // the beat below. Nothing may yield AFTER GoMainMenu(): the scene load destroys this
-            // MonoBehaviour and a trailing yield is silently dropped.
-            var name = acc?.displayName ?? "Duelist";
-            BuildLoadingPanel("Opening the Duel Disk…", "Welcome, " + name, SealState.Breached);
-
-            // The climax of a failing-seal arc. Breached, not Condemned — Condemned is blood-lit
-            // and means destructive, and spending it on a handoff would break that meaning.
-            yield return SimulateLoad(new[]
-            {
-                ("Striking the seam…", 0.40f),
-                ("Andrax's light is holding…", 0.45f),
-                ("Calibrating the Solid Vision…", 0.40f)
-            }, p =>
-            {
-                // Both properties run to the shader's Range ceiling of 2: the seal at its limit.
-                if (_loadSeal == null) return;
-                _loadSeal.SetBreach(Mathf.Lerp(1.30f, 2.00f, p));
-                _loadSeal.SetSmoke(Mathf.Lerp(1.20f, 2.00f, p));
-            });
-
-            var field = Embers();
-            if (field != null && _root != null)
-                field.BurstFromRect(_root, 48, UiEmberField.Kind.Ember, EldritchPalette.AbyssalMagenta);
-            WrldzAudio.PlayMillenniumEye();
-
-            // Fade to a violet matched to bg_hub — the art the Duel Disk menu opens on — so the
-            // scene cut reads as one continuous move rather than a hard switch.
+            // D10: the old loading panel and violet veil are a 0.3 s fade to Void now; the menu then plays its cold open
             var veil = FlowChrome.MakeImage(_root, "Handoff", null, Color.clear);
             FlowChrome.Stretch(veil);
             veil.SetAsLastSibling();
             yield return MenuMotion.FadeGraphic(veil.GetComponent<Image>(), Color.clear,
-                EldritchPalette.WithAlpha(
-                    Color.Lerp(EldritchPalette.Void, EldritchPalette.EldritchViolet, 0.35f), 1f),
-                0.45f);
+                EldritchPalette.WithAlpha(EldritchPalette.Void, 1f), 0.30f);
 
             _step = Step.Done;
+            MenuEntry.SetColdOpen();
             // Boot lands on the Duel Disk main menu; WORLD MAP takes the player to the Overworld.
             AppSession.Ensure().GoMainMenu();
+        }
+
+        /// <summary>The world load's persistence (the starter kit, onboarding complete, the tutorial badge), synchronous:
+        /// the first-time path's WorldLoad and the returning player's handoff both run it (§6 P2).</summary>
+        static void PersistForWorld(LocalAccountStore.Account acc)
+        {
+            if (acc == null) return;
+            acc.EnsureProgress();
+            if (acc.progress.onboardingKuribohChosen && !acc.progress.onboardingStarterGranted)
+                StarterKitService.GrantIfNeeded(acc);
+            if (acc.progress.onboardingStarterGranted && !acc.progress.onboardingComplete)
+            {
+                acc.progress.onboardingComplete = true;
+                ErazProgress.GrantTutorialBadge(acc.progress);
+                ProgressionService.Persist(acc);
+            }
+            else
+            {
+                ErazProgress.GrantTutorialBadgeIfOnboarded(acc.progress);
+                if (acc.progress.onboardingTutorialDuelDone || acc.progress.onboardingComplete)
+                    ProgressionService.Persist(acc);
+            }
         }
 
         // ── Loading panel helpers ───────────────────────────────────────────
@@ -2191,7 +2337,9 @@ namespace WRLDZ.UI
             FlowChrome.Place(box, 0.1f, 0.38f, 0.9f, 0.62f);
             _loadSeal = FlowChrome.SealOf(box);
 
-            var disk = FlowChrome.MakeImage(box, "Disk", FreeUiKit.DiskHolo() ?? FreeUiKit.DuelHub(), Color.white);
+            var diskSprite = FreeUiKit.DiskHolo();
+            if (diskSprite == null) diskSprite = FreeUiKit.DuelHub();
+            var disk = FlowChrome.MakeImage(box, "Disk", diskSprite, Color.white);
             FlowChrome.Place(disk, 0.3f, 0.35f, 0.7f, 0.95f);
             disk.GetComponent<Image>().preserveAspect = true;
 
@@ -2288,6 +2436,9 @@ namespace WRLDZ.UI
             var n = FlowChrome.Label(Panels, "Note", msg, 12, FlowChrome.Soft, TextAnchor.MiddleCenter, false);
             FlowChrome.Place(n.rectTransform, 0.08f, 0.2f, 0.92f, 0.28f);
         }
+
+        /// <summary>An input field's text, or null when the field is missing or destroyed (Unity null: no ?. on it).</summary>
+        static string Txt(InputField f) => f != null ? f.text : null;
 
         void SetError(string msg)
         {

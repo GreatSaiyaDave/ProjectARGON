@@ -22,6 +22,9 @@ namespace WRLDZ.UI.MenuV6
         public int Seed { get; private set; }
         public int ShownFrame => _shown;
 
+        /// <summary>The blink schedule (P2: the entrance sets its reveal).</summary>
+        public EyeBlinkSchedule Schedule => _schedule;
+
         /// <param name="frameRectsTopLeft">each frame's (x, y, w, h) in sheet px, y measured from the sheet's top.</param>
         public static EyeFlipbook Attach(RawImage img, Texture sheet, IList<Rect> frameRectsTopLeft, int seed,
             EyeBlinkSchedule schedule)
@@ -166,10 +169,20 @@ namespace WRLDZ.UI.MenuV6
             return _all;
         }
 
+        /// <summary>P2, the entrance's reveal (schedules.json eye.reveal "menu cold open: shut from the start, the reference
+        /// open at to0 + off[seed]"): shut until <see cref="RevealTo"/>, then the reference open (NaN = no reveal).</summary>
+        public double RevealTo = double.NaN;
+
         /// <summary>Flipbook frame at menu time t (schedules.json eye.flipbooks.pick).</summary>
         public int FrameAt(double t)
         {
             if (t < 0) t = 0;
+            if (!double.IsNaN(RevealTo) && t < RevealTo + Open)
+            {
+                if (t < RevealTo) return ShutFrame;
+                return Math.Min(FrameCount - 1, ShutFrame + (int)Math.Floor((t - RevealTo) * Fps));
+            }
+
             EnsureUntil(t);
             if (t < _lastT) _cursor = 0;   // a capture froze the clock earlier than the last query
             _lastT = t;

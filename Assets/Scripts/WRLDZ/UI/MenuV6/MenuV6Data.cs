@@ -61,7 +61,11 @@ namespace WRLDZ.UI.MenuV6
         {
             var s = new MenuV6Snapshot();
             LocalAccountStore.Account acc = null;
-            try { acc = AppSession.Ensure()?.Account; }
+            try
+            {
+                var session = AppSession.Ensure();   // a MonoBehaviour: explicit != null, not ?. (Unity null)
+                acc = session != null ? session.Account : null;
+            }
             catch (Exception ex) { Debug.LogWarning("[WRLDZ MenuV6] no session: " + ex.Message); }
 
             s.TearPins = OverworldUI.TearPinCount;

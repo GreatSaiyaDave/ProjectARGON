@@ -5,7 +5,8 @@ using WRLDZ.UI;
 namespace WRLDZ.Core
 {
     /// <summary>
-    /// Entry for Boot scene only — splash → title → load → DOB? → auth → terms? → world load → Overworld.
+    /// Entry for Boot scene only — the Genesis cut → the v6.3 title → (a returning player: the handoff into the MainMenu Stone)
+    /// | load → DOB? → auth → terms? → onboarding → world load → MainMenu (its cold open).
     /// See FLOW.md for the full menu graph.
     /// Desktop Lab is opt-in (CLI <c>-desktopLab</c> or PrefSkipBootCascade) so title music / splash always show by default.
     /// </summary>

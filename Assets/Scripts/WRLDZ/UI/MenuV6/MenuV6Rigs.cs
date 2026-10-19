@@ -143,6 +143,12 @@ namespace WRLDZ.UI.MenuV6
         public IRigGfx Gfx;
         public double[] Noise;                    // schedules.json torch.NZF_row7 (the flick's noise row)
         public Func<double> RealTime = () => 0;   // wall-clock seconds (CSS transitions); the stage passes Time.unscaledTime
+
+        /// <summary>P2 entrance: a recess's entrance flash ent at t (anime_menu_v6.js:106: k = v + .8 ent + .6 pk); null = 0.</summary>
+        public Func<string, double, double> RecessEnt;
+
+        /// <summary>P2 entrance: the keystone's eye value at t given the idle one (the lock's +1.1 / +1.2 boost); null = idle.</summary>
+        public Func<double, double, double> KeystoneEye;
         public string Layout => Kind == MenuLayoutKind.Landscape ? "Land" : "Port";
         public Dictionary<string, object> Rig(string id) => RJ.D(Rigs, id);
     }
@@ -422,7 +428,8 @@ namespace WRLDZ.UI.MenuV6
             var K = _k;
             var v = o.P != null ? o.P.Value(t) : 0;
             var pk = o.P != null ? o.P.Press(t, .45) : 0;
-            var k = MenuV6RigMath.RecessK(v, pk);
+            var ent = Ctx.RecessEnt != null ? Ctx.RecessEnt(o.Id, t) : 0;
+            var k = MenuV6RigMath.RecessK(v + ent * .8, pk);
             double x = o.X, y = o.Y, rr = o.Rr;
             o.Glow.Clear();
             o.Hot?.Clear();

@@ -247,12 +247,28 @@ def main() -> int:
     title = ROOT / "Assets/Scripts/WRLDZ/UI/BootFlowUI.cs"
     must_contain(title, "WrldzBuild.Log", "title screen is missing BUILD log")
 
+    # P2 (BUILD_PLAN §6 P2, D8-D11): the v6.3 title behind its gate with the legacy cascade as the fallback (the credit
+    # text kept for SETTINGS -> CREDITS), the D8 handoff and the shared persistence, the menu's entry token, the live
+    # cracks on a MaskableGraphic with the baked plates as their fallback, and the edit-mode boot check in the smoke test
+    must_contain(title, "TitleStage.WhyNot", "boot lost its v6 title gate (kill switch / no data -> legacy cascade)")
+    must_contain(title, "void BuildCredits", "boot lost the credits (the legacy fallback; SETTINGS -> CREDITS, P3)")
+    must_contain(title, "Story & design", "boot lost the credit text")
+    must_contain(title, "MenuEntry.KeepTitle", "boot lost the D8 handoff (the kept title canvas)")
+    must_contain(title, "PersistForWorld", "boot lost the shared world-load persistence")
+    must_contain(ROOT / "Assets/Scripts/WRLDZ/Core/MainMenuBootstrap.cs", "MenuEntry.Take", "the menu lost its entry token")
+    must_contain(MENU_V6 / "CrackNetGraphic.cs", "MaskableGraphic", "the cracks left UGUI (CrackNetGraphic : MaskableGraphic)")
+    must_contain(stage, "LiveCracks", "the Stone lost its live cracks (D11)")
+    smoke = ROOT / "Assets/Editor/WRLDZ/MenuSmokeTest.cs"
+    must_contain(smoke, '"BootCanvas"', "MenuSmokeTest no longer cleans up the boot canvas (§11 F18)")
+    must_contain(smoke, "BuildAndRun", "MenuSmokeTest lost the edit-mode title build check (§11 F18)")
+
     print("hub overlay chrome")
     print("  HubChrome header / well / BACK present")
     print("  DualMenuPresenter compact Solid Vision slates (map visible)")
     print("  BAG / ARTIFACTS / scan / lab / avatar use quiet wells")
     print("  main menu: v6.3 Stone labels + legacy fallback; MenuV6Local only via MenuV6Art, gitignored")
     print("  main menu: portrait plan, rigs on UI/Default (no own shader), P1a stills kept as the rigs' fallback")
+    print("  boot: v6.3 title gate + legacy cascade, D8 handoff, entry token, live cracks, edit-mode title smoke")
     print("PASS")
     return 0
 

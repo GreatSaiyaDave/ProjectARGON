@@ -4,8 +4,9 @@ using WRLDZ.UI;
 namespace WRLDZ.Core
 {
     /// <summary>
-    /// Entry for MainMenu scene — Mr. Referobot systems hub.
-    /// Entered only from Overworld Disk HUB. Not home (home is Overworld).
+    /// Entry for the MainMenu scene: home — "The Stone Beneath Nut" v6.3 main menu (DuelDiskMenuUI). Boot lands here
+    /// (the title's TOUCH, or the first-time path's world load); the Overworld is reached by WORLD MAP. The entry token
+    /// (MenuEntry: the boot handoff over the kept title canvas, else the cold open) picks the menu's entrance.
     /// Requires login; otherwise returns to Boot.
     /// </summary>
     public class MainMenuBootstrap : MonoBehaviour
@@ -33,6 +34,7 @@ namespace WRLDZ.Core
                 var host = new GameObject("MainMenuHost");
                 var menu = host.AddComponent<DuelDiskMenuUI>();
                 menu.duelSceneName = duelSceneName;
+                menu.Entry = WRLDZ.UI.MenuV6.MenuEntry.Take();
                 menu.Build();
                 Debug.Log("[WRLDZ Lab] " + DuelDiskMenuUI.GameTitle + " hub · " +
                           WrldzLab.ModeBanner() + " · " +
