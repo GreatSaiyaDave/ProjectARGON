@@ -44,6 +44,7 @@ namespace WRLDZ.Presentation
         bool _female;
         float _scale = 1f;
         Material _eyeL, _eyeR, _browL, _browR, _nose, _mouth;
+        Mesh _bake;   // the body's posed mesh, for FitToSurface
         readonly List<GameObject> _quads = new();
         readonly List<Material> _owned = new();
         Shader _shader;
@@ -188,8 +189,50 @@ namespace WRLDZ.Presentation
                 _mouth.SetColor(SkinId, _skin); _mouth.SetColor(InkId, _ink);
                 _mouth.SetFloat("_MouthW", _mouthShape.W); _mouth.SetFloat("_LipLine", _mouthShape.LipLine); _mouth.SetFloat("_LowerLip", _mouthShape.LowerLip);
             }
+            FitToSurface();
             ApplyStatic();
             Tick(0f);
+        }
+
+        /// <summary>
+        /// Each quad sits just in front of the sculpt under it: the body mesh is baked in its current pose and every
+        /// quad slides along its own normal to the most protruding vertex inside its footprint plus a small margin. The
+        /// face planes (FaceFwdMale / Female) are only a first guess: the nose tip stands ~1.5 cm proud of the eye line,
+        /// so a nose quad left on the eye plane drew its tick inside the nose (only a pale sliver of the quad showed), and
+        /// the head / face morphs move every feature's depth. Measured in the quad's frame, so the pose does not matter.
+        /// </summary>
+        void FitToSurface()
+        {
+            if (_body == null || _quads.Count == 0) return;
+            SkinnedMeshRenderer smr = null;
+            foreach (var r in _body.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                if (r.name.StartsWith("ArgonBody") && r.sharedMesh != null) { smr = r; break; }
+            if (smr == null) return;
+            _bake ??= new Mesh();
+            smr.BakeMesh(_bake, true);
+            var vs = _bake.vertices;
+            var m = smr.transform.localToWorldMatrix;
+            foreach (var q in _quads)
+            {
+                if (q == null) continue;
+                var t = q.transform;
+                // the margin ahead of the skin: the lips and the nose tip are rounded, so a little more there
+                var margin = q.name == "FaceNose" ? 0.0025f : q.name == "FaceMouth" ? 0.002f : 0.0015f;
+                var n = -t.forward;                                  // the quad looks down -forward: this is out of the face
+                var right = t.right; var up = t.up; var c = t.position;
+                var hw = t.lossyScale.x * 0.5f; var hh = t.lossyScale.y * 0.5f;
+                var best = float.NegativeInfinity;
+                for (var i = 0; i < vs.Length; i++)
+                {
+                    var w = m.MultiplyPoint3x4(vs[i]) - c;
+                    if (Mathf.Abs(Vector3.Dot(w, right)) > hw || Mathf.Abs(Vector3.Dot(w, up)) > hh) continue;
+                    var d = Vector3.Dot(w, n);
+                    if (d > best) best = d;
+                }
+                if (float.IsNegativeInfinity(best)) continue;
+                var move = Mathf.Clamp(best + margin * _scale, -0.03f * _scale, 0.03f * _scale);
+                t.position = c + n * move;
+            }
         }
 
         float _browRestTilt;

@@ -177,14 +177,14 @@ def main():
                 if texel(spx, uv, SN) > 0.5: continue
                 r = texel(rpx, uv, RN)
                 a = texel(px, uv, N)
-                if r[0] < 0.6 or np.abs(a - skin).sum() > 0.22 or (a @ np.array([0.2126, 0.7152, 0.0722])) < skinLum * 0.62:
+                if r[0] < 0.9 or np.abs(a - skin).sum() > 0.22 or (a @ np.array([0.2126, 0.7152, 0.0722])) < skinLum * 0.62:
                     isFeat[vi] = True
         # strokes thinner than a triangle (brows, lash tails) pass between the vertices: rasterise the region map's
         # non-skin texels and flag every triangle that contains one
         regionFeat = np.zeros((N, N), dtype=bool)
         rr = rpx[:, :, 0] if RN == N else np.repeat(np.repeat(rpx[:, :, 0], N // RN, 0), N // RN, 1)
         ss = spx if SN == N else np.repeat(np.repeat(spx, N // SN, 0), N // SN, 1)
-        regionFeat = fp & ((rr < 0.6) | (d > 0.22) | (lum < skinLum * 0.62)) & (ss < 0.5)
+        regionFeat = fp & ((rr < 0.9) | (d > 0.22) | (lum < skinLum * 0.62)) & (ss < 0.5)   # anything not pure skin: flattening skin is a visual no-op, the pale painted nose highlight is not
         hits = 0
         for tri in me.loop_triangles:
             vs = tri.vertices
@@ -216,7 +216,7 @@ def main():
         for tri in me.loop_triangles:
             if (wh[list(tri.vertices)] > 0.5).sum() < 2: continue
             raster_tri(hfoot, uvl[tri.loops[0]].uv, uvl[tri.loops[1]].uv, uvl[tri.loops[2]].uv, pad=-0.5)
-        leak = (hfoot > 0.5) & (rr < 0.6) & (ss < 0.5) & (mask < 0.9)
+        leak = (hfoot > 0.5) & (rr < 0.9) & (ss < 0.5) & (mask < 0.9)
         ly, lx = np.nonzero(leak)
         log(sex, 'head non-skin texels still showing (cap aside)', int(leak.sum()),
             'uv bounds', (round(float(lx.min()) / N, 3), round(float(lx.max()) / N, 3), round(1 - float(ly.max()) / N, 3), round(1 - float(ly.min()) / N, 3)) if len(lx) else None)

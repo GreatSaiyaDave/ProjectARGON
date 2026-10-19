@@ -749,5 +749,17 @@ tone, and make all the eyes and mouths fully animated."
   `Material.GetTexture("_BaseMap")` is null on the bases (there is no albedo: do not look for one). `AiDuelistLooks.For`:
   a canon name without a `Look(...)` row must start from `AvatarAppearance.Default()`, not `Seeded()` (Kaiba's AR body
   wore the darkest skin preset).
+- **HD pass (owner: "Higher quality please"):** the shader draws with line weight — the upper lash thins to a point at
+  the inner corner, is heaviest in the outer third and flicks past the outer corner (`_Flick`, `_FlickLen`); a
+  double-eyelid crease (`_Crease`); the iris has a limbal ring (`_LimbalRing`), a lid shadow at the top, a light pool
+  at the bottom, a pupil halo, a big soft highlight, a small sharp one and a wet rim arc; brows are tapered strokes
+  peaking in the outer third (`_BrowPeak`); the closed mouth is a thin weighted curve with corner marks and a faint lit
+  lower lip (`_LipShade`, `_CornerMark`); the nose is a soft side shadow plus the tick (`_NoseSoft`). The new
+  properties default sensibly, FaceCatalog and the rig did not change their inputs.
+- **Quads hug the sculpt:** `AvatarFaceRig.FitToSurface` bakes the posed body mesh and slides every quad along its own
+  normal to the most protruding vertex under its footprint plus a margin (eyes / brows 1.5 mm, mouth 2 mm, nose 2.5 mm).
+  The face planes were only a guess: the nose tip stands ~1.5 cm proud of the eye line, so the nose quad drew its tick
+  inside the nose; head / face morphs move every feature's depth. Runs in `Apply`, measured in the quad's frame, so the
+  pose does not matter.
 - **Open:** canon duelists keep their flat face decals (not animated yet) — the next step is one FaceCatalog preset per
   canon character sourced from the series frames, so Kaiba's glare and Joey's grin animate like the player's.
