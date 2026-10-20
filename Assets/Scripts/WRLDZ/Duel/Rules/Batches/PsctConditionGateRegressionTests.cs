@@ -17,7 +17,7 @@ namespace WRLDZ.Duel.Rules
         /// <summary>Cards whose only compiled sentence had its condition dropped (see the class summary).</summary>
         static readonly (int id, string why)[] FailClosed =
         {
-            (79853073, "Cipher Soldier: \"If this card battles a Warrior-Type monster, during damage calculation\""),
+            // 79853073 Cipher Soldier removed — now Implemented (GainAtkDefThisDamageCalculationVsRace)
             // Coffin Seller (65830223) left this list in v162: the EffectDamageEvents atom compiles its whole sentence, condition
             // included (DroppedConditionsFailClosed checks that below).
             // Gearfried the Swordmaster (57046845) left this list in the RevivalEquipsAndGearfried batch: its whole equip-trigger

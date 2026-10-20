@@ -101,8 +101,6 @@ namespace WRLDZ.Duel.Rules
                          (c.Action == EffectActionKind.NegateActivation && !c.NegateRespondsToEquipSpellOnly), false),
                 (57953380, "Card of Safe Return", "a draw trigger, not a draw on activation",
                     c => c.Timing == EffectTiming.Activate && c.Action == EffectActionKind.Draw, false),
-                (79853073, "Cipher Soldier", "vs a Warrior-Type, during that damage calculation only",
-                    c => c.Action == EffectActionKind.ApplyLingeringAtkDef, true),
                 // EffectDamageEvents batch (v162): Implemented as one whole-text trigger clause — the wrong clause is a burn
                 // on activation; gate off.
                 (65830223, "Coffin Seller", "burn each time a monster goes to the opponent's GY",
