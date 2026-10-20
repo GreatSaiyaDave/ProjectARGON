@@ -8854,6 +8854,16 @@ namespace WRLDZ.Duel.TextEffects
                     FlipDownAndPeekRuntime.RevealAllFaceDownCardsThenReturn(engine, who, source, clause);
                     break;
 
+                // — 17092736 Ancient Telescope: peek top cards of opp Deck.
+                case EffectActionKind.PeekTopOpponentDeckCards:
+                    FlipDownAndPeekRuntime.PeekTopOpponentDeckCards(engine, who, source, clause);
+                    break;
+
+                // — 33413638 Cockroach Knight: return this card from GY to top of Deck.
+                case EffectActionKind.ReturnThisToTopOfDeck:
+                    FlipDownAndPeekRuntime.ReturnThisToTopOfDeck(engine, who, source, clause);
+                    break;
+
                 case EffectActionKind.OpponentSkipsNextMainPhase1:
                     BattleOutcomeTriggersRuntime.ScheduleMainPhase1Skip(engine, opp, source);
                     break;
@@ -11077,7 +11087,7 @@ namespace WRLDZ.Duel.TextEffects
             }
         }
 
-        static void PlaceThisOnTopOfDeck(DuelEngine engine, DuelistState who, CardInstance card)
+        internal static void PlaceThisOnTopOfDeck(DuelEngine engine, DuelistState who, CardInstance card)
         {
             if (engine == null || who == null || card == null) return;
             if (who.Graveyard.Contains(card) &&

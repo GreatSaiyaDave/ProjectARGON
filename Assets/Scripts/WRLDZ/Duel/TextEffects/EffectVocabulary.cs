@@ -777,6 +777,10 @@ namespace WRLDZ.Duel.TextEffects
                     EffectActionKind.GainThisCardAtkAtNextStandbyWhileFaceUp => EffectResolutionKind.ModifyStats,
                 // — 87557188: reveal all face-down cards then return — peek only, no resolution.
                 EffectActionKind.RevealAllFaceDownCardsThenReturn => EffectResolutionKind.None,
+                // — 17092736: peek top 5 cards of opp Deck — peek only, no resolution.
+                EffectActionKind.PeekTopOpponentDeckCards => EffectResolutionKind.None,
+                // — 33413638: return this card from GY to top of Deck — board change.
+                EffectActionKind.ReturnThisToTopOfDeck => EffectResolutionKind.ReturnToDeck,
                 EffectActionKind.OpponentSkipsNextMainPhase1 => EffectResolutionKind.Protection,
                 EffectActionKind.CoinCallRightDestroyOneOppMonster => EffectResolutionKind.Destroy,
                 EffectActionKind.OpponentSendsSpellFromDeckToGy => EffectResolutionKind.Discard,

@@ -383,5 +383,54 @@ namespace WRLDZ.Duel.TextEffects
             LogLook(engine, who, source, $"{faceDown.Count} face-down card(s)", faceDown);
             // Cards stay face-down in their zones — "return to original position" is a no-op.
         }
+
+        // ───────────────────────────── — 17092736: peek top opp Deck cards ─────────────────────────────
+
+        /// <summary>
+        /// — 17092736 Ancient Telescope: See the top N cards of your opponent's Deck.
+        /// </summary>
+        public static void PeekTopOpponentDeckCards(DuelEngine engine, DuelistState who,
+            CardInstance source, EffectClause clause)
+        {
+            if (engine == null || who == null || source == null || engine.GameOver) return;
+            var opp = engine.OpponentOf(who);
+            if (opp?.Deck == null || opp.Deck.Count == 0)
+            {
+                engine.Log($"{source.Name}: {opp?.Name ?? "opponent"} has an empty Deck.");
+                return;
+            }
+
+            var peekCount = opp.Deck.Count < 5 ? opp.Deck.Count : 5;
+            var names = new List<string>();
+            for (var i = 0; i < peekCount; i++)
+            {
+                if (engine.Database.TryGet(opp.Deck[i], out var d))
+                    names.Add(d.name);
+            }
+
+            if (names.Count == 0)
+            {
+                engine.Log($"{source.Name}: could not read any cards from {opp.Name}'s Deck.");
+                return;
+            }
+
+            engine.Log($"{source.Name}: {who.Name} looks at top {names.Count} card(s) of {opp.Name}'s Deck — " +
+                       string.Join(", ", names) + ".");
+            // Cards stay in the Deck in the same order — "return" is a no-op.
+        }
+
+        // ───────────────────────────── — 33413638: return this to top of Deck ─────────────────────────────
+
+        /// <summary>
+        /// — 33413638 Cockroach Knight: When sent to the GY, return this card to the top of the Deck.
+        /// </summary>
+        public static void ReturnThisToTopOfDeck(DuelEngine engine, DuelistState who,
+            CardInstance source, EffectClause clause)
+        {
+            if (engine == null || who == null || source == null || engine.GameOver) return;
+            // Move the card from GY to the top of its owner's Deck.
+            engine.Log($"{source.Name}: returned to the top of {who.Name}'s Deck.");
+            TextEffectRuntime.PlaceThisOnTopOfDeck(engine, who, source);
+        }
     }
 }

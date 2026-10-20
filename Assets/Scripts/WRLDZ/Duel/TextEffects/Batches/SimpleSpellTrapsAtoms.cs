@@ -348,6 +348,42 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Controller,
                     MakesChainLink = false
                 }),
+            // — 10809984 Great Phantom Thief: "If this card inflicts battle damage to your opponent: Declare 1 card
+            // name; look at your opponent's hand, and if you do, discard all cards with that name in their hand."
+            new AtomRegistration.Atom(
+                @"^\s*If this card inflicts battle damage to your opponent: Declare 1 card name; look at your " +
+                @"opponent's hand, and if you do, discard all cards with that name in their hand\.\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardInflictsBattleDamage,
+                    Action = EffectActionKind.DeclareCardNameThenOpponentDiscardsAllOrSelfDiscardsRandom,
+                    Side = EffectSide.Controller,
+                    IsOptional = true,
+                    MakesChainLink = true
+                }),
+            // — 17092736 Ancient Telescope: "See the top 5 cards of your opponent's Deck. Return the cards to the
+            // Deck in the same order."
+            new AtomRegistration.Atom(
+                @"^\s*See the top 5 cards of your opponent's Deck\. Return the cards to the Deck in the same " +
+                @"order\.\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.PeekTopOpponentDeckCards,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }),
+            // — 33413638 Cockroach Knight: "When this card is sent to the Graveyard, it is returned to the top of the Deck."
+            new AtomRegistration.Atom(
+                @"^\s*When this card is sent to the Graveyard, it is returned to the top of the Deck\.\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.SentFromFieldToGy,
+                    Action = EffectActionKind.ReturnThisToTopOfDeck,
+                    Side = EffectSide.Controller,
+                    IsOptional = true,
+                    MakesChainLink = true
+                }),
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>

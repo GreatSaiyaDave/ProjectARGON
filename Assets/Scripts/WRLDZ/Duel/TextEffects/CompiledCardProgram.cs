@@ -4263,6 +4263,14 @@ namespace WRLDZ.Duel.TextEffects
         /// — 45895206: Flip all face-down monsters on your opponent's side of the field face-up (keeping position).
         /// </summary>
         FlipAllOpponentFaceDownMonstersFaceUp,
+        /// <summary>
+        /// — 17092736 Ancient Telescope: See the top 5 cards of your opponent's Deck.
+        /// </summary>
+        PeekTopOpponentDeckCards,
+        /// <summary>
+        /// — 33413638 Cockroach Knight: When sent to the GY, return this card to the top of the Deck.
+        /// </summary>
+        ReturnThisToTopOfDeck,
     }
 
 
