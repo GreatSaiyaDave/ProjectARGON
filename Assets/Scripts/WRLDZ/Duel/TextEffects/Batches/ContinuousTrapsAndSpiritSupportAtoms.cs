@@ -177,6 +177,18 @@ namespace WRLDZ.Duel.TextEffects
                     StaysOnField = true,
                     MakesChainLink = true
                 }),
+            // Ceremonial Bell (c20228463): SRL Continuous Trap whose whole text is one sentence — "Both players must
+            // keep their hands revealed." Continuous field rule like Mind on Air but reveals both players' hands.
+            new AtomRegistration.Atom(
+                S + @"Both players must keep their hands revealed" + E,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.BothPlayersMustPlayWithHandRevealed,
+                    Side = EffectSide.Controller,
+                    StaysOnField = true,
+                    MakesChainLink = true
+                }),
         };
 
         static int Parse(Match m, int group, int fallback)

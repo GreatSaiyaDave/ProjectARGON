@@ -1185,6 +1185,8 @@ namespace WRLDZ.Duel.TextEffects
                     if (!AppliesHandReveal(st)) continue;
                     var opp = engine.OpponentOf(side);
                     if (opp != null) opp.HandRevealed = true;
+                    // Ceremonial Bell reveals both players' hands, not just the opponent's.
+                    if (AppliesBothPlayersHandReveal(st)) side.HandRevealed = true;
                 }
             }
         }
@@ -1194,7 +1196,16 @@ namespace WRLDZ.Duel.TextEffects
         {
             var prog = WRLDZ.Duel.TextEffects.CompiledEffectCache.GetOrCompile(card.Def);
             return prog != null && prog.FullyCompiled && prog.ClauseList.Exists(c => c != null &&
-                c.Action == EffectActionKind.OpponentMustPlayWithHandRevealed);
+                c.Action == EffectActionKind.OpponentMustPlayWithHandRevealed ||
+                c.Action == EffectActionKind.BothPlayersMustPlayWithHandRevealed);
+        }
+
+        /// <summary>True when <paramref name="card"/>'s program reveals both players' hands (Ceremonial Bell).</summary>
+        static bool AppliesBothPlayersHandReveal(CardInstance card)
+        {
+            var prog = WRLDZ.Duel.TextEffects.CompiledEffectCache.GetOrCompile(card.Def);
+            return prog != null && prog.FullyCompiled && prog.ClauseList.Exists(c => c != null &&
+                c.Action == EffectActionKind.BothPlayersMustPlayWithHandRevealed);
         }
 
         /// <summary>

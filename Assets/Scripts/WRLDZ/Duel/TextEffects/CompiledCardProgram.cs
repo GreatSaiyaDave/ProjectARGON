@@ -4204,6 +4204,12 @@ namespace WRLDZ.Duel.TextEffects
         /// Flip Summon); card effects still can (<see cref="TlmLeftoverSpellTrapsRuntime.ManualPositionChangeLocked"/>).
         /// </summary>
         OpponentCannotChangeBattlePositionsDuringTheirNextTurn,
+        /// <summary>
+        /// SRL — Ceremonial Bell (c20228463): a Continuous Trap whose whole text is one sentence. Both players must
+        /// keep their hands revealed while this card is face-up. Registered as a continuous field rule, scanned by
+        /// RefreshHandReveal on every board change like Mind on Air.
+        /// </summary>
+        BothPlayersMustPlayWithHandRevealed,
     }
 
 

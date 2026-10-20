@@ -416,6 +416,8 @@ namespace WRLDZ.Duel.TextEffects
                 // ContinuousTrapsAndSpiritSupport batch: Mind on Air — a Continuous Trap that imposes one continuous
                 // rule on the opponent (their hand is public), the same family as NegateCardFamilyOnFieldThisTurn.
                 EffectActionKind.OpponentMustPlayWithHandRevealed => EffectResolutionKind.Protection,
+                // ContinuousTrapsAndSpiritSupport batch: Ceremonial Bell — both players' hands are public.
+                EffectActionKind.BothPlayersMustPlayWithHandRevealed => EffectResolutionKind.Protection,
                 // ContinuousTrapsAndSpiritSupport batch: Greed — 500 per card drawn by a card effect, at the End
                 // Phase. Its tracker clause records; the damage clause is the readable one.
                 EffectActionKind.InflictDamagePerEffectDrawThisTurn => EffectResolutionKind.Damage,

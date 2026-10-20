@@ -9307,6 +9307,11 @@ namespace WRLDZ.Duel.TextEffects
                     ContinuousTrapsAndSpiritSupportRuntime.ArmHandReveal(engine, who, source);
                     break;
 
+                case EffectActionKind.BothPlayersMustPlayWithHandRevealed:
+                    // Ceremonial Bell (ContinuousTrapsAndSpiritSupport batch): a continuous field rule, not a one-shot.
+                    ContinuousTrapsAndSpiritSupportRuntime.ArmHandReveal(engine, who, source);
+                    break;
+
                 // Staunch Defender (AttackObligations batch): until the end of this Battle Phase the opponent may
                 // attack only the target, and every monster it controls must attack it, if able.
                 case EffectActionKind.OpponentAttacksOnlyTargetAndMustAttackIt:
