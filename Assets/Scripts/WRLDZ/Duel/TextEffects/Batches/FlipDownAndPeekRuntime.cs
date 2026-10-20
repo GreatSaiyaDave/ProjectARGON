@@ -309,5 +309,79 @@ namespace WRLDZ.Duel.TextEffects
                        "monster is destroyed.");
             TextEffectRuntime.DestroyCard(engine, attacker, source, byPlayer: who);
         }
+
+        // ───────────────────────────── — 81820689: peek at 1 opponent hand card ─────────────────────────────
+
+        /// <summary>
+        /// — 81820689: select 1 card in your opponent's hand and see it. The card stays where it is, face-down,
+        /// and only the looking player's log sees its name (<see cref="LogLook"/>).
+        /// </summary>
+        public static void PeekOpponentHandCard(DuelEngine engine, DuelistState who, CardInstance source,
+            EffectClause clause)
+        {
+            if (engine == null || who == null || source == null || engine.GameOver) return;
+            var opp = engine.OpponentOf(who);
+            if (opp?.Hand == null || opp.Hand.Count == 0)
+            {
+                engine.Log($"{source.Name}: {opp?.Name ?? "opponent"} has no card in hand.");
+                return;
+            }
+
+            // Let the activator choose 1 card to see; AI takes the first.
+            ContinuousTrapsAndSpiritSupportRuntime.AskCardPick(engine, who, source,
+                () => opp.Hand,
+                EffectTargetKind.CardInOppHand,
+                $"{source.Name}: select 1 card in {opp.Name}'s hand to see.",
+                list => list.FirstOrDefault(),
+                picked =>
+                {
+                    if (picked == null) return;
+                    LogLook(engine, who, source, $"{picked.Name}", new[] { picked });
+                });
+        }
+
+        // ───────────────────────────── — 87557188: reveal all face-down cards ─────────────────────────────
+
+        /// <summary>
+        /// — 87557188: FLIP — reveal all face-down cards on the field (no flip effects activate), then return them
+        /// to face-down. Logs names for the activator; nothing else changes.
+        /// </summary>
+        public static void RevealAllFaceDownCardsThenReturn(DuelEngine engine, DuelistState who,
+            CardInstance source, EffectClause clause)
+        {
+            if (engine == null || who == null || source == null || engine.GameOver) return;
+
+            var faceDown = new List<CardInstance>();
+            foreach (var p in new[] { engine.Player, engine.Opponent })
+            {
+                if (p == null) continue;
+                foreach (var zone in p.MonsterZones)
+                {
+                    var c = zone?.Occupant;
+                    if (c != null && !c.FaceUp) faceDown.Add(c);
+                }
+                foreach (var zone in p.SpellTrapZones)
+                {
+                    var c = zone?.Occupant;
+                    if (c != null && !c.FaceUp) faceDown.Add(c);
+                }
+                var c2 = p.FieldSpellZone?.Occupant;
+                if (c2 != null && !c2.FaceUp) faceDown.Add(c2);
+                foreach (var zone in p.PendulumZones)
+                {
+                    var c = zone?.Occupant;
+                    if (c != null && !c.FaceUp) faceDown.Add(c);
+                }
+            }
+
+            if (faceDown.Count == 0)
+            {
+                engine.Log($"{source.Name}: no face-down cards on the field.");
+                return;
+            }
+
+            LogLook(engine, who, source, $"{faceDown.Count} face-down card(s)", faceDown);
+            // Cards stay face-down in their zones — "return to original position" is a no-op.
+        }
     }
 }

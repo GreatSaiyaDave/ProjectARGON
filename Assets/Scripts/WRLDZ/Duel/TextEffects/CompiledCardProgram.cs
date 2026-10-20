@@ -1904,6 +1904,11 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         ChangeThisCardAtkWhileFaceUp,
         /// <summary>
+        /// — 87557188: FLIP — reveal all face-down cards on the field (no flip effects activate), then return them
+        /// to face-down. Logs names for the activator; nothing else changes.
+        /// </summary>
+        RevealAllFaceDownCardsThenReturn,
+        /// <summary>
         /// BattleOutcomeTriggers batch (v162) — Timeater (<see cref="EffectTiming.ThisCardDestroysByBattle"/>): "Your
         /// opponent skips their next Main Phase 1." (ygopro c44913552 EFFECT_SKIP_M1, reset at the opponent's Main Phase 1).
         /// The opponent's next turn goes from the Standby Phase to the Battle Phase, or to the End Phase when they cannot
@@ -4249,6 +4254,15 @@ namespace WRLDZ.Duel.TextEffects
         /// otherwise Special Summon it to the declarer's field.
         /// </summary>
         DeclareCardNameThenCheckGyBottomMatchBanishOrSpsummon,
+        /// <summary>
+        /// - 81820689: Select 1 card in your opponent's hand and see it (reveal to the activator). The card stays
+        /// in the opponent's hand. Uses AskCardPick over CardInOppHand candidates.
+        /// </summary>
+        PeekOpponentHandCard,
+        /// <summary>
+        /// — 45895206: Flip all face-down monsters on your opponent's side of the field face-up (keeping position).
+        /// </summary>
+        FlipAllOpponentFaceDownMonstersFaceUp,
     }
 
 

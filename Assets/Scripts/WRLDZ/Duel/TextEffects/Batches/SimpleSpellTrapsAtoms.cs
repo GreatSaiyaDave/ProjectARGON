@@ -336,6 +336,18 @@ namespace WRLDZ.Duel.TextEffects
                     Amount = 700,
                     MakesChainLink = false
                 }),
+            // — 87557188: "FLIP: Reveal all face-down cards on the field (Flip Effects are not activated), then
+            // return them to their original positions."
+            new AtomRegistration.Atom(
+                @"^\s*FLIP: Reveal all face-down cards on the field \(Flip Effects are not activated\), then " +
+                @"return them to their original positions\.\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Flip,
+                    Action = EffectActionKind.RevealAllFaceDownCardsThenReturn,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = false
+                }),
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>

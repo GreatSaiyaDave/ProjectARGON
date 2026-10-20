@@ -446,6 +446,10 @@ namespace WRLDZ.Duel.TextEffects
                 // PGD — Question: declare name, check GY bottom match, banish or Special Summon — a Search-like
                 // declaration that moves a card from GY (banish or to field).
                 EffectActionKind.DeclareCardNameThenCheckGyBottomMatchBanishOrSpsummon => EffectResolutionKind.Search,
+                // — 81820689: peek at 1 card in opponent's hand — no resolution, just a look.
+                EffectActionKind.PeekOpponentHandCard => EffectResolutionKind.None,
+                // — 45895206: flip all opponent face-down monsters face-up — board change, no damage/resolution.
+                EffectActionKind.FlipAllOpponentFaceDownMonstersFaceUp => EffectResolutionKind.None,
                 // The tracker clause is a ContinuousWhileFaceUp marker, not a resolution, so it maps to None like
                 // the other markers (it exists to make the card a Greed for NoteEffectDraw).
                 EffectActionKind.TrackEffectDrawForEndPhaseDamage => EffectResolutionKind.None,
@@ -771,6 +775,8 @@ namespace WRLDZ.Duel.TextEffects
                 // Timeater's Main Phase 1 skip is a rule restriction; Kryuel destroys; Dark Scorpion Burglars mills a Spell.
                 EffectActionKind.ChangeThisCardAtkWhileFaceUp or
                     EffectActionKind.GainThisCardAtkAtNextStandbyWhileFaceUp => EffectResolutionKind.ModifyStats,
+                // — 87557188: reveal all face-down cards then return — peek only, no resolution.
+                EffectActionKind.RevealAllFaceDownCardsThenReturn => EffectResolutionKind.None,
                 EffectActionKind.OpponentSkipsNextMainPhase1 => EffectResolutionKind.Protection,
                 EffectActionKind.CoinCallRightDestroyOneOppMonster => EffectResolutionKind.Destroy,
                 EffectActionKind.OpponentSendsSpellFromDeckToGy => EffectResolutionKind.Discard,

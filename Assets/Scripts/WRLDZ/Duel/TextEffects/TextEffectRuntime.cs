@@ -7925,6 +7925,14 @@ namespace WRLDZ.Duel.TextEffects
                                 SetFaceUpPosition(engine, m, BattlePosition.Defense, suppressFlip: true);
                     break;
 
+                // — 45895206: Flip all face-down monsters on your opponent's side face-up (keeping position).
+                case EffectActionKind.FlipAllOpponentFaceDownMonstersFaceUp:
+                    if (opp != null)
+                        foreach (var m in opp.MonstersOnField().ToList())
+                            if (m != null && !m.FaceUp)
+                                SetFaceUpPosition(engine, m, m.Position, suppressFlip: true);
+                    break;
+
                 case EffectActionKind.DoubleAtkOfYourMatchingThenDestroyAtEnd:
                     foreach (var m in who.MonstersOnField().ToList())
                     {
@@ -8840,6 +8848,12 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.ChangeThisCardAtkWhileFaceUp:
                     BattleOutcomeTriggersRuntime.ApplyThisCardAtkChange(engine, who, source, clause);
                     break;
+
+                // — 87557188: FLIP — reveal all face-down cards on the field, then return them face-down.
+                case EffectActionKind.RevealAllFaceDownCardsThenReturn:
+                    FlipDownAndPeekRuntime.RevealAllFaceDownCardsThenReturn(engine, who, source, clause);
+                    break;
+
                 case EffectActionKind.OpponentSkipsNextMainPhase1:
                     BattleOutcomeTriggersRuntime.ScheduleMainPhase1Skip(engine, opp, source);
                     break;
@@ -9310,6 +9324,11 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.BothPlayersMustPlayWithHandRevealed:
                     // Ceremonial Bell (ContinuousTrapsAndSpiritSupport batch): a continuous field rule, not a one-shot.
                     ContinuousTrapsAndSpiritSupportRuntime.ArmHandReveal(engine, who, source);
+                    break;
+
+                // — 81820689: select and see 1 card in your opponent's hand.
+                case EffectActionKind.PeekOpponentHandCard:
+                    FlipDownAndPeekRuntime.PeekOpponentHandCard(engine, who, source, clause);
                     break;
 
                 // Staunch Defender (AttackObligations batch): until the end of this Battle Phase the opponent may
