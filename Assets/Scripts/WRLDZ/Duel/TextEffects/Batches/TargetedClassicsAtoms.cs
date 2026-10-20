@@ -162,6 +162,26 @@ namespace WRLDZ.Duel.TextEffects
                         MakesChainLink = true
                     };
                 }),
+            // — 61831093: FLIP: Target 2 Set Spell/Trap Cards on the field; destroy those targets.
+            new AtomRegistration.Atom(
+                Start + @"FLIP:\s*Target (\d+) Set Spell/Trap Cards on the field; destroy those targets" + End,
+                m =>
+                {
+                    var n = Parse(m, 1, 2);
+                    if (n < 2) return null;
+                    return new EffectClause
+                    {
+                        Timing = EffectTiming.Flip,
+                        Action = EffectActionKind.Destroy,
+                        Zone = EffectZoneFilter.FaceDownSpellTraps,
+                        Side = EffectSide.Both,
+                        RequiresTargetChoice = true,
+                        IsPsctTarget = true,
+                        TargetCount = n,
+                        TargetUpTo = false,
+                        MakesChainLink = true
+                    };
+                }),
         };
 
         static int Parse(Match m, int group, int fallback)
