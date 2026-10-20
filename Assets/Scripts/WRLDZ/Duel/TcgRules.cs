@@ -36,6 +36,8 @@ namespace WRLDZ.Duel
             if (level <= 6) return 1;
             // Fusilier Dragon, the Dual-Mode Beast (c51632798): can be Normal Summoned/Set without Tributing
             if (cardId == 51632798) return 0;
+            // Behemoth the King of All Animals (c22996376): can be Normal Summoned/Set with 1 Tribute instead of 2
+            if (cardId == 22996376) return 1;
             return 2;
         }
 

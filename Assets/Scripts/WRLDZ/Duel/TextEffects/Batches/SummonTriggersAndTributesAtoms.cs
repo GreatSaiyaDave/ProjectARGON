@@ -177,6 +177,34 @@ namespace WRLDZ.Duel.TextEffects
                     RequiresThisNormalSummoned = true,
                     MakesChainLink = true
                 }),
+            // Fusilier Dragon, the Dual-Mode Beast (c51632798): You can Normal Summon/Set this card without Tributing,
+            // but its original ATK and DEF become halved (engine already handles: TcgRules returns 0 tribute, DuelEngine
+            // halves stats on no-tribute summon). Text program just needs to compile.
+            new AtomRegistration.Atom(
+                Start + @"You can Normal Summon/Set this card without Tributing, but its original ATK and DEF become " +
+                @"halved" + End,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.Draw,
+                    Amount = 0,
+                    MakesChainLink = false
+                }),
+            // Behemoth the King of All Animals (c22996376): Can be Normal Summoned/Set with 1 Tribute.
+            // If summoned with 1 Tribute, ATK becomes 2000 (engine: TcgRules returns 1 tribute,
+            // DuelEngine sets ATK to 2000). Text program just needs to compile.
+            new AtomRegistration.Atom(
+                Start + @"This card can be Normal Summoned or Set with 1 Tribute\. In that case, the original " +
+                @"ATK of this card becomes 2000\. When this card is Tribute Summoned, you can return from " +
+                @"your Graveyard to the owner's hand a number of Beast-Type monsters equal to the number " +
+                @"of Tributed monsters" + End,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.Draw,
+                    Amount = 0,
+                    MakesChainLink = false
+                }),
 
         };
 

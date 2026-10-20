@@ -1527,6 +1527,17 @@ namespace WRLDZ.Duel
                 Log($"{card.Name}: Summoned/Set without Tribute — base ATK/DEF become 1400/1000.");
             }
 
+            // Behemoth the King of All Animals (22996376): when Summoned/Set with exactly 1 Tribute,
+            // original ATK becomes 2000 (2700 -> 2000).
+            if (card.CardId == 22996376 && tributes != null && tributes.Count == 1)
+            {
+                if (card.Def != null)
+                {
+                    card.Def.atk = 2000;
+                }
+                Log($"{card.Name}: Summoned/Set with 1 Tribute — base ATK becomes 2000.");
+            }
+
             Notify();
 
             // A Summon (not a Set) first waits on its summon-negation window (Solemn Judgment / Horn of
