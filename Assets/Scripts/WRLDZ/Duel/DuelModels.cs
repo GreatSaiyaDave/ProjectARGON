@@ -226,6 +226,8 @@ namespace WRLDZ.Duel
         public bool SwapOriginalAtkDefThisTurn;
         /// <summary>Damage Step only. Cleared as soon as that battle's damage calculation returns.</summary>
         public int DamageStepAtkBonus;
+        /// <summary>Damage Step only DEF bonus (e.g. 79853073: Warrior battler). Cleared after damage calculation.</summary>
+        public int DamageStepDefBonus;
         /// <summary>
         /// Lingering ATK change that aura refresh must not wipe (Adhesion Trap Hole
         /// halves original ATK; Slate Warrior Flip). Reset when the card leaves the field.
@@ -586,7 +588,7 @@ namespace WRLDZ.Duel
             DefZeroUntilEndOfTurn
                 ? 0
                 : ShownDef >= 0
-                ? System.Math.Max(0, ShownDef + DefModifier + UntilEndOfTurnDef + LingeringDefModifier)
+                ? System.Math.Max(0, ShownDef + DefModifier + UntilEndOfTurnDef + LingeringDefModifier + DamageStepDefBonus)
                 : 0;
         public string Name => Def?.name ?? $"#{CardId}";
 

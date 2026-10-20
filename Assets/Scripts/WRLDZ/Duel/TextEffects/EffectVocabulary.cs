@@ -700,7 +700,8 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.DeclareTypeForThisCardBattles => EffectResolutionKind.TreatAsName,
                 EffectActionKind.GainAtkThisDamageCalculationVsDeclaredType or
                     EffectActionKind.GainAtkThisDamageCalculation or
-                    EffectActionKind.GainAtkDefUntilEndOfBattlePhase => EffectResolutionKind.ModifyStats,
+                    EffectActionKind.GainAtkDefUntilEndOfBattlePhase or
+                    EffectActionKind.GainAtkDefThisDamageCalculationVsRace => EffectResolutionKind.ModifyStats,
                 // BothSideAndMonsterEquip batch (v161): Sword Hunter.
                 EffectActionKind.EquipMonstersThisDestroyedByBattleAsEquipSpells => EffectResolutionKind.Equip,
                 // CoinDiceInterrupts batch: Second Coin Toss / Dice Re-Roll redo a coin toss / die roll.

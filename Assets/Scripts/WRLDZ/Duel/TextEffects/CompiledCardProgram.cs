@@ -1787,6 +1787,12 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         GainAtkDefUntilEndOfBattlePhase,
         /// <summary>
+        /// — 79853073: while face-up, this card gains Amount ATK and DefAmount DEF during this damage calculation
+        /// only when battling a monster matching RaceFilter (<see cref="EffectTiming.DamageCalculation"/>, continuous).
+        /// Read by BattleBoostsRuntime.ApplyFor via DamageStepDefBonus/DamageStepAtkBonus.
+        /// </summary>
+        GainAtkDefThisDamageCalculationVsRace,
+        /// <summary>
         /// NegationMonsters batch (v161) — Freed the Matchless General / Frontier Wiseman / Tyrant Dragon
         /// (ContinuousWhileFaceUp marker): "Negate any Spell (Trap) effects that target this card (a Warrior-Type
         /// monster you control), and if you do, destroy that card." (ygopro EVENT_CHAIN_SOLVING + NegateEffect, then

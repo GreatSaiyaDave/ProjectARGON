@@ -297,7 +297,11 @@ namespace WRLDZ.Duel.TextEffects
             ApplyFor(engine, attacker, target);
             ApplyFor(engine, target, attacker);
             if (s_state.TryGetValue(engine, out var st))
+            {
                 st.ThisCalculationAtk.Clear();
+                if (attacker != null) attacker.DamageStepDefBonus = 0;
+                if (target != null) target.DamageStepDefBonus = 0;
+            }
         }
 
         static void ApplyFor(DuelEngine engine, CardInstance self, CardInstance other)
@@ -311,11 +315,46 @@ namespace WRLDZ.Duel.TextEffects
                            $"({self.CurrentAtk}).");
             }
 
+            // — 79853073: gain ATK and DEF during this damage calculation when battling a RaceFilter monster.
+            var raceGain = RaceGainVsRace(self, other);
+            if (raceGain.AtkGain != 0)
+            {
+                self.DamageStepAtkBonus += raceGain.AtkGain;
+                engine.Log($"{self.Name} battles a {raceGain.Type} monster: +{raceGain.AtkGain} ATK during this " +
+                           $"damage calculation ({self.CurrentAtk}).");
+            }
+            if (raceGain.DefGain != 0)
+            {
+                self.DamageStepDefBonus += raceGain.DefGain;
+                engine.Log($"{self.Name} battles a {raceGain.Type} monster: +{raceGain.DefGain} DEF during this " +
+                           $"damage calculation ({self.CurrentDef}).");
+            }
+
             if (s_state.TryGetValue(engine, out var st) && st.ThisCalculationAtk.TryGetValue(self, out var n) && n != 0)
             {
                 self.DamageStepAtkBonus += n;
                 engine.Log($"{self.Name}: +{n} ATK during this damage calculation ({self.CurrentAtk}).");
             }
+        }
+
+        /// <summary>Result of a race-based damage calculation gain (79853073).</summary>
+        static (int AtkGain, int DefGain, string Type) RaceGainVsRace(CardInstance self, CardInstance other)
+        {
+            if (self?.Def == null || !self.FaceUp || self.IsNegated || other?.Def == null) return (0, 0, null);
+            var prog = CompiledEffectCache.GetOrCompile(self.Def);
+            if (prog == null || !prog.FullyCompiled) return (0, 0, null);
+            int atkGain = 0, defGain = 0;
+            string type = null;
+            foreach (var c in prog.ClausesFor(EffectTiming.ContinuousWhileFaceUp))
+            {
+                if (c == null || c.Action != EffectActionKind.GainAtkDefThisDamageCalculationVsRace) continue;
+                if (!string.IsNullOrEmpty(c.RaceFilter) &&
+                    !ClassicEraTemplates.RaceMatches(other.Race, c.RaceFilter)) continue;
+                atkGain += c.Amount;
+                defGain += c.DefAmount;
+                type = c.RaceFilter;
+            }
+            return (atkGain, defGain, type);
         }
 
         /// <summary>The Hunter with 7 Weapons: the ATK <paramref name="self"/> gains at damage calculation against

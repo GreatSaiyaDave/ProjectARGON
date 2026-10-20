@@ -9857,6 +9857,8 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.GainAtkThisDamageCalculationVsDeclaredType:
                 case EffectActionKind.GainAtkThisDamageCalculation:
                 case EffectActionKind.GainAtkDefUntilEndOfBattlePhase:
+                // — 79853073: read by BattleBoostsRuntime.ApplyFor via DamageStepAtkBonus/DamageStepDefBonus.
+                case EffectActionKind.GainAtkDefThisDamageCalculationVsRace:
                     break;
 
                 // PgdSpellTrapBasics batch (v162 PGD). Card Shuffle's shuffle resolves on its own face-up ignition link

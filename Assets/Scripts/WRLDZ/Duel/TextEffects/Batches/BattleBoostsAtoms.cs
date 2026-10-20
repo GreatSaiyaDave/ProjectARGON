@@ -119,6 +119,21 @@ namespace WRLDZ.Duel.TextEffects
                     IsOptional = true,
                     MakesChainLink = true
                 }),
+            // — 79853073: If this card battles a Warrior-Type monster, during damage calculation:
+            // This card gains 2000 ATK and DEF during that damage calculation only.
+            new AtomRegistration.Atom(
+                S + @"If this card battles a Warrior-Type monster, during damage calculation:" +
+                @" This card gains (\d+) ATK and DEF during that damage calculation only" + E,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.GainAtkDefThisDamageCalculationVsRace,
+                    Side = EffectSide.Controller,
+                    Amount = Parse(m, 1, 2000),
+                    DefAmount = Parse(m, 1, 2000),
+                    RaceFilter = "Warrior",
+                    MakesChainLink = false
+                }),
             // Spirit Ryu (c67957315): EFFECT_TYPE_QUICK_O, condition: turn player, Battle Phase, this card is the
             // attacker or the attack target; cost: discard 1 Dragon; +1000 ATK and DEF until the end of the Battle Phase.
             new AtomRegistration.Atom(
