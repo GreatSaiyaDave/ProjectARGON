@@ -110,6 +110,15 @@ namespace WRLDZ.Duel.TextEffects
                 return true;
             }
 
+            // — 52077741: cannot be destroyed by battle with a monster whose ATK is Amount or more.
+            foreach (var c in LiveClauses(mine, EffectActionKind.CannotBeDestroyedByBattleWithMonsterAtkAtLeast))
+            {
+                if (other.CurrentAtk < c.Amount) continue;
+                engine.Log($"{mine.Name} cannot be destroyed by battle with {other.Name} ({other.CurrentAtk} ATK, " +
+                           $"{c.Amount} or more).");
+                return true;
+            }
+
             return false;
         }
 

@@ -488,7 +488,8 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.RollDieSpecialSummonFromGyWithLevelOfRoll => EffectResolutionKind.SpecialSummon,
                 EffectActionKind.ShuffleTargetsFromOpponentGyIntoDeck => EffectResolutionKind.ReturnToDeck,
                 EffectActionKind.CannotBeDestroyedBySpellTrapEffectsThatDoNotTargetThis or
-                    EffectActionKind.CannotBeDestroyedByBattleWithMonsterAtkAtMost => EffectResolutionKind.Protection,
+                    EffectActionKind.CannotBeDestroyedByBattleWithMonsterAtkAtMost or
+                    EffectActionKind.CannotBeDestroyedByBattleWithMonsterAtkAtLeast => EffectResolutionKind.Protection,
                 // DerivedAtkMonsters batch (v176): Tribute-derived ATK (Garzetts); Guardian Tryce's revival of its Tributes.
                 EffectActionKind.ThisAtkBecomesTributedOriginalAtk => EffectResolutionKind.ModifyStats,
                 EffectActionKind.SpecialSummonTributeMaterialsFromGy => EffectResolutionKind.SpecialSummon,

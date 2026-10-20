@@ -10418,6 +10418,11 @@ namespace WRLDZ.Duel.TextEffects
                 case EffectActionKind.CannotBeDestroyedByBattleWithMonsterAtkAtMost:
                     break;
 
+                // — 52077741: cannot be destroyed by battle with a monster whose ATK is Amount or more.
+                // Read by BattleDestroyedTriggersRuntime.BattleIndestructible — no runtime action here.
+                case EffectActionKind.CannotBeDestroyedByBattleWithMonsterAtkAtLeast:
+                    break;
+
                 case EffectActionKind.NegateAttackAndAnotherOpponentMonsterBattlesInstead:
                     if (BattleWindowsRuntime.ResolveDarkSpirit(engine, who, source, chosenTarget))
                         attackNegated = true;

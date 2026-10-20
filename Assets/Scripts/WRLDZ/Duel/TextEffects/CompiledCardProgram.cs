@@ -2710,6 +2710,11 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         CannotBeDestroyedByBattleWithMonsterAtkAtMost,
         /// <summary>
+        /// — 52077741: while face-up, this card cannot be destroyed by battle with a monster whose ATK is
+        /// Amount or higher (e.g. 1900 or more). Read by BattleDestroyedTriggersRuntime.BattleIndestructible.
+        /// </summary>
+        CannotBeDestroyedByBattleWithMonsterAtkAtLeast,
+        /// <summary>
         /// GuardiansAndEquipEvents batch — Guardian Elma / Chopman the Desperate Outlaw: the summon trigger's target, an Equip
         /// Spell in the controller's GY that can equip to this card (Lua CheckEquipTarget), is equipped to this card
         /// (Duel.Equip from the GY: <see cref="GuardiansAndEquipEventsRuntime.ApplyEquipFromGy"/>).

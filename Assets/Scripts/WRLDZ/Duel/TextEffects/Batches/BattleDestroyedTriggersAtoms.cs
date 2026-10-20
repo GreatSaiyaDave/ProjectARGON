@@ -138,6 +138,17 @@ namespace WRLDZ.Duel.TextEffects
                     Amount = Int(m, 1),
                     MakesChainLink = false
                 }),
+            // — 52077741: cannot be destroyed by battle with a monster that has (\d+) or more ATK.
+            new AtomRegistration.Atom(
+                @"(?<=^|\.\s)Cannot be destroyed by battle with a monster that has (\d+) or more ATK(?:\.|$)(?=\s|$)",
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.CannotBeDestroyedByBattleWithMonsterAtkAtLeast,
+                    Side = EffectSide.Controller,
+                    Amount = Int(m, 1),
+                    MakesChainLink = false
+                }),
             // Shinato, King of a Higher Plane (c86327225), third sentence: SINGLE TRIGGER_F EVENT_BATTLE_DESTROYING; condition:
             // this card still relates to the battle, the battle target is a monster in the GY whose battle position was
             // Defense; Damage(1-tp, its GetBaseAttack()).
