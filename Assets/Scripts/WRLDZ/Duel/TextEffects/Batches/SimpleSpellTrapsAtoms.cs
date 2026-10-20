@@ -286,6 +286,56 @@ namespace WRLDZ.Duel.TextEffects
                     OncePerTurn = true,
                     MakesChainLink = true
                 }),
+            // — 81820689: "Select and see 1 card in your opponent's hand."
+            new AtomRegistration.Atom(
+                @"^\s*Select and see 1 card in your opponent's hand\.\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.PeekOpponentHandCard,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }),
+            // — 45895206: "Flip all face-down monsters on your opponent's side of the field face-up."
+            new AtomRegistration.Atom(
+                @"^\s*Flip all face-down monsters on your opponent's side of the field face-up\.\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.FlipAllOpponentFaceDownMonstersFaceUp,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }),
+            // — 87210505: "Tribute 1 face-up "Dark Magician"; Special Summon 1 "Dark Magician Knight" from your hand, Deck or Graveyard."
+            new AtomRegistration.Atom(
+                @"^\s*Tribute 1 face-up ""Dark Magician""; Special Summon 1 ""Dark Magician Knight"" from your hand, Deck or Graveyard\.\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.SpecialSummonNamed,
+                    Side = EffectSide.Controller,
+                    NamedCard = "Dark Magician Knight",
+                    FromHand = true,
+                    FromDeck = true,
+                    FromGrave = true,
+                    RequiresTributeCount = 1,
+                    TributeNamedCard = "Dark Magician",
+                    TributeFaceUpOnly = true,
+                    MakesChainLink = true
+                }),
+            // — 43580269: "Each time this card destroys an opponent's monster and sends it to the Graveyard as a
+            // result of battle, increase the ATK of this card by 700 points."
+            new AtomRegistration.Atom(
+                @"^\s*Each time this card destroys an opponent's monster and sends it to the Graveyard as a result of " +
+                @"battle, increase the ATK of this card by 700 points\.\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardDestroysByBattle,
+                    Action = EffectActionKind.ChangeThisCardAtkWhileFaceUp,
+                    Side = EffectSide.Controller,
+                    Amount = 700,
+                    MakesChainLink = false
+                }),
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>
