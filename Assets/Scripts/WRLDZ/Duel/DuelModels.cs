@@ -822,6 +822,11 @@ namespace WRLDZ.Duel
         /// <summary>Fenrir: skip this player's next Draw Phase.</summary>
         public bool SkipNextDrawPhase;
 
+        /// <summary>PGD — Question (c38723936): while face-up, the opponent cannot check cards in this player's Graveyard.
+        /// Set by <see cref="TextEffects.SimpleSpellTrapsRuntime.LockOpponentGraveyardInspection"/>; read by UI/GY browser.
+        /// </summary>
+        public bool GYInspectionLockedByOpponent;
+
         /// <summary>
         /// Hino-Kagu-Tsuchi (SpiritsAndMisc batch): this player discards their whole hand at the start of the
         /// next Draw Phase (either player's), before the draw. A Draw Phase skipped by a card effect ends it

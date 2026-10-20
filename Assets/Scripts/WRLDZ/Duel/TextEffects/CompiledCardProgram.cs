@@ -4226,6 +4226,29 @@ namespace WRLDZ.Duel.TextEffects
         /// your Deck; if it matches the declared name add it to hand, otherwise send it to the GY.
         /// </summary>
         DeclareCardNameThenPayLpExcavateTopMatchAddOrSendToGy,
+        /// <summary>
+        /// PSV — The Eye of Truth (c34694160): Once per turn, during your opponent's Standby Phase, if they have a
+        /// Spell(s) in their hand, they gain 1000 LP. Runs on EachStandbyPhase + OpponentTurnOnly; the handler checks
+        /// the opponent's hand for Spell cards at resolution.
+        /// </summary>
+        StandbyPhaseOpponentHasSpellInHandGainLp,
+        /// <summary>
+        /// PGD — Narrow Pass (c40172183): Continuous Trap. While face-up, each player can only Normal Summon up to
+        /// Amount additional monsters per turn. Checked by DuelEngine.TryNormalSummonToZone before a Normal Summon
+        /// proceeds; tracked by TokensDeclarationsAndPicksRuntime.RecordNormalSummon.
+        /// </summary>
+        ContinuousLimitNormalSummonsPerTurn,
+        /// <summary>
+        /// PGD — Question (c38723936): While face-up, the opponent cannot check cards in the declarer's Graveyard.
+        /// Sets DuelistState.GYInspectionLockedByOpponent on the declarer; a ContinuousWhileFaceUp marker.
+        /// </summary>
+        LockOpponentGraveyardInspection,
+        /// <summary>
+        /// PGD — Question (c38723936): Declare 1 card name over the whole declarable pool; then check the bottom
+        /// card of the declarer's Graveyard. If it is a Monster Card whose name matches the declaration, banish it;
+        /// otherwise Special Summon it to the declarer's field.
+        /// </summary>
+        DeclareCardNameThenCheckGyBottomMatchBanishOrSpsummon,
     }
 
 

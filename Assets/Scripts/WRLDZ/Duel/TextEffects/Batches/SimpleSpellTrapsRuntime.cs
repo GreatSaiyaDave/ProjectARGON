@@ -41,6 +41,8 @@ namespace WRLDZ.Duel.TextEffects
         public const string OwnRaceLevelMonsterAndOtherSpellTrap = "OwnRaceLevelMonsterAndOtherSpellTrap";
         public const string OppGyCardsAndDeckCovers = "OppGyCardsAndDeckCovers";
         public const string OtherSpellTrapYouControl = "OtherSpellTrapYouControl";
+        /// <summary>PGD — Narrow Pass (c40172183): both players control <= ConditionAmount monsters.</summary>
+        public const string BothPlayersMonstersLeqN = "BothPlayersMonstersLeqN";
 
         // ── CountSource value ──
         /// <summary>Face-up monsters the aura's controller controls whose Type is in <see cref="EffectClause.CountRaceFilter"/>.</summary>
@@ -107,6 +109,16 @@ namespace WRLDZ.Duel.TextEffects
                     ok = ProvisionsCandidates(who, card).Count > 0;
                     reason = "Needs another Spell/Trap Card you control to send to the GY.";
                     return true;
+                case BothPlayersMonstersLeqN:
+                {
+                    var n = c.ConditionAmount;
+                    var whoCount = who?.MonsterZones?.Count(z => z != null && z.Occupant != null) ?? 0;
+                    var opp = engine?.OpponentOf(who);
+                    var oppCount = opp?.MonsterZones?.Count(z => z != null && z.Occupant != null) ?? 0;
+                    ok = whoCount <= n && oppCount <= n;
+                    reason = $"Both players must control {n} or fewer monsters (currently {whoCount}/{oppCount}).";
+                    return true;
+                }
                 default:
                     return false;
             }

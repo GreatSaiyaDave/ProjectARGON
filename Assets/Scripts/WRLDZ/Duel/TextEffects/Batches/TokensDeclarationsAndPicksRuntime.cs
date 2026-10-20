@@ -53,6 +53,8 @@ namespace WRLDZ.Duel.TextEffects
         {
             /// <summary>The last turn each player Normal, Flip or Special Summoned.</summary>
             public readonly Dictionary<DuelistState, int> SummonedTurn = new();
+            /// <summary>Normal Summon count this turn per player (for Narrow Pass: max 2 per player per turn).</summary>
+            public readonly Dictionary<DuelistState, int> NormalSummonCountTurn = new();
             public readonly List<Oath> Oaths = new();
             /// <summary>The oath source whose own Special Summon is being performed (exempt from its own oath).</summary>
             public CardInstance SummoningFor;
@@ -89,6 +91,42 @@ namespace WRLDZ.Duel.TextEffects
             if (engine == null || who == null) return;
             var st = StateOf(engine);
             st.SummonedTurn[st.SummonerOverride ?? who] = engine.TurnNumber;
+        }
+
+        /// <summary>PGD — Narrow Pass (c40172183): record that <paramref name="who"/> Normal Summoned this turn.</summary>
+        public static void RecordNormalSummon(DuelEngine engine, DuelistState who)
+        {
+            if (engine == null || who == null) return;
+            var st = StateOf(engine);
+            var target = st.SummonerOverride ?? who;
+            if (!st.NormalSummonCountTurn.ContainsKey(target))
+                st.NormalSummonCountTurn[target] = 0;
+            st.NormalSummonCountTurn[target]++;
+        }
+
+        /// <summary>PGD — Narrow Pass (c40172183): how many Normal Summons <paramref name="who"/> has done this turn.</summary>
+        public static int NormalSummonCount(DuelEngine engine, DuelistState who)
+        {
+            if (engine == null || who == null) return 0;
+            if (!s_state.TryGetValue(engine, out var st)) return 0;
+            var target = st.SummonerOverride ?? who;
+            return st.NormalSummonCountTurn.TryGetValue(target, out var n) ? n : 0;
+        }
+
+        /// <summary>PGD — Narrow Pass (c40172183): is a face-up copy active on either player's field?</summary>
+        public static bool HasNarrowPassActive(DuelEngine engine)
+        {
+            if (engine == null) return false;
+            foreach (var who in new[] { engine.Player, engine.Opponent })
+            {
+                if (who == null) continue;
+                foreach (var zone in who.SpellTrapZones)
+                {
+                    var c = zone?.Occupant;
+                    if (c != null && c.FaceUp && c.CardId == 40172183) return true;
+                }
+            }
+            return false;
         }
 
         /// <summary><paramref name="who"/> Normal, Flip or Special Summoned this turn.</summary>

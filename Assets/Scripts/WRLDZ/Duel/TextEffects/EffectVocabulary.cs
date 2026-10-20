@@ -435,6 +435,17 @@ namespace WRLDZ.Duel.TextEffects
                 // DCR — Archfiend's Oath: declare name, pay LP, excavate top card, add or send to GY.
                 EffectActionKind.DeclareCardNameThenPayLpExcavateTopMatchAddOrSendToGy =>
                     EffectResolutionKind.Search,
+                // PSV — The Eye of Truth: Standby Phase, opponent gains 1000 LP if they have Spell in hand.
+                EffectActionKind.StandbyPhaseOpponentHasSpellInHandGainLp =>
+                    EffectResolutionKind.GainLp,
+                // PGD — Narrow Pass: ContinuousWhileFaceUp marker that limits Normal Summons per turn; maps to None
+                // because it is enforced in the engine (DuelEngine.TryNormalSummonToZone), not resolved as an effect.
+                EffectActionKind.ContinuousLimitNormalSummonsPerTurn => EffectResolutionKind.None,
+                // PGD — Question: ContinuousWhileFaceUp marker that locks opponent GY inspection; no resolution.
+                EffectActionKind.LockOpponentGraveyardInspection => EffectResolutionKind.None,
+                // PGD — Question: declare name, check GY bottom match, banish or Special Summon — a Search-like
+                // declaration that moves a card from GY (banish or to field).
+                EffectActionKind.DeclareCardNameThenCheckGyBottomMatchBanishOrSpsummon => EffectResolutionKind.Search,
                 // The tracker clause is a ContinuousWhileFaceUp marker, not a resolution, so it maps to None like
                 // the other markers (it exists to make the card a Greed for NoteEffectDraw).
                 EffectActionKind.TrackEffectDrawForEndPhaseDamage => EffectResolutionKind.None,

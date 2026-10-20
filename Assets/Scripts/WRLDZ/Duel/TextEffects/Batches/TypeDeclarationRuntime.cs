@@ -1248,5 +1248,69 @@ namespace WRLDZ.Duel.TextEffects
                 engine.ResumeStandbyAfterUpkeep();
             engine.NotifyPublic();
         }
+
+        // ───────────────────────────── PGD — Question (c38723936) ─────────────────────────────
+
+        /// <summary>
+        /// Declare 1 card name over the whole declarable pool; then check the bottom card of the declarer's
+        /// Graveyard. If it matches the declared name, banish it; otherwise Special Summon it to the declarer's field.
+        /// </summary>
+        public static void DeclareCardNameThenCheckGyBottomMatchBanishOrSpsummon(DuelEngine engine, DuelistState who,
+            CardInstance source, EffectClause clause)
+        {
+            if (engine == null || who == null || source == null || engine.GameOver) return;
+
+            var pool = DeclarableCardNames(engine);
+            if (pool.Length == 0) return;
+
+            ContinuousTrapsAndSpiritSupportRuntime.AskCardPick(engine, who, source, new CardPickRequest
+            {
+                Candidates = () => CardNameTokens(engine),
+                Kind = EffectTargetKind.CardInOppHand,
+                Prompt = $"{source.Name}: declare 1 card name. Check the bottom card of your Graveyard; " +
+                         "if it matches, banish it, otherwise Special Summon it.",
+                AiChoose = list => AiDeclaredName(engine, who, list),
+                Cancel = () => engine.Log($"{source.Name}: no card name declared — Question resolves with no effect."),
+                Finish = token => ResolveQuestion(engine, who, source, token)
+            });
+        }
+
+        static void ResolveQuestion(DuelEngine engine, DuelistState who, CardInstance source, CardInstance token)
+        {
+            var name = token?.Def?.name;
+            var id = token?.CardId ?? 0;
+            if (string.IsNullOrEmpty(name) || id <= 0)
+            {
+                engine.Log($"{source.Name}: no card name declared — Question resolves with no effect.");
+                return;
+            }
+
+            // Check the bottom card of the Graveyard.
+            if (who?.Graveyard == null || who.Graveyard.Count == 0)
+            {
+                engine.Log($"{source.Name}: {who.Name}'s Graveyard is empty — nothing to check.");
+                return;
+            }
+
+            var bottom = who.Graveyard[who.Graveyard.Count - 1];
+            var bottomName = bottom?.Def?.name ?? "?";
+            var bottomId = bottom.CardId;
+
+            engine.Log($"{source.Name}: {who.Name} declared {name}; bottom of GY is {bottomName}.");
+
+            if (bottomId == id)
+            {
+                // Match: banish from GY.
+                engine.BanishCard(who, bottom);
+                engine.Log($"{source.Name}: {bottomName} matches the declared name — banished from Graveyard.");
+            }
+            else
+            {
+                // No match: Special Summon from GY to the field.
+                who.Graveyard.Remove(bottom);
+                var ok = engine.SpecialSummonToField(who, bottom, BattlePosition.Attack, true);
+                engine.Log($"{source.Name}: {bottomName} does not match — Special Summoned{(ok ? "" : " (failed)")}.");
+            }
+        }
     }
 }

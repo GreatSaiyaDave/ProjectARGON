@@ -201,6 +201,85 @@ namespace WRLDZ.Duel.TextEffects
                     StaysOnField = true,
                     MakesChainLink = true
                 }),
+            // The Eye of Truth (c34694160): PSV Trap — sentence 1: "Your opponent must keep their hand revealed."
+            // Reuses the OpponentMustPlayWithHandRevealed rule.
+            new AtomRegistration.Atom(
+                S + @"Your opponent must keep their hand revealed" + E,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.OpponentMustPlayWithHandRevealed,
+                    Side = EffectSide.Controller,
+                    StaysOnField = true,
+                    MakesChainLink = true
+                }),
+            // The Eye of Truth (c34694160): PSV Trap — sentence 2: "Once per turn, during your opponent's Standby Phase,
+            // if they have a Spell(s) in their hand: They gain 1000 LP if they have a Spell(s) in their hand at resolution."
+            new AtomRegistration.Atom(
+                S + @"Once per turn, during your opponent's Standby Phase, if they have a Spell\(s\) in their hand: They " +
+                @"gain 1000 LP if they have a Spell\(s\) in their hand at resolution" + E,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.StandbyPhase,
+                    Action = EffectActionKind.StandbyPhaseOpponentHasSpellInHandGainLp,
+                    Side = EffectSide.Controller,
+                    EachStandbyPhase = true,
+                    OpponentTurnOnly = true,
+                    MakesChainLink = false
+                }),
+            // The Eye of Truth atoms end here. Narrow Pass (c40172183): PGD Continuous Trap.
+            // Sentence 1: "This card can only be activated when both players have 2 monsters or less on
+            // their respective sides of the field." ActivationCondition gates activation.
+            new AtomRegistration.Atom(
+                S + @"This card can only be activated when both players have 2 monsters or less on" +
+                @" their respective sides of the field" + E,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.ContinuousLimitNormalSummonsPerTurn,
+                    Side = EffectSide.Controller,
+                    ActivationCondition = SimpleSpellTrapsRuntime.BothPlayersMonstersLeqN,
+                    ConditionAmount = 2,
+                    MakesChainLink = true
+                }),
+            // Sentence 2: "Both players can only Normal Summon up to 2 additional monsters on their
+            // sides of the field." ContinuousWhileFaceUp marker; enforced in DuelEngine.
+            new AtomRegistration.Atom(
+                S + @"Both players can only Normal Summon up to 2 additional monsters on their" +
+                @" sides of the field" + E,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.ContinuousLimitNormalSummonsPerTurn,
+                    Side = EffectSide.Controller,
+                    Amount = 2,
+                    MakesChainLink = false
+                }),
+            // PGD — Question (c38723936): PGD Normal Trap.
+            // Sentence 1: "When activating this card, your opponent cannot check cards in the Graveyard."
+            new AtomRegistration.Atom(
+                S + @"When activating this card, your opponent cannot check cards in the Graveyard" + E,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.LockOpponentGraveyardInspection,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }),
+            // Sentences 2-4: "Your opponent calls the name of the first monster found at the bottom of
+            // your Graveyard. If he/she calls it right, the monster is removed from play. If he/she calls it
+            // wrong, the monster is Special Summoned to your side of the field."
+            new AtomRegistration.Atom(
+                S + @"Your opponent calls the name of the first monster found at the bottom of your Graveyard\. " +
+                @"If he/she calls it right, the monster is removed from play\. " +
+                @"If he/she calls it wrong, the monster is Special Summoned to your side of the field" + E,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.DeclareCardNameThenCheckGyBottomMatchBanishOrSpsummon,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }),
         };
 
         static int Parse(Match m, int group, int fallback)

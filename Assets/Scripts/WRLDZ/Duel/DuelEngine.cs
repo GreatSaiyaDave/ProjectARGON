@@ -1368,6 +1368,15 @@ namespace WRLDZ.Duel
                 return false;
             }
 
+            // PGD — Narrow Pass (c40172183): while active, each player can only Normal Summon up to 2
+            // additional monsters per turn. Check before the summon proceeds (Sets are not Normal Summons).
+            if (!asSet && TextEffects.TokensDeclarationsAndPicksRuntime.HasNarrowPassActive(this) && TextEffects.TokensDeclarationsAndPicksRuntime.NormalSummonCount(this, who) >= 2)
+            {
+                Log($"Cannot Normal Summon: Narrow Pass limit (2 per turn) reached for {who.Name}.");
+                return false;
+            }
+
+
             var need = TcgRules.TributesRequired(card.Level, card.CardId);
             List<CardInstance> tributes = null;
             if (need > 0)
@@ -1646,7 +1655,9 @@ namespace WRLDZ.Duel
             monster.WasTributeSummoned = false;
             monster.NormalOrFlipSummonedTurn = TurnNumber;
             // TokensDeclarationsAndPicks batch: this turn's summon record (Stray Lambs / Scapegoat).
-            TextEffects.TokensDeclarationsAndPicksRuntime.NoteSummon(this, who);
+                TextEffects.TokensDeclarationsAndPicksRuntime.NoteSummon(this, who);
+                // PGD — Narrow Pass: track Normal Summon count for the per-turn limit.
+                TextEffects.TokensDeclarationsAndPicksRuntime.RecordNormalSummon(this, who);
             // SpellCounterSpenders batch: Armor Exe cannot attack the turn it is Flip Summoned.
             TextEffects.SpellCounterSpendersRuntime.OnNormalOrFlipSummoned(this, monster);
             Log(who.IsPlayer

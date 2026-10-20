@@ -13107,6 +13107,35 @@ static void TickEquipStandbyDecay(DuelEngine engine, DuelistState turnPlayer)
                         continue;
                     }
 
+                    // PSV — The Eye of Truth (c34694160): Standby Phase, opponent gains 1000 LP if they have Spell in hand.
+                    if (c.Action == EffectActionKind.StandbyPhaseOpponentHasSpellInHandGainLp)
+                    {
+                        if (!card.FaceUp) continue;
+                        var opp = engine.OpponentOf(who);
+                        if (opp != null && opp.Hand != null)
+                        {
+                            var hasSpell = opp.Hand.Any(ci => ci != null && ci.Def != null && ci.Def.IsSpell);
+                            if (hasSpell)
+                                ApplyLifePointGain(engine, opp, 1000, card?.Name ?? "The Eye of Truth");
+                        }
+                        continue;
+                    }
+
+                    // PGD — Question (c38723936): while face-up, opponent cannot check this player's Graveyard.
+                    if (c.Action == EffectActionKind.LockOpponentGraveyardInspection)
+                    {
+                        who.GYInspectionLockedByOpponent = true;
+                        continue;
+                    }
+
+                    // PGD — Question (c38723936): declare a card name; check GY bottom card match; banish or SS.
+                    if (c.Action == EffectActionKind.DeclareCardNameThenCheckGyBottomMatchBanishOrSpsummon)
+                    {
+                        // Name declaration is handled by TypeDeclarationRuntime; resolution happens here.
+                        TypeDeclarationRuntime.DeclareCardNameThenCheckGyBottomMatchBanishOrSpsummon(engine, who, card, c);
+                        continue;
+                    }
+
                     // ArchfiendRiders batch: Infernalqueen Archfiend — every Standby Phase, its controller targets 1 face-up
                     // "Archfiend" monster they control (+1000 ATK until the End Phase).
                     if (ArchfiendRidersRuntime.TryStandbyTargetBoost(engine, who, card, c))
