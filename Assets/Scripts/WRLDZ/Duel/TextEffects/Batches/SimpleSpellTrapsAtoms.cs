@@ -384,6 +384,18 @@ namespace WRLDZ.Duel.TextEffects
                     IsOptional = true,
                     MakesChainLink = true
                 }),
+            // — 97809599: "Pay 1000 Life Points. Pick up and see all face-down cards on your opponent's side of the field, then return them to their original positions."
+            new AtomRegistration.Atom(
+                @"^\s*Pay 1000 Life Points\. Pick up and see all face-down cards on your opponent's side of the field, then " +
+                @"return them to their original positions\.(?: \(The effects of the face-down cards are not activated\.\))?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.LookAtOppFaceDownCardsPayLp,
+                    Side = EffectSide.Controller,
+                    PayLpAmount = 1000,
+                    MakesChainLink = true
+                }),
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>

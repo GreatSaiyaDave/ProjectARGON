@@ -779,6 +779,8 @@ namespace WRLDZ.Duel.TextEffects
                 EffectActionKind.RevealAllFaceDownCardsThenReturn => EffectResolutionKind.None,
                 // — 17092736: peek top 5 cards of opp Deck — peek only, no resolution.
                 EffectActionKind.PeekTopOpponentDeckCards => EffectResolutionKind.None,
+                // — 97809599: pay 1000 LP, look at opp face-down cards — peek only, no resolution.
+                EffectActionKind.LookAtOppFaceDownCardsPayLp => EffectResolutionKind.None,
                 // — 33413638: return this card from GY to top of Deck — board change.
                 EffectActionKind.ReturnThisToTopOfDeck => EffectResolutionKind.ReturnToDeck,
                 EffectActionKind.OpponentSkipsNextMainPhase1 => EffectResolutionKind.Protection,

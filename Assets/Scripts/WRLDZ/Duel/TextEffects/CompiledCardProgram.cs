@@ -4271,6 +4271,10 @@ namespace WRLDZ.Duel.TextEffects
         /// — 33413638 Cockroach Knight: When sent to the GY, return this card to the top of the Deck.
         /// </summary>
         ReturnThisToTopOfDeck,
+        /// <summary>
+        /// — 97809599: Pay 1000 LP; look at all face-down cards on opp's field.
+        /// </summary>
+        LookAtOppFaceDownCardsPayLp,
     }
 
 

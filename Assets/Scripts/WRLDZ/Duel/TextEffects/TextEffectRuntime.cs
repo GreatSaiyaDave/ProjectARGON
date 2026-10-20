@@ -8864,6 +8864,11 @@ namespace WRLDZ.Duel.TextEffects
                     FlipDownAndPeekRuntime.ReturnThisToTopOfDeck(engine, who, source, clause);
                     break;
 
+                // — 97809599: Pay 1000 LP; look at all face-down cards on opp's field.
+                case EffectActionKind.LookAtOppFaceDownCardsPayLp:
+                    FlipDownAndPeekRuntime.RevealAllFaceDownCardsThenReturn(engine, who, source, clause);
+                    break;
+
                 case EffectActionKind.OpponentSkipsNextMainPhase1:
                     BattleOutcomeTriggersRuntime.ScheduleMainPhase1Skip(engine, opp, source);
                     break;
