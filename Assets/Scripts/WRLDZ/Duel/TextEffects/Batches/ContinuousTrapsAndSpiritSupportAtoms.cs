@@ -189,6 +189,18 @@ namespace WRLDZ.Duel.TextEffects
                     StaysOnField = true,
                     MakesChainLink = true
                 }),
+            // Respect Play (c8951260): PSV Normal Trap — "During their respective turns, each player must show
+            // their opponent their hand." Reuses the BothPlayersMustPlayWithHandRevealed rule (both hands public).
+            new AtomRegistration.Atom(
+                S + @"During their respective turns, each player must show their opponent their hand" + E,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.BothPlayersMustPlayWithHandRevealed,
+                    Side = EffectSide.Controller,
+                    StaysOnField = true,
+                    MakesChainLink = true
+                }),
         };
 
         static int Parse(Match m, int group, int fallback)

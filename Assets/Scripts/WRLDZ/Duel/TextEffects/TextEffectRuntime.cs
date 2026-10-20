@@ -10011,6 +10011,24 @@ namespace WRLDZ.Duel.TextEffects
                     TypeDeclarationRuntime.DeclareCardNameThenResolveMindCrush(engine, who, source, clause);
                     break;
 
+                case EffectActionKind.DeclareCardNameThenAddFromOpponentDeckToHand:
+                    // Dark Designator: declare a card name over the whole pool, then add one copy from the opponent's
+                    // Deck to the opponent's hand if present.
+                    TypeDeclarationRuntime.DeclareCardNameThenAddFromOpponentDeckToHand(engine, who, source, clause);
+                    break;
+
+                case EffectActionKind.DeclareCardNameThenBanishOrSelfDiscardRandom:
+                    // D.D. Designator: declare a card name over the whole pool, then banish from opponent's hand if
+                    // present, else banish 1 random from declarer's hand.
+                    TypeDeclarationRuntime.DeclareCardNameThenBanishOrSelfDiscardRandom(engine, who, source, clause);
+                    break;
+
+                case EffectActionKind.DeclareCardNameThenPayLpExcavateTopMatchAddOrSendToGy:
+                    // Archfiend's Oath: declare a card name over the whole pool, pay 500 LP, excavate the top card,
+                    // add to hand if it matches the declared name, otherwise send to GY.
+                    TypeDeclarationRuntime.DeclareCardNameThenPayLpExcavateTopMatchAddOrSendToGy(engine, who, source, clause);
+                    break;
+
                 case EffectActionKind.ReplaceDrawLinkWithDiscard:
                     // Muko resolves as a chain answer: the draw it answers discards instead (MukoRuntime), so this
                     // link's own effect is only the announcement. Nothing more to apply here.

@@ -200,6 +200,190 @@ namespace WRLDZ.Duel.TextEffects
                        $"discards {unlucky.Name} at random.");
         }
 
+        /// <summary>
+        /// Dark Designator (c78053598) at resolution: the activator declares 1 Monster Card name (over the whole
+        /// declarable pool). If the declared card is in the opponent's Deck, add 1 copy to the opponent's hand.
+        /// </summary>
+        public static void DeclareCardNameThenAddFromOpponentDeckToHand(DuelEngine engine, DuelistState who,
+            CardInstance source, EffectClause clause)
+        {
+            if (engine == null || who == null || source == null || engine.GameOver) return;
+            var victim = engine.OpponentOf(who);
+            var pool = DeclarableCardNames(engine);
+            if (pool.Length == 0 || victim == null) return;
+
+            // The declared card must be a Monster Card name (the declarable pool is monsters only).
+            ContinuousTrapsAndSpiritSupportRuntime.AskCardPick(engine, who, source, new CardPickRequest
+            {
+                Candidates = () => CardNameTokens(engine),
+                Kind = EffectTargetKind.CardInOppHand,
+                Prompt = $"{source.Name}: declare 1 Monster Card name. If it is in your opponent's Deck, " +
+                         "add 1 copy to your opponent's hand.",
+                AiChoose = list => AiDeclaredName(engine, victim, list),
+                Cancel = () => engine.Log($"{source.Name}: no card name declared — Dark Designator resolves with no effect."),
+                Finish = token => ResolveDarkDesignator(engine, who, victim, source, token)
+            });
+        }
+
+        static void ResolveDarkDesignator(DuelEngine engine, DuelistState who, DuelistState victim,
+            CardInstance source, CardInstance token)
+        {
+            var name = token?.Def?.name;
+            var id = token?.CardId ?? 0;
+            if (string.IsNullOrEmpty(name) || id <= 0)
+            {
+                engine.Log($"{source.Name}: no card name declared — Dark Designator resolves with no effect.");
+                return;
+            }
+
+            var copies = victim?.Deck?.Where(id2 => id2 == id).ToList() ?? new List<int>();
+            if (copies.Count == 0)
+            {
+                engine.Log($"{source.Name}: {who.Name} declared {name}; {victim.Name}'s Deck has no copy.");
+                return;
+            }
+
+            // Add 1 copy from the opponent's Deck to their hand (this removes from Deck internally).
+            if (MonsterEffects.AddCardIdFromDeckToHand(engine, victim, id, source?.Name ?? "Dark Designator"))
+            {
+                engine.Log($"{source.Name}: {who.Name} declared {name}; added 1 copy from {victim.Name}'s Deck to their hand.");
+            }
+            else
+            {
+                engine.Log($"{source.Name}: could not add {name} to {victim.Name}'s hand.");
+            }
+        }
+
+        /// <summary>
+        /// D.D. Designator (c33423043) at resolution: the activator declares 1 card name (over the whole declarable
+        /// pool). If the opponent holds it, banish that copy. Otherwise banish 1 random card from the declarer's hand.
+        /// </summary>
+        public static void DeclareCardNameThenBanishOrSelfDiscardRandom(DuelEngine engine, DuelistState who,
+            CardInstance source, EffectClause clause)
+        {
+            if (engine == null || who == null || source == null || engine.GameOver) return;
+            var victim = engine.OpponentOf(who);
+            var pool = DeclarableCardNames(engine);
+            if (pool.Length == 0 || victim == null) return;
+
+            ContinuousTrapsAndSpiritSupportRuntime.AskCardPick(engine, who, source, new CardPickRequest
+            {
+                Candidates = () => CardNameTokens(engine),
+                Kind = EffectTargetKind.CardInOppHand,
+                Prompt = $"{source.Name}: declare 1 card name. If your opponent holds it, banish that copy; " +
+                         "otherwise banish 1 card from your hand at random.",
+                AiChoose = list => AiDeclaredName(engine, victim, list),
+                Cancel = () => engine.Log($"{source.Name}: no card name declared — D.D. Designator resolves with no effect."),
+                Finish = token => ResolveDDDesignator(engine, who, victim, source, token)
+            });
+        }
+
+        static void ResolveDDDesignator(DuelEngine engine, DuelistState who, DuelistState victim,
+            CardInstance source, CardInstance token)
+        {
+            var name = token?.Def?.name;
+            var id = token?.CardId ?? 0;
+            if (string.IsNullOrEmpty(name) || id <= 0)
+            {
+                engine.Log($"{source.Name}: no card name declared — D.D. Designator resolves with no effect.");
+                return;
+            }
+
+            var copies = victim?.Hand?.Where(c => c != null && c.CardId == id).ToList() ?? new List<CardInstance>();
+            if (copies.Count > 0)
+            {
+                var c = copies[0];
+                if (victim.Hand.Remove(c)) engine.BanishCard(victim, c);
+                engine.Log($"{source.Name}: {who.Name} declared {name}; {victim.Name} banishes {c.Name}.");
+                return;
+            }
+
+            var own = who?.Hand;
+            if (own == null || own.Count == 0)
+            {
+                engine.Log($"{source.Name}: {who.Name} declared {name}; {victim.Name} does not hold it, and you have " +
+                           "no card to banish.");
+                return;
+            }
+
+            var unlucky = own[engine.Rng.PickIndex(own.Count)];
+            if (own.Remove(unlucky)) engine.BanishCard(who, unlucky);
+            engine.Log($"{source.Name}: {who.Name} declared {name}; {victim.Name} does not hold it, so {who.Name} " +
+                       $"banishes {unlucky.Name} at random.");
+        }
+
+        /// <summary>
+        /// Archfiend's Oath (c22796548) at resolution: pay 500 LP, declare 1 card name, excavate the top card of the
+        /// Deck; if it matches the declared name add it to hand, otherwise send it to the GY.
+        /// </summary>
+        public static void DeclareCardNameThenPayLpExcavateTopMatchAddOrSendToGy(DuelEngine engine, DuelistState who,
+            CardInstance source, EffectClause clause)
+        {
+            if (engine == null || who == null || source == null || engine.GameOver) return;
+
+            // Cost: pay 500 LP.
+            if (who.LifePoints < 500)
+            {
+                engine.Log($"{source.Name}: {who.Name} cannot pay 500 LP — Archfiend's Oath resolves with no effect.");
+                return;
+            }
+            engine.PayLifePoints(who, 500, $"Cost: {who.Name} pays 500 LP for Archfiend's Oath.");
+
+            var pool = DeclarableCardNames(engine);
+            if (pool.Length == 0) return;
+
+            ContinuousTrapsAndSpiritSupportRuntime.AskCardPick(engine, who, source, new CardPickRequest
+            {
+                Candidates = () => CardNameTokens(engine),
+                Kind = EffectTargetKind.CardInOppHand,
+                Prompt = $"{source.Name}: declare 1 card name. Excavate the top card of your Deck; if it matches, add it " +
+                         "to your hand, otherwise send it to the Graveyard.",
+                AiChoose = list => AiDeclaredName(engine, who, list),
+                Cancel = () => engine.Log($"{source.Name}: no card name declared — Archfiend's Oath resolves with no effect."),
+                Finish = token => ResolveArchfiendsOath(engine, who, source, token)
+            });
+        }
+
+        static void ResolveArchfiendsOath(DuelEngine engine, DuelistState who, CardInstance source,
+            CardInstance token)
+        {
+            var name = token?.Def?.name;
+            var id = token?.CardId ?? 0;
+            if (string.IsNullOrEmpty(name) || id <= 0)
+            {
+                engine.Log($"{source.Name}: no card name declared — Archfiend's Oath resolves with no effect.");
+                return;
+            }
+
+            // Excavate the top card of the Deck.
+            if (who?.Deck == null || who.Deck.Count == 0)
+            {
+                engine.Log($"{source.Name}: {who.Name}'s Deck is empty — nothing to excavate.");
+                return;
+            }
+
+            var topId = who.Deck[0];
+            var topDef = engine.Database?.Get(topId);
+            var topName = topDef?.name ?? "?";
+            who.Deck.RemoveAt(0);
+
+            engine.Log($"{source.Name}: {who.Name} declared {name}; excavates {topName}.");
+
+            if (topId == id)
+            {
+                // Match: add to hand.
+                var inst = engine.CreateCardInstance(topId);
+                who.Hand.Add(inst);
+                engine.Log($"{source.Name}: {topName} matches the declared name — added to {who.Name}'s hand.");
+            }
+            else
+            {
+                // No match: send to GY.
+                engine.SendCardToGrave(who, engine.CreateCardInstance(topId));
+                engine.Log($"{source.Name}: {topName} does not match {name} — sent to the Graveyard.");
+            }
+        }
+
         // ------------------------------------------------------------------ declaration tokens
 
         /// <summary>The Monster Types of this duel's card pool (every Type a monster card in the database has), A–Z.</summary>

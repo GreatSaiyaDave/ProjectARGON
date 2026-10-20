@@ -4210,6 +4210,22 @@ namespace WRLDZ.Duel.TextEffects
         /// RefreshHandReveal on every board change like Mind on Air.
         /// </summary>
         BothPlayersMustPlayWithHandRevealed,
+        /// <summary>
+        /// PGD — Dark Designator (c78053598): Declare 1 Monster Card name. If the declared card is in your opponent's
+        /// Deck, add 1 of that card to your opponent's hand. Declaration is over the whole declarable card pool; at
+        /// resolution the deck is searched by name and one copy is added to the opponent's hand.
+        /// </summary>
+        DeclareCardNameThenAddFromOpponentDeckToHand,
+        /// <summary>
+        /// IOC — D.D. Designator (c33423043): Declare 1 card name. Look at your opponent's hand; if they hold it,
+        /// banish that copy. Otherwise banish 1 random card from your own hand.
+        /// </summary>
+        DeclareCardNameThenBanishOrSelfDiscardRandom,
+        /// <summary>
+        /// DCR — Archfiend's Oath (c22796548): Once per turn, pay 500 LP, declare 1 card name, excavate the top card of
+        /// your Deck; if it matches the declared name add it to hand, otherwise send it to the GY.
+        /// </summary>
+        DeclareCardNameThenPayLpExcavateTopMatchAddOrSendToGy,
     }
 
 

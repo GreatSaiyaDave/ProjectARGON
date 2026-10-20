@@ -247,6 +247,45 @@ namespace WRLDZ.Duel.TextEffects
             // opponent; it is a Continuous Trap that damages the player who activates each Trap) and Covering Fire's two
             // copies of ".*target 1 other face-up monster you control.*gains ATK equal to that target.*ATK" (no Damage Step
             // window; the gain lasted the turn) were removed: both cards are uncompiled again, as in v206.
+            // PGD — Dark Designator (c78053598): Declare 1 Monster Card name. If the declared card is in your opponent's
+            // Deck, add 1 of that card to your opponent's hand. Declaration is over the declarable monster pool; resolution
+            // searches the opponent's Deck by name and adds one copy to their hand.
+            new AtomRegistration.Atom(
+                @"^\s*Declare 1 Monster Card name\.\s*If the declared card is in your opponent's Deck, add 1 of that card " +
+                @"to your opponent's hand\.\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.DeclareCardNameThenAddFromOpponentDeckToHand,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }),
+            // IOC — D.D. Designator (c33423043): Declare 1 card name. Look at your opponent's hand; if they hold it,
+            // banish that copy. Otherwise banish 1 random card from your hand.
+            new AtomRegistration.Atom(
+                @"^\s*Declare 1 card name\.\s*Look at your opponent's hand, and if they have the declared card in their " +
+                @"hand, remove that 1 card from play\.\s*If they do not have the declared card in their hand, remove 1 " +
+                @"random card in your hand from play\.\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.DeclareCardNameThenBanishOrSelfDiscardRandom,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }),
+            // DCR — Archfiend's Oath (c22796548): Once per turn, pay 500 LP, declare 1 card name, excavate the top card
+            // of your Deck; if it matches the declared name add it to hand, otherwise send it to the GY.
+            new AtomRegistration.Atom(
+                @"^\s*Once per turn:\s*You can pay 500 Life Points, then declare 1 card name;\s*excavate the top card of " +
+                @"your Deck, and if it is the declared card, add it to your hand\.\s*Otherwise, send it to the Graveyard\.\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.DeclareCardNameThenPayLpExcavateTopMatchAddOrSendToGy,
+                    Side = EffectSide.Controller,
+                    OncePerTurn = true,
+                    MakesChainLink = true
+                }),
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>

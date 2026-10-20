@@ -426,6 +426,15 @@ namespace WRLDZ.Duel.TextEffects
                 // TypeDeclaration batch: Mind Crush — declare a card name, and a hand goes to the GY either way.
                 EffectActionKind.DeclareCardNameThenOpponentDiscardsAllOrSelfDiscardsRandom =>
                     EffectResolutionKind.Discard,
+                // PGD — Dark Designator: declare a card name, add from opponent's Deck to opponent's hand (a Search).
+                EffectActionKind.DeclareCardNameThenAddFromOpponentDeckToHand =>
+                    EffectResolutionKind.Search,
+                // IOC — D.D. Designator: declare a card name, banish from opponent's hand or banish random from own hand.
+                EffectActionKind.DeclareCardNameThenBanishOrSelfDiscardRandom =>
+                    EffectResolutionKind.Banish,
+                // DCR — Archfiend's Oath: declare name, pay LP, excavate top card, add or send to GY.
+                EffectActionKind.DeclareCardNameThenPayLpExcavateTopMatchAddOrSendToGy =>
+                    EffectResolutionKind.Search,
                 // The tracker clause is a ContinuousWhileFaceUp marker, not a resolution, so it maps to None like
                 // the other markers (it exists to make the card a Greed for NoteEffectDraw).
                 EffectActionKind.TrackEffectDrawForEndPhaseDamage => EffectResolutionKind.None,
