@@ -21,7 +21,7 @@ namespace WRLDZ.Duel.Rules
     /// <item>Frontline Base c46181000: once per turn, Special Summon 1 Level 4 or lower Union from the hand.</item>
     /// <item>Buster Rancher c84740193: equip only to ATK 1000 or less (re-checked except in damage calculation); +2500 ATK in
     /// damage calculation against a 2500+ ATK (Attack) / DEF (Defense) opponent's monster.</item>
-    /// <item>Narrow Pass c40172183 stays Unimplemented (printed text and script disagree).</item>
+    /// <item>Narrow Pass c40172183: Implemented — summon limit 2 per turn per player enforced in DuelEngine.</item>
     /// </list>
     /// </summary>
     public static class ContinuousLocksAndIgnitionsRegressionTests
@@ -273,11 +273,10 @@ namespace WRLDZ.Duel.Rules
                     cal.ConditionAmount == 2500, p?.ToString());
             }
             {
-                // Narrow Pass: the script's EFFECT_CANNOT_SUMMON for a player with 2+ monsters is not the printed "up to 2
-                // additional" count — fail closed.
+                // Narrow Pass: summon limit 2 per turn per player is enforced in DuelEngine.TryNormalSummonToZone.
                 var (p, st) = Of(db, NarrowPass);
-                Check("Narrow Pass: stays not FullyCompiled / not Implemented (text and script disagree)",
-                    p != null && !p.FullyCompiled && st != CardEffectStatusKind.Implemented, $"{st} {p}");
+                Check("Narrow Pass: FullyCompiled and Implemented with summon limit",
+                    p != null && p.FullyCompiled && st == CardEffectStatusKind.Implemented, $"{st} {p}");
             }
             {
                 // Near miss: Messenger of Peace keeps its own Spell-borne ATK lock (1500) and upkeep.
