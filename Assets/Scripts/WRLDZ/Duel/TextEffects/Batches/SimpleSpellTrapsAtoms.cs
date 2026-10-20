@@ -396,6 +396,25 @@ namespace WRLDZ.Duel.TextEffects
                     PayLpAmount = 1000,
                     MakesChainLink = true
                 }),
+            // — 85602018: "If a monster on your side of the field was sent to your Graveyard this turn, you can
+            // Special Summon 1 monster with an ATK of 1500 points or less from your Deck once during this turn."
+            new AtomRegistration.Atom(
+                @"^\s*If a monster on your side of the field was sent to your Graveyard this turn, you can " +
+                @"Special Summon 1 monster with an ATK of 1500 points or less from your Deck once during this " +
+                @"turn\. Then shuffle your Deck\.\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.SpecialSummonFromDeck,
+                    Side = EffectSide.Controller,
+                    FromDeck = true,
+                    AmountIsAtkMax = true,
+                    Amount = 1500,
+                    OncePerTurn = true,
+                    ActivationCondition = "YourLevelOrHigherMonsterSentToGyThisTurn",
+                    ConditionAmount = 1,
+                    MakesChainLink = true
+                }),
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>
