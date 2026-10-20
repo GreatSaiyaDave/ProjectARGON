@@ -1904,11 +1904,6 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         ChangeThisCardAtkWhileFaceUp,
         /// <summary>
-        /// — 87557188: FLIP — reveal all face-down cards on the field (no flip effects activate), then return them
-        /// to face-down. Logs names for the activator; nothing else changes.
-        /// </summary>
-        RevealAllFaceDownCardsThenReturn,
-        /// <summary>
         /// BattleOutcomeTriggers batch (v162) — Timeater (<see cref="EffectTiming.ThisCardDestroysByBattle"/>): "Your
         /// opponent skips their next Main Phase 1." (ygopro c44913552 EFFECT_SKIP_M1, reset at the opponent's Main Phase 1).
         /// The opponent's next turn goes from the Standby Phase to the Battle Phase, or to the End Phase when they cannot
@@ -2253,6 +2248,11 @@ namespace WRLDZ.Duel.TextEffects
         /// stays face-up on the field (<see cref="PerCopyDeckRuntime.ResolveDrawnSummon"/>).
         /// </summary>
         SpecialSummonDrawnThisInDefenseDamageDrawerAndChangeRace,
+        /// <summary>
+        /// — 87557188: FLIP — reveal all face-down cards on the field (no flip effects activate), then
+        /// return them to face-down. Logs names for the activator; nothing else changes.
+        /// </summary>
+        RevealAllFaceDownCardsThenReturn,
         /// <summary>
         /// PerCopyDeck batch (v163) — Pharaoh's Treasure: this card is shuffled face-up into its controller's Deck instead
         /// of going to the GY (ygopro CancelToGrave + SendtoDeck + ReverseInDeck); that copy carries the card's

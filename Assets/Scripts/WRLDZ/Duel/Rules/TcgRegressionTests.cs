@@ -2310,8 +2310,12 @@ namespace WRLDZ.Duel.Rules
 
                     var ktitle = db.Get(87210505);
                     var ktProg = ktitle != null ? CardTextEffectCompiler.Compile(ktitle) : null;
-                    Check("Corpus: Knight's Title leftover (no invented tribute-named spell)",
-                        ktProg != null && !ktProg.FullyCompiled);
+                    Check("Corpus: Knight's Title: Tribute 1 face-up \"Dark Magician\"; SS \"Dark Magician Knight\" from h/d/GY",
+                        ktProg != null && ktProg.FullyCompiled && ktProg.ClauseList.Count == 1 &&
+                        ktProg.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.SpecialSummonNamed &&
+                            c.NamedCard == "Dark Magician Knight" && c.FromHand && c.FromDeck && c.FromGrave &&
+                            c.RequiresTributeCount == 1 && c.TributeNamedCard == "Dark Magician" &&
+                            c.TributeFaceUpOnly));
 
                     var dekoichi = db.Get(87621407);
                     var dekProg = dekoichi != null ? CardTextEffectCompiler.Compile(dekoichi) : null;

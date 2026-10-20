@@ -6813,8 +6813,12 @@ namespace WRLDZ.Duel.Rules
 
                 var knightTitle = db.Get(87210505);
                 var ktProg = knightTitle != null ? CardTextEffectCompiler.Compile(knightTitle) : null;
-                Check("Knight's Title leftover (no invented tribute-named spell procedure)",
-                    ktProg != null && !ktProg.FullyCompiled);
+                Check("Knight's Title: Tribute 1 face-up \"Dark Magician\"; SS \"Dark Magician Knight\" from h/d/GY",
+                    ktProg != null && ktProg.FullyCompiled && ktProg.ClauseList.Count == 1 &&
+                    ktProg.ClauseList.Exists(c => c != null && c.Action == EffectActionKind.SpecialSummonNamed &&
+                        c.NamedCard == "Dark Magician Knight" && c.FromHand && c.FromDeck && c.FromGrave &&
+                        c.RequiresTributeCount == 1 && c.TributeNamedCard == "Dark Magician" &&
+                        c.TributeFaceUpOnly));
 
                 const int mineGolemId = 76321376;
                 var mineDef = db.Get(mineGolemId);
