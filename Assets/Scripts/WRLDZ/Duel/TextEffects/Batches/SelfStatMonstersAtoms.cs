@@ -103,6 +103,16 @@ namespace WRLDZ.Duel.TextEffects
                     Action = EffectActionKind.CannotAttackDirectly,
                     MakesChainLink = false
                 }),
+            // — 6285791: This card can attack your opponent directly.
+            new AtomRegistration.Atom(
+                Start + @"This card can attack your opponent directly" + End,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.CanAttackDirectly,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = false
+                }),
         };
 
         static int Parse(Match m, int group, int fallback)
