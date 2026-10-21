@@ -22,7 +22,7 @@ namespace WRLDZ.Duel.TextEffects
         {
             // The Wicked Worm Beast (c6285791): EndPhase, this card returns to owner's hand.
             new AtomRegistration.Atom(
-                @"^\s*This face-up card on the field is returned to its owner's hand during the End Phase of your turn\.?\s*$",
+                @"^\s*This face-up card on the field is returned to (?:its|the) owner's hand during the End Phase of your turn\.?\s*$",
                 m => new EffectClause
                 {
                     Timing = EffectTiming.EndPhase,
