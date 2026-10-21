@@ -46,6 +46,17 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = true
                 }),
 
+            // — 16469012 Teva: When this card is Tribute Summoned successfully, your opponent cannot declare an attack during his/her next turn.
+            new AtomRegistration.Atom(
+                @"^\s*When this card is Tribute Summoned successfully, your opponent cannot declare an attack during (?:his|her)/(?:his|her) next turn\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.AttackerCannotAttackNextTurn,
+                    Side = EffectSide.Opponent,
+                    MakesChainLink = true
+                }),
+
             // Copycat (c26376390): if Summoned, this card's ATK/DEF become equal to target opp monster's original ATK/DEF.
             new AtomRegistration.Atom(
                 @"^\s*If this card is Summoned:\s*Target 1 face-up monster your opponent controls;\s*" +
