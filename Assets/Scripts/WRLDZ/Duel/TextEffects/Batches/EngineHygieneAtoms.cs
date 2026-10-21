@@ -88,6 +88,8 @@ namespace WRLDZ.Duel.TextEffects
             // Ekibyo Drakmord (c69954399): AddEquipProcedure (any face-up monster), EFFECT_CANNOT_ATTACK, a turn counter
             // ticked at each End Phase of the equipped monster's controller (EFFECT_FLAG_CANNOT_DISABLE), the destroy at
             // count N, then this card returns to the hand.
+            // — 17185260 Inferno Hammer: When this card destroys your opponent's monster and sends it to the Graveyard as a result of battle, you can select 1 face-up monster on your opponent's side of the field and flip it into face-down Defense Position.
+
             AtomRegistration.Atom.Sequence(
                 Begin + @"The equipped monster cannot attack\.\s*" +
                 @"Destroy the equipped monster at the end of its controller" + Apos + @"s (\d+)(?:st|nd|rd|th) turn " +

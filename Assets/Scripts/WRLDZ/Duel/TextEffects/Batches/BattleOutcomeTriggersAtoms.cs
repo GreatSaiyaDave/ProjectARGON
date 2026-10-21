@@ -133,6 +133,20 @@ namespace WRLDZ.Duel.TextEffects
             // uncompiled again, as in v206 (a Start of Damage Step coin call with a human call needs a battle pause).
             // RdsRedoBattle batch (v210 group): compiled again by RdsRedoBattleAtoms with a real Damage Step pause
             // (RdsRedoBattleRuntime.TryBeginBattleStartCoinCalls).
+            // — 17185260 Inferno Hammer
+            new AtomRegistration.Atom(
+                @"flip it into face-down Defense Position",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardDestroysByBattle,
+                    Action = EffectActionKind.SetTargetFaceDownDefense,
+                    Side = EffectSide.Opponent,
+                    Zone = EffectZoneFilter.OppFaceUpMonsters,
+                    RequiresTargetChoice = true,
+                    IsPsctTarget = true,
+                    IsOptional = true,
+                    MakesChainLink = true
+                }),
         };
 
         static int Parse(System.Text.RegularExpressions.Match m, int group, int fallback)

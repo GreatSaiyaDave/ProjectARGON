@@ -135,6 +135,21 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = true
                 }),
 
+            // — 50725996 Dark Magician Knight: When this card is Special Summoned: Target 1 card on the field; destroy that target.
+            new AtomRegistration.Atom(
+                Start + @"When this card is Special Summoned:\s*Target 1 card on the field;\s*destroy that target\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.Destroy,
+                    Side = EffectSide.Both,
+                    Zone = EffectZoneFilter.AnyCardOnField,
+                    RequiresTargetChoice = true,
+                    IsPsctTarget = true,
+                    TargetCount = 1,
+                    MakesChainLink = true
+                }),
+
             // Mustering of the Dark Scorpions (c68191243). ygopro: ACTIVATE (free chain), condition a face-up "Don Zaloog"
             // on your field (LOCATION_ONFIELD); chk: a free Monster Zone and a SET_DARK_SCORPION monster in the hand that
             // can be Special Summoned; SelectUnselectGroup 1..ft with aux.dncheck (different names), POS_FACEUP.
