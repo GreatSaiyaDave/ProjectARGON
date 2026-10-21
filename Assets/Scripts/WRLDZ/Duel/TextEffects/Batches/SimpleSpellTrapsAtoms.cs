@@ -415,6 +415,40 @@ namespace WRLDZ.Duel.TextEffects
                     ConditionAmount = 1,
                     MakesChainLink = true
                 }),
+            // — 29267084 Shadow Spell: Activate this card by targeting 1 face-up monster your opponent controls; it loses 700 ATK, also it cannot attack or change its battle position. When it leaves the field, destroy this card.
+            // — 85602018: "If a monster on your side of the field was sent to your Graveyard this turn, you can
+            // Special Summon 1 monster with an ATK of 1500 points or less from your Deck once during this turn."
+            new AtomRegistration.Atom(
+                @"^\s*If a monster on your side of the field was sent to your Graveyard this turn, you can " +
+                @"Special Summon 1 monster with an ATK of 1500 points or less from your Deck once during this " +
+                @"turn\. Then shuffle your Deck\.\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.SpecialSummonFromDeck,
+                    Side = EffectSide.Controller,
+                    FromDeck = true,
+                    AmountIsAtkMax = true,
+                    Amount = 1500,
+                    OncePerTurn = true,
+                    ActivationCondition = "YourLevelOrHigherMonsterSentToGyThisTurn",
+                    ConditionAmount = 1,
+                    MakesChainLink = true
+                }),
+            new AtomRegistration.Atom(
+                @"^\s*Activate this card by targeting 1 face-up monster your opponent controls; it loses (\d+) ATK, also it cannot attack or change its battle position\. When it leaves the field, destroy this card\.?\s*$",
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.EquipThisToTarget,
+                    Zone = EffectZoneFilter.OppFaceUpMonsters,
+                    RequiresTargetChoice = true,
+                    IsPsctTarget = true,
+                    RequiresTargetFaceUp = true,
+                    TargetCount = 1,
+                    EquipAtkBonus = -int.Parse(m.Groups[1].Value),
+                    MakesChainLink = true
+                }),
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>
