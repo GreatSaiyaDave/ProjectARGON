@@ -5663,8 +5663,10 @@ namespace WRLDZ.Duel.Rules
                 // LvChain batch (v194): Level Up! — "Special Summon 1 monster from your hand or Deck that is
                 // listed in the sent monster's text" is a summon whose name is only known at resolution, so it is
                 // the only card in its family — 1 more, so 50.
+                // Teva (16469012): When Tribute Summoned, opponent cannot attack next turn (AttackerCannotAttackNextTurn) —
+                // 1 more, so 51.
                 Check("Vocabulary: unique exceptions stay a short named list",
-                    unique <= 50,
+                    unique <= 51,
                     $"unique={unique}");
                 Check("Vocabulary: Exiled Force compiles as shared Tribute→Destroy",
                     db.Get(74131780) is { } exd &&

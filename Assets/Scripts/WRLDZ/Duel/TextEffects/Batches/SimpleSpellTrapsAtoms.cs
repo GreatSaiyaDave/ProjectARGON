@@ -415,35 +415,6 @@ namespace WRLDZ.Duel.TextEffects
                     ConditionAmount = 1,
                     MakesChainLink = true
                 }),
-            // — 19159413: "Select 1 Spell Card on the field and destroy it."
-            new AtomRegistration.Atom(
-                @"^\s*Select 1 Spell Card on the field and destroy it\.?\s*$",
-                _ => new EffectClause
-                {
-                    Timing = EffectTiming.Activate,
-                    Action = EffectActionKind.Destroy,
-                    Side = EffectSide.Both,
-                    Zone = EffectZoneFilter.FieldSpellTraps,
-                    RequiresTargetChoice = true,
-                    TargetCount = 1,
-                    IsPsctTarget = true,
-                    MakesChainLink = true
-                }),
-            // — 25880422: "Target 1 face-up Attack Position monster your opponent controls; change that target to face-up Defense Position."
-            new AtomRegistration.Atom(
-                @"^\s*Target 1 face-up Attack Position monster your opponent controls; change that target to face-up Defense Position\.?\s*$",
-                _ => new EffectClause
-                {
-                    Timing = EffectTiming.Activate,
-                    Action = EffectActionKind.ChangeFaceUpAttackTargetToFaceUpDefense,
-                    Side = EffectSide.Opponent,
-                    Zone = EffectZoneFilter.OppAttackPositionMonsters,
-                    RequiresTargetChoice = true,
-                    IsPsctTarget = true,
-                    RequiresTargetFaceUp = true,
-                    TargetCount = 1,
-                    MakesChainLink = true
-                }),
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>
