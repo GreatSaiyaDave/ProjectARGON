@@ -67,6 +67,19 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = true
                 }),
 
+            // — 14702066 Cannon Soldier MK-2: You can Tribute 2 monsters to inflict 1500 damage to your opponent.
+            new AtomRegistration.Atom(
+                Start + @"You can Tribute (\d+) monsters? (?:to inflict|; inflict) (\d+) damage to your opponent" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.InflictDamageToOpponent,
+                    Side = EffectSide.Opponent,
+                    Amount = int.Parse(m.Groups[2].Value),
+                    RequiresTributeCount = int.Parse(m.Groups[1].Value),
+                    IsOptional = true,
+                    MakesChainLink = true
+                }),
             // Senri Eye (c60391791): Continuous Spell; FIELD TRIGGER_O on EVENT_PHASE+PHASE_STANDBY from the Spell & Trap
             // Zone, count limit 1, condition: your turn and the opponent's Deck is not empty; cost Cost.PayLP(100);
             // ConfirmCards(tp, the opponent's top card) — the card stays on top, the opponent does not see it.
