@@ -40,6 +40,19 @@ namespace WRLDZ.Duel.TextEffects
                     CheckedAt = ConditionCheckedAt.Activation,
                     MakesChainLink = true
                 }),
+            // — 60161788 Blizzed, Defender of the Ice Barrier: When this card is destroyed by battle and sent to the GY, draw 1 card.
+            new AtomRegistration.Atom(
+                Start + @"When this card is destroyed by battle and sent to the (?:GY|Graveyard), draw (\d+) card" +
+                @"(?:s)?" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.SentFromFieldToGy,
+                    Action = EffectActionKind.Draw,
+                    Side = EffectSide.Controller,
+                    Amount = Pos(m, 1),
+                    RequiresThisDestroyedByBattle = true,
+                    MakesChainLink = true
+                }),
 
             // T.A.D.P.O.L.E. (c10456559): SINGLE TRIGGER_O EVENT_BATTLE_DESTROYED, condition IsLocation(GRAVE), tp ==
             // GetPreviousControler() and REASON_BATTLE; SelectMatchingCard(IsCode(id), DECK, 1..3), SendtoHand.
