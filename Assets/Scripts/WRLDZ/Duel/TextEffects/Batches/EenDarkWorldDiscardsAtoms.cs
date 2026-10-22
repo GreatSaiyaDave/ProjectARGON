@@ -51,6 +51,21 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Controller,
                     MakesChainLink = true
                 }),
+            // — 56399890 The Fabled Catsith: "If this card is discarded to the GY: Target 1 face-up card on the field; destroy that target."
+            new AtomRegistration.Atom(
+                @"^\s*If this card is discarded to the (?:GY|Graveyard):\s*Target 1 face-up card on the field;\s*destroy that target\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.DiscardedToGyByCardEffect,
+                    Action = EffectActionKind.Destroy,
+                    Side = EffectSide.Both,
+                    Zone = EffectZoneFilter.AnyCardOnField,
+                    RequiresTargetChoice = true,
+                    IsPsctTarget = true,
+                    RequiresTargetFaceUp = true,
+                    TargetCount = 1,
+                    MakesChainLink = true
+                }),
             // Broww. Lua s.drtg: 1 card, 2 when rp ~= tp and tp == the previous controller (its own hand).
             new AtomRegistration.Atom(
                 Discarded + @"Draw 1 card, plus another card if this card was " + ByOpponent + @"\.?\s*$",
