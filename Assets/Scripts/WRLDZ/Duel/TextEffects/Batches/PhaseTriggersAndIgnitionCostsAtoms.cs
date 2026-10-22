@@ -80,6 +80,19 @@ namespace WRLDZ.Duel.TextEffects
                     IsOptional = true,
                     MakesChainLink = true
                 }),
+            // — 27869883 Shadowpriestess of Ohm: You can Tribute 1 face-up DARK monster you control to inflict 800 damage to your opponent.
+            new AtomRegistration.Atom(
+                Start + @"You can Tribute (\d+) face-up (?:\w+ )?monster(?:s)? you control to inflict (\d+) damage to your opponent" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.InflictDamageToOpponent,
+                    Side = EffectSide.Opponent,
+                    Amount = int.Parse(m.Groups[2].Value),
+                    RequiresTributeCount = int.Parse(m.Groups[1].Value),
+                    IsOptional = true,
+                    MakesChainLink = true
+                }),
             // Senri Eye (c60391791): Continuous Spell; FIELD TRIGGER_O on EVENT_PHASE+PHASE_STANDBY from the Spell & Trap
             // Zone, count limit 1, condition: your turn and the opponent's Deck is not empty; cost Cost.PayLP(100);
             // ConfirmCards(tp, the opponent's top card) — the card stays on top, the opponent does not see it.
