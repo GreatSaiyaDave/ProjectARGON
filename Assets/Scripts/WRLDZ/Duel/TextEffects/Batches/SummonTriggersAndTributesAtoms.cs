@@ -34,6 +34,20 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Both,
                     MakesChainLink = true
                 }),
+            // — 8175346 Poki Draco: When this card is Normal Summoned: You can add 1 "Poki Draco" from your Deck to your hand.
+            new AtomRegistration.Atom(
+                Start + @"When this card is Normal Summoned: You can add 1 ""([^""]+)"" from your Deck to your hand" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.AddNamedFromDeckToHand,
+                    NamedCard = m.Groups[1].Value,
+                    Amount = 1,
+                    FromDeck = true,
+                    RequiresNormalOrFlipSummon = true,
+                    IsOptional = true,
+                    MakesChainLink = true
+                }),
             // — 18063928 Tin Goldfish: When this card is Normal Summoned: You can Special Summon 1 Level 4 monster from your hand.
             new AtomRegistration.Atom(
                 Start + @"When this card is Normal Summoned: You can Special Summon 1 Level (\d+) monster from your hand" + End,
