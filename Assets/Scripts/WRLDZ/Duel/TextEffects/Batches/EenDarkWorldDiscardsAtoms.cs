@@ -41,6 +41,16 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Controller,
                     MakesChainLink = true
                 }),
+            // — 82888408 The Fabled Cerburrel / 97651498 Fabled Lurrie: "If this card is discarded to the GY: Special Summon it."
+            new AtomRegistration.Atom(
+                @"^\s*If this card is discarded to the (?:GY|Graveyard):\s*Special Summon it\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.DiscardedToGyByCardEffect,
+                    Action = EffectActionKind.SpecialSummonThisFromGyFaceUpWhenDiscarded,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }),
             // Broww. Lua s.drtg: 1 card, 2 when rp ~= tp and tp == the previous controller (its own hand).
             new AtomRegistration.Atom(
                 Discarded + @"Draw 1 card, plus another card if this card was " + ByOpponent + @"\.?\s*$",
