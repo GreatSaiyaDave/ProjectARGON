@@ -150,6 +150,23 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = true
                 }),
 
+            // — 17045014 Evolsaur Diplo: When this card is Special Summoned by the effect of an "Evoltile" monster: Target 1 Spell/Trap Card your opponent controls; destroy that target.
+            new AtomRegistration.Atom(
+                Start + @"When this card is Special Summoned by the effect of an ""([^""]+)"" monster:\s*Target 1 Spell/Trap Card your opponent controls;\s*destroy that target\.?\s*$",
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.Destroy,
+                    Side = EffectSide.Opponent,
+                    Zone = EffectZoneFilter.OppSpellTraps,
+                    RequiresTargetChoice = true,
+                    IsPsctTarget = true,
+                    TargetCount = 1,
+                    RequiresThisSpecialSummonedByNamed = true,
+                    SpecialSummonedByNamedCard = m.Groups[1].Value.Trim(),
+                    MakesChainLink = true
+                }),
+
             // Mustering of the Dark Scorpions (c68191243). ygopro: ACTIVATE (free chain), condition a face-up "Don Zaloog"
             // on your field (LOCATION_ONFIELD); chk: a free Monster Zone and a SET_DARK_SCORPION monster in the hand that
             // can be Special Summoned; SelectUnselectGroup 1..ft with aux.dncheck (different names), POS_FACEUP.
