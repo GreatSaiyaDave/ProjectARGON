@@ -80,6 +80,20 @@ namespace WRLDZ.Duel.TextEffects
                     TargetCount = 1,
                     MakesChainLink = true
                 }),
+            // — 51232472 Gren, Tactician of Dark World: "If this card is discarded to the Graveyard by a card effect: Target 1 Spell/Trap Card on the field; destroy that target."
+            new AtomRegistration.Atom(
+                @"^\s*If this card is discarded to the (?:GY|Graveyard) by a card effect:\s*Target 1 Spell/Trap Card on the field;\s*destroy that target\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.DiscardedToGyByCardEffect,
+                    Action = EffectActionKind.Destroy,
+                    Side = EffectSide.Both,
+                    Zone = EffectZoneFilter.FieldSpellTraps,
+                    RequiresTargetChoice = true,
+                    IsPsctTarget = true,
+                    TargetCount = 1,
+                    MakesChainLink = true
+                }),
             // Broww. Lua s.drtg: 1 card, 2 when rp ~= tp and tp == the previous controller (its own hand).
             new AtomRegistration.Atom(
                 Discarded + @"Draw 1 card, plus another card if this card was " + ByOpponent + @"\.?\s*$",
