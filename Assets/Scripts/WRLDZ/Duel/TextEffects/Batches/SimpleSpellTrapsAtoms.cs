@@ -449,6 +449,18 @@ namespace WRLDZ.Duel.TextEffects
                     EquipAtkBonus = -int.Parse(m.Groups[1].Value),
                     MakesChainLink = true
                 }),
+            // — 4149689 Goblin Fan: When a Level 2 or lower monster is Flip Summoned, destroy it. Its effects do not activate at that time.
+            new AtomRegistration.Atom(
+                @"^\s*When a Level (\d+) or lower monster is Flip Summoned, destroy it\. Its effects do not activate at that time\.?\s*$",
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.OpponentNormalOrFlipSummon,
+                    Action = EffectActionKind.Destroy,
+                    Side = EffectSide.Both,
+                    Zone = EffectZoneFilter.FieldMonsters,
+                    MonsterLevelMax = int.Parse(m.Groups[1].Value),
+                    MakesChainLink = true
+                }),
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>
