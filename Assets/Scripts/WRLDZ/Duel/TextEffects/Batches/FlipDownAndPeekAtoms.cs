@@ -95,6 +95,23 @@ namespace WRLDZ.Duel.TextEffects
                     AlsoWhenFlippedFaceUp = true,
                     MakesChainLink = true
                 }),
+            // — 91133740 Snowman Eater: If this card is flipped face-up: Target 1 face-up monster on the field; destroy that target.
+            new AtomRegistration.Atom(
+                S + @"If this card is flipped face-up:\s*Target 1 face-up monster on the field;\s*destroy that target\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.Destroy,
+                    Side = EffectSide.Both,
+                    Zone = EffectZoneFilter.FieldAnyMonster,
+                    RequiresTargetChoice = true,
+                    IsPsctTarget = true,
+                    RequiresTargetFaceUp = true,
+                    TargetCount = 1,
+                    RequiresThisFlipSummoned = true,
+                    AlsoWhenFlippedFaceUp = true,
+                    MakesChainLink = true
+                }),
             // Cobraman Sakuzy (75109441). ygopro c75109441: SINGLE TRIGGER_F on EVENT_FLIP; Duel.ConfirmCards on the
             // face-down cards in the opponent's LOCATION_SZONE (they stay Set).
             new AtomRegistration.Atom(
