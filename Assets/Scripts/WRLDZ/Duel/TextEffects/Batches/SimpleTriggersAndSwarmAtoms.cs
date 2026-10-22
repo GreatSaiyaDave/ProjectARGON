@@ -166,6 +166,19 @@ namespace WRLDZ.Duel.TextEffects
                     SpecialSummonedByNamedCard = m.Groups[1].Value.Trim(),
                     MakesChainLink = true
                 }),
+            // — 2158562 Cyber Prima: If this card is Tribute Summoned: Destroy all face-up Spell Cards on the field.
+            new AtomRegistration.Atom(
+                Start + @"If this card is Tribute Summoned:\s*Destroy all face-up Spell Cards on the field\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.Destroy,
+                    Side = EffectSide.Both,
+                    Zone = EffectZoneFilter.FieldSpellTraps,
+                    RequiresTargetFaceUp = true,
+                    RequiresThisTributeSummoned = true,
+                    MakesChainLink = true
+                }),
 
             // Mustering of the Dark Scorpions (c68191243). ygopro: ACTIVATE (free chain), condition a face-up "Don Zaloog"
             // on your field (LOCATION_ONFIELD); chk: a free Monster Zone and a SET_DARK_SCORPION monster in the hand that
