@@ -51,6 +51,16 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Controller,
                     MakesChainLink = true
                 }),
+            // — 18282103 The Fabled Ganashia: "If this card is discarded to the GY: Special Summon it." (partial)
+            new AtomRegistration.Atom(
+                @"^\s*If this card is discarded to the (?:GY|Graveyard):\s*Special Summon it\.",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.DiscardedToGyByCardEffect,
+                    Action = EffectActionKind.SpecialSummonThisFromGyFaceUpWhenDiscarded,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }),
             // — 56399890 The Fabled Catsith: "If this card is discarded to the GY: Target 1 face-up card on the field; destroy that target."
             new AtomRegistration.Atom(
                 @"^\s*If this card is discarded to the (?:GY|Graveyard):\s*Target 1 face-up card on the field;\s*destroy that target\.?\s*$",
