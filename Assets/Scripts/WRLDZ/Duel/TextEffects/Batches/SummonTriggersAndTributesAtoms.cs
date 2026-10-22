@@ -34,6 +34,20 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Both,
                     MakesChainLink = true
                 }),
+            // — 18063928 Tin Goldfish: When this card is Normal Summoned: You can Special Summon 1 Level 4 monster from your hand.
+            new AtomRegistration.Atom(
+                Start + @"When this card is Normal Summoned: You can Special Summon 1 Level (\d+) monster from your hand" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.SpecialSummonFromHand,
+                    Side = EffectSide.Controller,
+                    Amount = int.Parse(m.Groups[1].Value),
+                    AmountIsLevel = true,
+                    RequiresNormalOrFlipSummon = true,
+                    IsOptional = true,
+                    MakesChainLink = true
+                }),
 
             // King Tiger Wanghu (c83986578): FIELD+TRIGGER_F on EVENT_SUMMON_SUCCESS / EVENT_SPSUMMON_SUCCESS (not Flip),
             // range MZONE; condition: a face-up summoned monster with ATK <= 1400 and not this card; at resolution this
