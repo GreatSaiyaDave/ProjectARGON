@@ -236,9 +236,6 @@ namespace WRLDZ.Duel.Rules
 
             var stubs = new (int id, string label, Func<EffectClause, bool> wrong)[]
             {
-                (4149689, "Goblin Fan (destroy the Flip Summoned monster)", c => c.Action == EffectActionKind.Destroy),
-                (29267084, "Shadow Spell (cannot attack or change position)",
-                    c => c.Action == EffectActionKind.ChangeBattlePosition),
             };
             // BattleRiders batch (v210): Spiral Spear Strike left this list — it compiles whole (the named piercing grant and
             // Gaia the Dragon Champion's draw 2, then discard 1 trigger; BattleRidersRegressionTests drive it) and still

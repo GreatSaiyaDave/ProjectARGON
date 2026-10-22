@@ -289,9 +289,8 @@ namespace WRLDZ.Duel.Rules
                     !sb.ClauseList.Exists(c => c.DestroyThisWhenBoundHostLeaves),
                     Describe(sb));
                 var shadow = CardTextEffectCompiler.Compile(db.Get(ShadowSpell));
-                Check("Near miss: Shadow Spell (also loses 700 ATK) is not compiled by the Nightmare Wheel atom",
-                    shadow != null && !shadow.FullyCompiled &&
-                    !shadow.ClauseList.Exists(c => c.DestroyThisWhenBoundHostLeaves),
+                Check("Shadow Spell is now compiled (loses 700 ATK, cannot attack or change position)",
+                    shadow != null && shadow.FullyCompiled,
                     Describe(shadow));
             }
             {

@@ -168,9 +168,8 @@ namespace WRLDZ.Duel.Rules
                     !Has(prog, EffectActionKind.SpecialSummonNamed) && !Has(prog, EffectActionKind.SpecialSummonFromDeck),
                     Shape(prog));
             }
-            foreach (var (id, label) in new[]
+            foreach (var (id, label) in new (int, string)[]
                      {
-                         (GoblinFan, "Goblin Fan"),
                      })
             {
                 var def = db.Get(id);
