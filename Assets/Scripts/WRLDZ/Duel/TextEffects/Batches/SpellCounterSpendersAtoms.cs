@@ -128,6 +128,16 @@ namespace WRLDZ.Duel.TextEffects
                     CannotAttackAlsoTurnNormalOrFlipSummoned = true,
                     MakesChainLink = false
                 }),
+            // — 64892035 Tardy Orc: This card cannot attack the turn it is Normal Summoned.
+            new AtomRegistration.Atom(
+                S + @"This card cannot attack (?:the turn|during the turn) it is Normal Summoned" + E,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.CannotAttackTurnSpecialSummoned,
+                    CannotAttackAlsoTurnNormalOrFlipSummoned = true,
+                    MakesChainLink = false
+                }),
             // Armor Exe (c7180418) e4: FIELD+CONTINUOUS on EVENT_PHASE+PHASE_STANDBY (either player's), count limit 1,
             // EFFECT_FLAG_CANNOT_DISABLE: if 1 Spell Counter can be removed from your side and you choose to
             // (SelectYesNo), remove it (REASON_COST); else destroy this card.
