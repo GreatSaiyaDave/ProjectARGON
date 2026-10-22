@@ -84,6 +84,17 @@ namespace WRLDZ.Duel.TextEffects
                     CheckedAt = ConditionCheckedAt.Activation,
                     MakesChainLink = true
                 }),
+            // — 16751086 Warm Worm: If this card is destroyed, send the top 3 cards of your opponent's Deck to the Graveyard.
+            new AtomRegistration.Atom(
+                Start + @"If this card is destroyed, send the top (\d+) cards of your opponent" + Apos + @"s Deck to the (?:GY|Graveyard)" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.SentFromFieldToGy,
+                    Action = EffectActionKind.SendFromTopOfDeckToGy,
+                    Side = EffectSide.Opponent,
+                    Amount = int.Parse(m.Groups[1].Value),
+                    MakesChainLink = true
+                }),
 
             // Hydrogeddon (c22587018): SINGLE TRIGGER_O EVENT_BATTLE_DESTROYING, aux.bdogcon (still on the field, the
             // destroyed monster in the GY); GetFirstMatchingCard(IsCode(id), DECK), SpecialSummon POS_FACEUP.
