@@ -53,6 +53,18 @@ namespace WRLDZ.Duel.TextEffects
                     RequiresThisDestroyedByBattle = true,
                     MakesChainLink = true
                 }),
+            // — 12694768 Abaki: When this card is destroyed and sent to the Graveyard by battle, both players take 500 damage.
+            new AtomRegistration.Atom(
+                Start + @"When this card is destroyed (?:and sent to the (?:GY|Graveyard) )?by battle, both players take (\d+) damage" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.SentFromFieldToGy,
+                    Action = EffectActionKind.InflictDamageToBothPlayers,
+                    Side = EffectSide.Both,
+                    Amount = Pos(m, 1),
+                    RequiresThisDestroyedByBattle = true,
+                    MakesChainLink = true
+                }),
 
             // T.A.D.P.O.L.E. (c10456559): SINGLE TRIGGER_O EVENT_BATTLE_DESTROYED, condition IsLocation(GRAVE), tp ==
             // GetPreviousControler() and REASON_BATTLE; SelectMatchingCard(IsCode(id), DECK, 1..3), SendtoHand.
