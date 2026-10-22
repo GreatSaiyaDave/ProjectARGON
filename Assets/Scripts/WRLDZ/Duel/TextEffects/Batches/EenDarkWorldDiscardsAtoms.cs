@@ -51,6 +51,16 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Controller,
                     MakesChainLink = true
                 }),
+            // — 14983497 Mist Valley Baby Roc: "When this card is sent directly from the hand to the Graveyard, you can Special Summon it."
+            new AtomRegistration.Atom(
+                @"^\s*When this card is sent directly from the hand to the (?:GY|Graveyard), you can Special Summon it\.?\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.SentFromHandToGy,
+                    Action = EffectActionKind.SpecialSummonThisFromGyFaceUpWhenDiscarded,
+                    Side = EffectSide.Controller,
+                    MakesChainLink = true
+                }),
             // — 18282103 The Fabled Ganashia: "If this card is discarded to the GY: Special Summon it." (partial)
             new AtomRegistration.Atom(
                 @"^\s*If this card is discarded to the (?:GY|Graveyard):\s*Special Summon it\.",
