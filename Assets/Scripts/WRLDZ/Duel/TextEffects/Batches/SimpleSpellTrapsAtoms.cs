@@ -461,6 +461,20 @@ namespace WRLDZ.Duel.TextEffects
                     MonsterLevelMax = int.Parse(m.Groups[1].Value),
                     MakesChainLink = true
                 }),
+            // — 19159413 De-Spell: Target 1 face-up Spell, or 1 Set Spell/Trap, on the field; destroy that target if it is a Spell. (If the target is Set, reveal it.)
+            new AtomRegistration.Atom(
+                @"^\s*Target 1 face-up Spell.*destroy.*target.*If the target is Set, reveal it.*\s*$",
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.Activate,
+                    Action = EffectActionKind.Destroy,
+                    Side = EffectSide.Both,
+                    Zone = EffectZoneFilter.FieldSpellTraps,
+                    RequiresTargetChoice = true,
+                    IsPsctTarget = true,
+                    TargetCount = 1,
+                    MakesChainLink = true
+                }),
         };
 
         /// <summary>The whole text is one of this batch's atoms (an earlier phrase template must leave it alone).</summary>
