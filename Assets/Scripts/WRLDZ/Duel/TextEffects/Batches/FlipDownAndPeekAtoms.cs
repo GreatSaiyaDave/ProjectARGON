@@ -112,6 +112,22 @@ namespace WRLDZ.Duel.TextEffects
                     AlsoWhenFlippedFaceUp = true,
                     MakesChainLink = true
                 }),
+            // — 14506878 DUCKER Mobile Cannon: FLIP: Target 1 Level 4 monster in your Graveyard; add that target to your hand.
+            new AtomRegistration.Atom(
+                S + @"FLIP:\s*Target 1 Level (\d+) monster in your (?:GY|Graveyard);\s*add that target to your hand\.?\s*$",
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.Flip,
+                    Action = EffectActionKind.AddFromGyToHand,
+                    Side = EffectSide.Controller,
+                    Zone = EffectZoneFilter.ControllerGyMonsters,
+                    RequiresTargetChoice = true,
+                    IsPsctTarget = true,
+                    TargetCount = 1,
+                    Amount = int.Parse(m.Groups[1].Value),
+                    AmountIsLevel = true,
+                    MakesChainLink = true
+                }),
             // Cobraman Sakuzy (75109441). ygopro c75109441: SINGLE TRIGGER_F on EVENT_FLIP; Duel.ConfirmCards on the
             // face-down cards in the opponent's LOCATION_SZONE (they stay Set).
             new AtomRegistration.Atom(
