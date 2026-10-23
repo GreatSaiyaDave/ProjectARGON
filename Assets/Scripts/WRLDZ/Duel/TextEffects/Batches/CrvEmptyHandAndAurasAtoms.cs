@@ -95,6 +95,18 @@ namespace WRLDZ.Duel.TextEffects
                     StaysOnField = true,
                     MakesChainLink = false
                 }),
+            // — 41589166 Tenkabito Shien: This card is unaffected by the effects of Trap Cards.
+            new AtomRegistration.Atom(
+                Start + @"This card is unaffected by the effects of Trap Cards" + End,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.UnaffectedByCardEffects,
+                    UnaffectedByFilter = "Trap",
+                    Side = EffectSide.Controller,
+                    StaysOnField = true,
+                    MakesChainLink = false
+                }),
 
             // Gyroid: the first battle destruction each turn does not happen.
             new AtomRegistration.Atom(
