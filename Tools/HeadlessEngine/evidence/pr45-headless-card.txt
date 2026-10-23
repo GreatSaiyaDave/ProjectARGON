@@ -1,0 +1,54 @@
+HeadlessEngine --card evidence for PR #45
+commit=55bda4fac4e1007075c23e32da27e3b85eef9a69
+utc=2026-09-10T09:11:40Z
+
+===== Morphing Jar =====
+  type=Flip Effect Monster  race=Rock  attr=EARTH  Lv2 700/600
+  desc: FLIP: Both players discard as many cards as possible from their hands, then each player draws 5 cards.
+
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  timings: 
+  clauses: 0
+
+===== Masked Sorcerer =====
+  type=Effect Monster  race=Spellcaster  attr=DARK  Lv4 900/1400
+  desc: When this card inflicts Battle Damage to your opponent's Life Points, draw 1 card from your Deck.
+
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  timings: 
+  clauses: 0
+
+===== Heart of the Underdog =====
+  type=Spell Card  race=Continuous  attr=  
+  desc: During your Draw Phase, when you draw a Normal Monster(s): You can reveal it; draw 1 more card.
+
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  timings: 
+  clauses: 0
+
+===== Spring of Rebirth =====
+  type=Spell Card  race=Continuous  attr=  
+  desc: Increase your Life Points by 500 points every time monsters return from the field to the owner's hand.
+
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  timings: 
+  clauses: 0
+
+===== Nutrient Z =====
+  type=Trap Card  race=Normal  attr=  
+  desc: During damage calculation, when you are about to take 2000 or more battle damage: Gain 4000 LP first.
+
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  timings: 
+  clauses: 0
+
