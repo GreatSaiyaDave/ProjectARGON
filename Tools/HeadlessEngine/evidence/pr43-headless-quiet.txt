@@ -1,0 +1,1185 @@
+HeadlessEngine evidence for PR #43
+branch=cursor/fc-rock-backfire-virus-park-2e14
+commit=f2f8f4bedb156e5e6d5942e9c4f33a413aa2e493
+utc=2026-09-10T09:06:58Z
+command=export PATH="$HOME/.dotnet:$PATH"; bash Tools/HeadlessEngine/run.sh --quiet
+dotnet=8.0.425
+park_scope=unchanged (Rock Bombardment / Backfire / Tribe-Infecting Virus / Mysterious Puppeteer / Token Thanksgiving)
+
+=== --quiet 2026-09-10T09:06:30Z commit=f2f8f4bedb156e5e6d5942e9c4f33a413aa2e493 ===
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.30
+== WRLDZ headless engine test harness ==
+streamingAssetsPath = /workspace/Assets/StreamingAssets
+stress duels = 40
+
+═══ WRLDZ ENGINE STRESS ═══
+duels=40 maxTurns=80
+
+── Unit: TcgRegressionTests ──
+PASS  ATK 1800 vs DEF 2000: defender lives
+PASS  ATK 1800 vs DEF 2000: attacker takes 200
+PASS  ATK 1800 vs DEF 2000: no damage to defender
+PASS  ATK 1800 vs DEF 600: destroy defender
+PASS  ATK 1800 vs DEF 600: 0 battle damage
+PASS  ATK 1800 vs DEF 600: attacker lives
+PASS  Face-down uses defense stat
+PASS  Face-down DEF 1500 vs ATK 1200: lives
+PASS  Face-down DEF 1500 vs ATK 1200: dmg 300 to attacker
+PASS  Equal ATK: both destroyed
+PASS  Equal ATK: 0 damage
+PASS  ATK 1500 vs ATK 2000: destroy attacker
+PASS  ATK 1500 vs ATK 2000: 500 to attacker controller
+PASS  ATK 2500 vs ATK 2000: destroy defender
+PASS  ATK 2500 vs ATK 2000: 500 to defender controller
+PASS  ATK = DEF: nothing destroyed
+PASS  ATK = DEF: 0 damage
+PASS  Direct: 1600 damage
+PASS  Piercing: destroy DEF
+PASS  Piercing: 1200 damage
+PASS  Waboku defender: no destroy
+PASS  Waboku defender: no damage
+PASS  Sanitize clears illegal DEF destroy
+PASS  Lv4 needs 0 tributes
+PASS  Lv5 needs 1 tribute
+PASS  Lv6 needs 1 tribute
+PASS  Lv7 needs 2 tributes
+PASS  Lv8 needs 2 tributes
+PASS  Starting LP 8000
+PASS  Starting hand 5
+PASS  Hand limit End Phase 6
+PASS  Monster zones 5
+PASS  Spell/Trap zones 5
+PASS  Registry: Raigeki
+PASS  Registry: Pot of Greed
+PASS  Registry: Mirror Force
+PASS  Registry: Swords
+PASS  Registry: Trap Hole
+PASS  Registry: Ring of Destruction
+PASS  Registry: Waboku
+PASS  Unregistered ID refused
+PASS  Fusion: Gaia the Dragon Champion registered
+PASS  Fusion: Black Skull Dragon registered
+PASS  PSCT Abyss Soldier: one chain sentence
+PASS  PSCT Abyss Soldier: colon + semicolon
+PASS  PSCT Abyss Soldier: makes a Chain Link
+PASS  PSCT Abyss Soldier: Once per turn ignition
+PASS  PSCT Abyss Soldier: condition is Once per turn
+PASS  PSCT Abyss Soldier: resolution is return to hand
+PASS  PSCT Sangan: colon, no semicolon
+PASS  PSCT Sangan: field→GY timing
+PASS  PSCT Raigeki: Spell with no colon still chains (card activation)
+PASS  PSCT inherent SS: monster with no colon does NOT start a chain
+PASS  PSCT inherent SS: Cyber Dragon text does not block Normal Summon
+PASS  PSCT ALO: parenthetical name is not a Chain Link
+PASS  PSCT ALO: Field Spell ATK/Level sentences are continuous, not extra chains
+PASS  PSCT MK-3: continuous, no Chain Link
+PASS  PSCT MK-3: compiles CanAttackDirectly while Umi
+PASS  PSCT Star Boy: two continuous ATK auras, no Chain Link
+PASS  PSCT Star Boy: WATER +500 ATK-only
+PASS  PSCT Star Boy: FIRE −400 ATK-only
+PASS  YGOPro bulk catalog loaded (Lua auras)
+PASS  YGOPro catalog: Star Boy WATER +500 and FIRE −400
+PASS  YGOPro catalog: MK-3 direct while Umi
+PASS  YGOPro catalog loaded extra-attack grants
+PASS  YGOPro catalog: Mermaid Knight extra attack while Umi
+PASS  YGOPro catalog: Twinheaded Beast unconditional extra attack
+PASS  PSCT Mermaid Knight: ExtraAttacks while Umi, no Chain Link
+PASS  PSCT Twinheaded Beast: ExtraAttacks unconditional
+PASS  PSCT Gray Wing: ignition this-turn is NOT continuous ExtraAttacks
+PASS  PSCT Bark of Dark Ruler: Damage Step pay-LP ATK/DEF loss
+PASS  PSCT Sakuretsu Armor: AttackDeclared destroy attacker
+PASS  PSCT Magic Cylinder: negate attack + damage equal to ATK
+PASS  PSCT Draining Shield: negate attack + gain LP equal to ATK
+PASS  YGOPro trigger catalog has Bark + Sakuretsu + Cylinder
+PASS  Master spec: Normal Monster is structural
+PASS  Vocabulary: Exiled Force is Tribute → Destroy (shared kind, not a unique card)
+PASS  Vocabulary: Time Wizard is UniqueException (call-wrong is not a shared kind)
+PASS  Vocabulary: Thunder Dragon is Discard → Search
+PASS  Vocabulary: shared kinds do not include UniqueException
+PASS  Master spec: Bark of Dark Ruler is implemented
+PASS  Master spec: Sakuretsu Armor is implemented
+PASS  PSCT Sakuretsu 'When' is checked at activation
+PASS  Master spec: uncompiled Effect Monster is stub or unimplemented (never silent vanilla)
+PASS  Deck gate: Normal Monster may enter when exclusion on
+PASS  Deck gate: Ha Des (uncompiled effect) may NOT enter when exclusion on
+PASS  Classify: Ha Des is not Implemented
+PASS  Deck gate: Pot of Greed (compiled/registry) may enter
+PASS  Runtime AI default is off
+PASS  ProgramMayActivate: Ha Des false
+PASS  ProgramMayActivate: Celtic Guardian false (structural)
+PASS  PSCT Granadora: summon +1000 LP and destroyed-to-GY 2000 damage
+PASS  PSCT Maiden of the Aqua: field treated as Umi
+PASS  PSCT Tornado Wall: Umi activate + no battle damage + self-destroy
+PASS  PSCT ignition: Exiled Force tributes itself and destroys a target
+PASS  PSCT ignition: Cannon Soldier tributes for 500 damage
+PASS  PSCT ignition: Chaos Sorcerer banishes a face-up monster
+PASS  PSCT ignition: Des Lacooda sets itself face-down
+PASS  PSCT ignition: Thunder Dragon discards itself from hand and searches
+PASS  PSCT Time Wizard: call coin, destroy opp or self
+PASS  PSCT Breaker: NS counter + ATK per counter + remove to destroy ST
+PASS  PSCT Cyber-Stein: pay 5000, SS Fusion from Extra
+PASS  PSCT Lekunga: banish 2 WATER, SS token
+PASS  PSCT Possessed Dark Soul: tribute this, take control LV≤3
+PASS  PSCT Lava Golem: Standby 1000 damage
+PASS  PSCT Lava Golem: printed text blocks Normal Summon/Set
+PASS  PSCT Daedalus: send face-up named Umi to GY, destroy all other cards
+PASS  PSCT Little Chimera: FIRE +500 and WATER −400
+PASS  PSCT Command Knight: Warrior you-control +400 ATK compiles
+PASS  PSCT fragment: Once per turn target+destroy compiles
+PASS  Normal Trap Speed 2
+PASS  Counter Trap Speed 3
+PASS  Quick-Play Speed 2
+PASS  Normal Spell Speed 1
+PASS  Field Spell Speed 1
+PASS  Field Spell is not a Trap
+PASS  Field Spell detection uses race=Field not type
+PASS  Normal Monster has no effect
+PASS  Normal Monster HasNoActivatableEffect
+PASS  Black Skull Dragon is effectless Extra
+PASS  Black Skull Dragon is not Normal Monster type
+PASS  Gaia the Dragon Champion is effectless Extra
+PASS  Effect Monster not structural-only flavor
+PASS  Replay: empty after empty direct = no new monsters
+PASS  Replay: monster appeared after direct declaration
+PASS  Man-Eater Bug is Flip-effect monster
+PASS  Magician of Faith is Flip-effect monster
+PASS  Lord of D. is Dragon-target protector ID
+PASS  Kuriboh-style noDmgDef: 0 damage on direct
+PASS  Without Kuriboh: direct deals ATK
+PASS  Kuriboh legal in DamageCalculation vs opponent attack
+PASS  Kuriboh illegal at AttackDeclared
+PASS  Kuriboh illegal if you are the attacker
+PASS  Kuriboh is registered monster effect
+PASS  Kuriboh discard removes from hand
+PASS  Kuriboh discard places in GY
+PASS  Corpus: cards_db loaded
+PASS  Corpus: entire cards_db is classified (not just lab decks)
+PASS  Corpus: shared-kind texts in cards_db compile (new cards with these shapes work)
+PASS  Corpus: Legendary Fisherman compiles Protection (Umi lock)
+PASS  New-card rule: Fisherman-shaped text compiles without a cardId branch
+PASS  Corpus: Hayabusa Knight compiles ExtraAttacks (second attack wording)
+PASS  Corpus: Book of Moon compiles SetTargetFaceDownDefense
+PASS  Corpus: Dragon Treasure compiles Equip +300/+300
+PASS  Corpus: Salamandra FullyCompiled Equip only FIRE +700
+PASS  Corpus: Legendary Sword FullyCompiled Equip only Warrior +300/+300
+PASS  Corpus: Axe of Despair FullyCompiled Equip +1000 and GY to top of Deck
+PASS  Corpus: United We Stand FullyCompiled +800 ATK/DEF per face-up monster
+PASS  Corpus: Mage Power FullyCompiled +500 ATK/DEF per Spell/Trap
+PASS  New-card rule: per-monster Equip ATK/DEF compiles without a cardId branch
+PASS  New-card rule: Equip-only FIRE +ATK compiles without a cardId branch
+PASS  Corpus: Falling Down FullyCompiled opponent-equip take-control
+PASS  New-card rule: Falling Down-shaped text compiles without a cardId branch
+PASS  Corpus: Monster Reincarnation FullyCompiled discard + GY monster add
+PASS  Corpus: Ectoplasmer FullyCompiled End Phase turn-player tribute + half original ATK
+PASS  New-card rule: End Phase turn-player tribute + half original ATK compiles without a cardId branch
+PASS  Corpus: Level Limit - Area B leftover unique is not FullyCompiled
+PASS  Corpus: Jam Breeding Machine leftover unique is not FullyCompiled
+PASS  Corpus: Toon World FullyCompiled pay-1000 Activate
+PASS  New-card rule: pay-LP Continuous Activate compiles without a cardId branch
+PASS  Corpus: Labyrinth of Nightmare FullyCompiled End Phase turn-player positions
+PASS  Corpus: Burning Land FullyCompiled destroy Field Spells + turn-player Standby damage
+PASS  Corpus: Gravity Bind FullyCompiled Level 4+ cannot attack
+PASS  Corpus: Insect Barrier FullyCompiled opponent Insect cannot attack
+PASS  Corpus: Messenger of Peace FullyCompiled ATK≥1500 lock + pay 100 or destroy
+PASS  Corpus: Call of the Haunted FullyCompiled GY SS + leave-field destroy
+PASS  Corpus: Soul Resurrection FullyCompiled Normal Monster GY SS in Defense
+PASS  Corpus: Skill Drain leftover unique is not FullyCompiled
+PASS  Corpus: The Warrior Returning Alive FullyCompiled Warrior GY add
+PASS  Corpus: Mask of Darkness FullyCompiled Flip Trap GY add
+PASS  Corpus: Spell Reproduction leftover send-2 is not FullyCompiled
+PASS  Corpus: Giant Rat battle-destroyed EARTH 1500 Deck SS is not a free ignition
+PASS  Corpus: Fox Fire End Phase battle-GY self-SS is not a free ignition
+PASS  Corpus: Witch of the Black Forest DEF 1500 search is not a free ignition
+PASS  Corpus: Giant Germ battle-GY 500 burn is not a free ignition
+PASS  Corpus: Mystic Tomato battle-GY DARK 1500 Deck SS is not a free ignition
+PASS  Corpus: Birdface battle-GY named Harpie Lady search is not a free ignition
+PASS  Corpus: Vampiric Orchis NS named hand SS is not a free ignition
+PASS  Corpus: Swarm of Scarabs Flip Summon destroy is not a free extra ignition
+PASS  Corpus: Swarm of Locusts Flip Summon ST destroy is not a free extra ignition
+PASS  Corpus: The Thing in the Crater destroyed-field Pyro hand SS is not battle-only
+PASS  Corpus: Witch Doctor of Chaos FullyCompiled Flip either-GY banish
+PASS  Corpus: Guardian Statue FullyCompiled Flip Summon bounce + set-FD
+PASS  Corpus: Medusa Worm FullyCompiled Flip Summon destroy + set-FD
+PASS  Corpus: Moai Interceptor Cannons FullyCompiled OPT set-FD
+PASS  Corpus: Immortal of Thunder Flip gain 3000 LP compiles; GY lose leftover
+PASS  Corpus: Spirit Caller FullyCompiled Flip Level-3-or-lower Normal GY SS
+PASS  New-card rule: Spirit Caller-shaped text compiles without a cardId branch
+PASS  Corpus: Gravekeeper's Spy FullyCompiled Flip series ATK<=1500 Deck SS
+PASS  Corpus: Decayed Commander NS named hand SS compiles; battle-damage leftover
+PASS  Corpus: Cobra Jar Flip token SS compiles; battle-destroyed inflict leftover
+PASS  New-card rule: Flip token with Stars compiles without a cardId branch
+PASS  Corpus: The Creator Incarnate FullyCompiled tribute-this named hand SS
+PASS  Corpus: Black Dragon's Chick FullyCompiled send-this named hand SS
+PASS  Corpus: Gather Your Mind FullyCompiled named Deck add (shuffle absorbed; Oath OPT boilerplate)
+PASS  New-card rule: named Deck add compiles without a cardId branch
+PASS  Corpus: Venus FullyCompiled pay-500 named hand-or-Deck SS
+PASS  Corpus: 4-Starred Ladybug FullyCompiled Flip destroy opp Level 4
+PASS  Corpus: Mother Grizzly battle-GY WATER 1500 Deck SS is not a free ignition
+PASS  Corpus: Black Luster Ritual compiles to a generalized Ritual Summon
+PASS  Corpus: Lord Poison battle-destroyed GY SS is not a free ignition
+PASS  Corpus: Desertapir FullyCompiled Flip set-FD except itself
+PASS  Corpus: Ryu-Kishin Clown FullyCompiled Summoned change position
+PASS  Corpus: Bowganian FullyCompiled Standby inflict 600
+PASS  Corpus: Sage's Stone leftover (no invented If-you-control spell lock)
+PASS  Corpus: Release Restraint leftover (no invented tribute-named spell)
+PASS  Corpus: Knight's Title leftover (no invented tribute-named spell)
+PASS  Corpus: Dekoichi scaled extra-draw leftover (not invented)
+PASS  Corpus: Lady Assailant banish-top-3 leftover (not invented)
+PASS  Corpus: Goblin's Secret Remedy compiles GainLifePoints 600
+PASS  Corpus: Absolute End compiles opponent-turn ForceOpponentDirectAttacksThisTurn
+PASS  New-card rule: Absolute End-shaped text compiles without a cardId branch
+PASS  Corpus: Numinous Healer compiles when-you-take-damage GainLifePoints
+PASS  New-card rule: Numinous Healer-shaped text compiles without a cardId branch
+PASS  Corpus: Cure Mermaid compiles Standby GainLifePoints 800
+PASS  New-card rule: Cure Mermaid-shaped text compiles without a cardId branch
+PASS  Corpus: Spirit of the Breeze compiles Standby LP in Attack Position
+PASS  Corpus: Terraforming compiles AddFromDeckToHand Field Spell search
+PASS  New-card rule: Terraforming-shaped text compiles without a cardId branch
+PASS  Corpus: Reinforcement of the Army compiles Level 4 Warrior search
+PASS  Corpus: Hinotama compiles InflictDamageToOpponent 500
+PASS  Corpus: Harpie's Feather Duster compiles destroy opponent S/T
+PASS  Corpus: Rock Bombardment stays parked (send Rock from Deck cost needs atom)
+PASS  Corpus: Rock Bombardment is not Hinotama-style Inflict 500
+PASS  Corpus: Rock Bombardment ProgramMayActivate is false
+PASS  Corpus: Backfire stays parked (your FIRE destroyed-to-GY trigger needs atom)
+PASS  Corpus: Backfire is not InflictDamageToOpponent / this-card SentFromFieldToGy
+PASS  Corpus: Backfire ProgramMayActivate is false
+PASS  Corpus: Tribe-Infecting Virus stays parked (declare Type needs atom)
+PASS  Corpus: Tribe-Infecting Virus is not discard + Destroy-all without declare
+PASS  Corpus: Tribe-Infecting Virus ProgramMayActivate is false
+PASS  Corpus: Mysterious Puppeteer stays parked (face-up monster NS/FS LP needs atom)
+PASS  Corpus: Mysterious Puppeteer is not GainLifePoints / this-card summoned LP
+PASS  Corpus: Mysterious Puppeteer ProgramMayActivate is false
+PASS  Corpus: Token Thanksgiving stays parked (destroy Tokens then gain 800× needs atom)
+PASS  Corpus: Token Thanksgiving is not DestroyTokensInflictPer / flat GainLifePoints
+PASS  Corpus: Token Thanksgiving ProgramMayActivate is false
+PASS  Corpus: Rock Bombardment leftover unique is not FullyCompiled
+PASS  Corpus: Backfire leftover unique is not FullyCompiled
+PASS  Corpus: Tribe-Infecting Virus leftover unique is not FullyCompiled
+PASS  Corpus: Mysterious Puppeteer leftover unique is not FullyCompiled
+PASS  Corpus: Token Thanksgiving leftover unique is not FullyCompiled
+PASS  Vocabulary: Protection is a shared kind
+PASS  XP curve L1 < L20
+PASS  XP curve L40 < L50 (wall starts)
+PASS  XP curve L49 < L50 hard step
+PASS  XP curve L50 wall much higher than L20
+PASS  XP curve soft cap returns 0
+PASS  XP progress 0 when empty
+PASS  XP progress ~0.5 mid-bar
+PASS  Band at L50 is Master
+PASS  Trap Hole legal vs ATK 1800 summon
+PASS  Trap Hole illegal vs ATK 800 summon
+PASS  Trap Hole illegal same-turn Set
+PASS  Bottomless Trap Hole FullyCompiled
+PASS  Bottomless compiles as summon destroy+banish ATK 1500, not a target
+PASS  Bottomless legal vs ATK 1800 summon
+PASS  Bottomless illegal vs ATK 1400 summon
+PASS  Bottomless illegal same-turn Set
+PASS  Adhesion Trap Hole FullyCompiled halve original ATK, answers SS
+PASS  Torrential Tribute FullyCompiled destroy-all, answers SS and own summon
+PASS  Eatgaboon FullyCompiled opponent NS/FS ATK ≤ 500, not SS
+PASS  Token Feastevil FullyCompiled destroy tokens + 300 each
+PASS  Mispolymerization FullyCompiled bounce face-up Fusions
+PASS  Slate Warrior FullyCompiled Flip lingering + battle destroyer lingering
+PASS  Malice Doll FullyCompiled next Standby SS after Continuous Spell send
+PASS  Yomi Ship FullyCompiled destroy the battle destroyer
+PASS  ERAZ: original exists
+PASS  ERAZ: TLM is not Original
+PASS  ERAZ: FET/LOB is Original
+PASS  ERAZ: TCG format shows tray
+PASS  ERAZ: quick shows tray
+PASS  ERAZ: ddm hides tray
+PASS  ERAZ: genesys hides tray
+PASS  ERAZ: next after original is gx
+PASS  Match default ERAZ is original
+PASS  Badge: new account has no ERAZ badge
+PASS  Badge: tutorial grants original
+PASS  Badge: tutorial does not grant gx
+PASS  Badge: season complete grants gx
+PASS  Badge: cannot select 5ds yet
+PASS  Badge: finished tutorial without csv has no original
+PASS  Badge: onboarded backfill grants original
+PASS  Badge: Hub/quick require original
+PASS  Badge: Practice/LabTest do not require original
+PASS  DeckRules: Celtic 3 copies OK
+PASS  DeckRules: Ha Des rejected
+PASS  DeckRules: labOpen allows unimplemented Ha Des
+PASS  DeckRules: labOpen still copy-caps at 3
+PASS  TextHash(era) matches current desc when no snapshot
+PASS  TextHash changes when desc changes
+PASS  Release: ddm still no tray
+PASS  Lab slice contains Pot of Greed
+PASS  Original not silently released without full compile
+PASS  DeckRules: Pot of Greed lab slice OK while Original unreleased
+PASS  DeckRules: Implemented non-lab rejected for unreleased era (not UNIMPLEMENTED)
+PASS  InPool: Pot of Greed is Original
+PASS  InPool: Sparkman is not Original
+PASS  DeckRules: post-TLM vanilla rejected from Original
+PASS  TCG pool file is loaded
+PASS  TCG pool includes Blue-Eyes 89631139
+PASS  TCG pool flags Ankuriboh 595626 as OCG-only
+PASS  DeckRules: OCG-only refused even in lab
+PASS  Advanced: Pot of Greed is Forbidden (0 copies)
+PASS  Original era: Pot of Greed still 3-of
+PASS  Banlist file effectiveDate is 2026.05 TCG
+--- 306 passed, 0 failed ---
+
+── Unit: InteractionRegressionTests ──
+PASS  Center zone: first summon → index 2
+PASS  Center zone: second summon → index 1 (left of center)
+PASS  Center zone: third summon → index 3 (right of center)
+PASS  Center ST zone: first set → index 2
+PASS  Sangan destroy: opens deck search pending
+PASS  Sangan destroy: Celtic Guardian is a legal option
+PASS  Sangan destroy: select resolves
+PASS  Sangan destroy: Celtic Guardian in hand
+PASS  Sangan destroy: removed from Deck
+PASS  Sangan destroy: Sangan in GY
+PASS  Sangan SendCardToGrave: opens search
+PASS  Sangan SendCardToGrave: has options
+PASS  Sangan SendCardToGrave: added Beaver Warrior
+PASS  Witch destroy: opens DEF deck search pending
+PASS  Witch search: Battle Ox DEF 1000 is legal
+PASS  Witch search: Prevent Rat DEF 2000 is illegal
+PASS  Witch search: Blue-Eyes is illegal
+PASS  Witch search: select Battle Ox
+PASS  Witch search: Battle Ox in hand
+PASS  Witch search: removed from Deck
+PASS  Magician of Faith: Flip Summon succeeds
+PASS  Magician of Faith: opens Spell-in-GY choice
+PASS  Magician of Faith: Pot of Greed returned to hand
+PASS  Dark Mimic LV1 Flip Summon
+PASS  Dark Mimic LV1 Flip: drew 1
+PASS  Gravekeeper's Curse Normal Summon
+PASS  Gravekeeper's Curse Summoned: opponent takes 500
+PASS  Kotetsu Flip Summon
+PASS  Kotetsu Flip: opens Equip Deck search
+PASS  Kotetsu: Axe is legal Equip
+PASS  Kotetsu: Blue-Eyes is not legal
+PASS  Kotetsu: select Axe
+PASS  Kotetsu: Axe in hand
+PASS  Man-Eater Bug: Flip Summon succeeds
+PASS  Man-Eater Bug: opens field target choice
+PASS  Man-Eater Bug: victim destroyed to GY
+PASS  Kuriboh: legal DC hand QE vs opp attack
+PASS  Kuriboh: discard cost pays
+PASS  Kuriboh: prevent battle damage flag set
+PASS  Kuriboh: direct deals 0 with flag
+PASS  DB has La Jinn + Giant Soldier
+PASS  LaJinn vs face-up GS DEF: attacker takes 200
+PASS  LaJinn vs face-up GS DEF: defender takes 0
+PASS  LaJinn vs set GS: attacker takes 200
+PASS  Sanitize restores ATK<DEF damage to 200
+PASS  Engine: LaJinn declares on set GS
+PASS  Engine: GS survives defense hold
+PASS  Engine: opponent (attacker) lost 200 LP
+PASS  Engine: defender LP unchanged
+PASS  Pot of Greed: activates from hand
+PASS  Pot of Greed: deck decreased by 2
+PASS  Pot of Greed: hand has 2 (drew 2, pot gone)
+PASS  Monster Reborn: Activate legal with a GY monster
+PASS  Monster Reborn: Activate opens GY target pending
+PASS  Monster Reborn: stays on field while choosing (does not bounce to hand)
+PASS  Monster Reborn: GY Celtic is a legal target
+PASS  Monster Reborn: select SS Celtic, Reborn to GY
+PASS  Monster Reincarnation FullyCompiled discard + GY monster add
+PASS  New-card rule: Reincarnation-shaped text compiles without a cardId branch
+PASS  Monster Reincarnation: refuse with no extra card to discard
+PASS  Monster Reincarnation: legal if discard itself supplies the GY monster
+PASS  Monster Reincarnation: Activate opens discard (empty GY, monster fodder)
+PASS  Monster Reincarnation: discard fodder
+PASS  Monster Reincarnation: discarded monster is now the GY target
+PASS  Monster Reincarnation: add discarded monster back to hand
+PASS  Monster Reincarnation: Activate legal with discard + GY monster
+PASS  Monster Reincarnation: Activate opens discard cost
+PASS  Monster Reincarnation: Celtic is a legal discard
+PASS  Monster Reincarnation: pay discard
+PASS  Monster Reincarnation: now choose a GY monster
+PASS  Monster Reincarnation: BEWD is a legal GY target
+PASS  Monster Reincarnation: add BEWD to hand, spell to GY
+PASS  The Warrior Returning Alive FullyCompiled Warrior GY add
+PASS  Warrior Returning Alive: Activate legal with Warrior in GY
+PASS  Warrior Returning Alive: opens GY monster targets
+PASS  Warrior Returning Alive: Warrior legal, Dragon is not
+PASS  Warrior Returning Alive: add Celtic to hand
+PASS  Tribute to the Doomed FullyCompiled discard + destroy
+PASS  Tribute to the Doomed: Activate legal
+PASS  Tribute to the Doomed: opens discard
+PASS  Tribute to the Doomed: pay discard
+PASS  Tribute to the Doomed: now choose a field monster
+PASS  Tribute to the Doomed: destroy opponent monster
+PASS  Mask of Darkness FullyCompiled Flip Trap GY add
+PASS  Mask of Darkness: Flip Summon succeeds
+PASS  Mask of Darkness: opens Trap-in-GY choice
+PASS  Mask of Darkness: Mirror Force returned to hand
+PASS  Spell Reproduction leftover send-2 is not FullyCompiled
+PASS  Dark Magician is Lv7 (2 tributes)
+PASS  Face-down Sets are legal tributes
+PASS  CanNormalSummonOrSet Dark Magician with 2 Sets
+PASS  Tribute Summon DM from 2 face-down (unambiguous auto)
+PASS  Both face-down tributes went to GY
+PASS  Dark Magician on field
+PASS  Face-down tributes are not still on field
+PASS  ValidatePlacement allows occupied tribute zone
+PASS  Drop onto face-down Set: Tribute Summon succeeds
+PASS  Dark Magician sits in the tributed zone
+PASS  Tributed Set is in GY
+PASS  3 monsters / 2 tributes: refuses without a choice
+PASS  3 monsters / 2 tributes: explicit face-down marks succeed
+PASS  Abyss Soldier is an Effect Monster, not a Trap
+PASS  Abyss Soldier: cannot activate from hand
+PASS  Abyss Soldier: no ignition without WATER in hand
+PASS  Abyss Soldier: Activate legal in Main Phase with WATER in hand
+PASS  Abyss Soldier: legal intents include Activate from field
+PASS  Abyss Soldier: Activate starts (cost then target)
+PASS  Abyss Soldier: Fenrir is a legal discard
+PASS  Abyss Soldier: pay discard cost
+PASS  Abyss Soldier: now choose a card on the field
+PASS  Abyss Soldier: Celtic Guardian is a legal bounce
+PASS  Abyss Soldier: bounce resolves
+PASS  Celtic Guardian returned to opponent's hand
+PASS  Abyss Soldier stays on the field
+PASS  Abyss Soldier once per turn used
+PASS  Abyss Soldier text compiles (discard WATER + bounce)
+PASS  ALO: database type is Spell Card
+PASS  ALO: name is always treated as Umi
+PASS  ALO: IsTrap is false (was registering as trap via S/T Set path)
+PASS  ALO: cannot Set in Spell & Trap Zone
+PASS  ALO: Spell & Trap Zone illegal
+PASS  ALO: Field Zone legal in Main Phase
+PASS  ALO: CanActivate from hand
+PASS  Salmon before ALO needs 1 Tribute
+PASS  ALO: activate from hand into Field Zone
+PASS  ALO: sits face-up in Field Spell Zone
+PASS  ALO: not in a Spell & Trap Zone
+PASS  Umi is on the field (name condition)
+PASS  Fenrir WATER +200 ATK/DEF
+PASS  Fenrir WATER Level −1 on field
+PASS  Celtic Guardian (non-WATER) unchanged
+PASS  Salmon in hand is Level 4 (no Tribute)
+PASS  Salmon Normal Summon without Tribute under ALO
+PASS  Salmon on field 2600/1200
+PASS  ALO text compiles (name + ATK/DEF + Level)
+PASS  Fisherman: ALO activates as Umi
+PASS  Fisherman: cannot be attack-targeted while ALO/Umi is up
+PASS  Fisherman: unaffected by Spell effects while Umi
+PASS  Fisherman: Raigeki does not destroy him under Umi
+PASS  Fisherman: MEB Flip (monster effect) still destroys him
+PASS  Fisherman: only monster — opponent may attack directly
+PASS  Absolute End text compiles opponent-turn direct-attack grant
+PASS  Absolute End not legal on your own turn
+PASS  Absolute End offered on opponent Main Phase (open-game-state)
+PASS  Absolute End activates on opponent's turn
+PASS  Opponent must attack directly this turn
+PASS  Absolute End is legal in AttackDeclared window
+PASS  Absolute End converts the current attack to direct
+PASS  Numinous Healer text compiles YouTakeLifePointDamage
+PASS  Numinous Healer not legal before you take damage
+PASS  Direct attack declares
+PASS  Numinous Healer offered after you take damage
+PASS  Damage applied before the trap window
+PASS  Numinous Healer activates and gains 1000 LP
+PASS  MK-3 text compiles CanAttackDirectly while Umi
+PASS  MK-3 without Umi cannot attack directly over a Set
+PASS  ALO is Umi on the field under MK-3
+PASS  MK-3 WATER +200 ATK under ALO
+PASS  MK-3 grants direct attack while ALO/Umi is up
+PASS  MK-3 CanAttackDirectly over opponent Set (ALO as Umi)
+PASS  ValidateAttack direct is legal with Set + ALO
+PASS  ValidateAttack still allows attacking the Set
+PASS  Legal intents include Direct Attack
+PASS  Legal intents still include Attack on Set
+PASS  MK-3 declares direct over Set
+PASS  MK-3 direct: Set monster still on field
+PASS  MK-3 direct: 1700 damage (1500+200 ALO)
+PASS  MK-3 direct: attacker LP unchanged
+PASS  Star Boy text compiles WATER +500 and FIRE −400
+PASS  Star Boy itself is WATER +500 (550→1050)
+PASS  Fenrir WATER +500 (1400→1900)
+PASS  Hinotama Soul FIRE −400 (600→200)
+PASS  Celtic Guardian (neither) unchanged
+PASS  Face-down Star Boy does not apply the aura
+PASS  Star Boy leaves: WATER/FIRE ATK return to printed
+PASS  Star Boy + ALO stack: Fenrir 1400+200+500=2100
+PASS  Mermaid Knight text compiles ExtraAttacks while Umi
+PASS  Mermaid Knight without Umi: ExtraAttacksAllowed is 0
+PASS  Mermaid Knight without Umi can declare first attack
+PASS  Mermaid Knight first attack (no Umi)
+PASS  Mermaid Knight without Umi cannot attack twice
+PASS  Mermaid Knight no-Umi: 1500 direct
+PASS  Mermaid Knight activates ALO before Battle
+PASS  ALO is Umi under Mermaid Knight
+PASS  Mermaid Knight WATER +200 ATK under ALO
+PASS  Mermaid Knight ExtraAttacksAllowed is 1 while ALO/Umi
+PASS  Mermaid Knight first attack while Umi
+PASS  Mermaid Knight can attack again after first (ALO)
+PASS  Legal intents still include Direct Attack after first
+PASS  Mermaid Knight second attack while Umi
+PASS  Mermaid Knight two directs: 3400 (1700+1700)
+PASS  Mermaid Knight cannot attack a third time
+PASS  Twinheaded Beast ExtraAttacksAllowed is 1 with no Umi
+PASS  Twinheaded Beast first attack
+PASS  Twinheaded Beast can attack twice
+PASS  Twinheaded Beast second attack
+PASS  Twinheaded Beast cannot attack a third time
+PASS  DB extra-attack battles twice: Mermaid Knight (24435369)
+PASS  DB extra-attack battles twice: Twinheaded Beast (82035781)
+PASS  cards_db extra-attack sweep found Mermaid Knight / Twinheaded
+PASS  Gray Wing is not a continuous extra-attack compile
+PASS  Bark of Dark Ruler text compiles Damage Step ATK/DEF loss
+PASS  Sakuretsu Armor text compiles destroy attacker
+PASS  YGOPro trigger catalog loaded one-shot traps
+PASS  YGOPro catalog: Bark of Dark Ruler is Damage Step pay-LP
+PASS  YGOPro catalog: Sakuretsu Armor is destroy attacker
+PASS  Bark: opponent can declare on Fiend
+PASS  Bark: declare attack
+PASS  Bark opens Damage Step response with Activate
+PASS  Bark CanActivate in Damage Step window
+PASS  Bark legal intent includes Response Activate
+PASS  Bark activates
+PASS  Bark LP cost accepted
+PASS  Bark: BEWD ATK reduced until End Phase
+PASS  Bark: trap left the field (Normal Trap)
+PASS  Sakuretsu: declare attack
+PASS  Sakuretsu is legal at attack declaration
+PASS  Sakuretsu activates
+PASS  Sakuretsu: attacker destroyed
+PASS  Sakuretsu: player's monster survived
+PASS  Draining Shield compiles negate + gain LP equal to ATK
+PASS  Draining Shield: declare attack
+PASS  Draining Shield is legal at attack declaration
+PASS  Draining Shield activates
+PASS  Draining Shield: gain ATK as LP
+PASS  Draining Shield: defender survived (attack did not resolve)
+PASS  Draining Shield: attacker still on field
+PASS  Draining Shield: that attack cannot be declared again
+PASS  attack-declare trap covered: Negate Attack (14315573)
+PASS  attack-declare trap covered: Dark Mirror Force (20522190)
+PASS  attack-declare trap covered: Draining Shield (43250041)
+PASS  attack-declare trap covered: Mirror Force (44095762)
+PASS  attack-declare trap covered: Sakuretsu Armor (56120475)
+PASS  attack-declare trap covered: Magic Cylinder (62279055)
+PASS  catalog attack-declare traps in cards_db
+PASS  Granadora text compiles summon LP + destroy damage
+PASS  Granadora Normal Summon
+PASS  Granadora: +1000 LP on Normal Summon
+PASS  Granadora: 2000 damage when destroyed
+PASS  Granadora tributed/sent (not destroyed): no 2000 damage
+PASS  Maiden of the Aqua treats the field as Umi (no Field Spell)
+PASS  Tornado Wall cannot activate the turn it was Set
+PASS  Tornado Wall activates while Maiden treats field as Umi
+PASS  Tornado Wall stays face-up Continuous
+PASS  Tornado Wall: ALO activates as Umi
+PASS  Tornado Wall offered on opponent Main (free-chain Continuous Trap)
+PASS  Tornado Wall activates from opponent-turn window and stays
+PASS  Tornado Wall: no battle damage while Umi is up
+PASS  Tornado Wall is legal in AttackDeclared window while Umi is up
+PASS  Tornado Wall + Maiden: controller takes no battle damage
+PASS  Daedalus text compiles send-Umi + destroy all other
+PASS  Daedalus: cannot activate without a face-up Umi you control
+PASS  Maiden treats the field as Umi but is not a named Umi cost
+PASS  ALO is always treated as Umi for Daedalus cost
+PASS  Daedalus: Activate legal with face-up ALO you control
+PASS  Daedalus: legal intents include Activate from field
+PASS  Daedalus: Activate starts send-Umi cost
+PASS  Daedalus: ALO is a legal send-to-GY cost
+PASS  Daedalus: pay ALO cost then destroy others
+PASS  ALO sent to GY as cost
+PASS  Daedalus survives its own effect
+PASS  Daedalus destroyed the other monster
+PASS  Daedalus destroyed the other Spell/Trap
+PASS  Daedalus: printed Umi is a legal send cost
+PASS  Printed Umi sent; Celtic destroyed; Daedalus remains
+PASS  Exiled Force: Activate legal
+PASS  Exiled Force: Activate tributes itself then asks for a target
+PASS  Exiled Force: destroy target
+PASS  Cannon Soldier: Activate
+PASS  Cannon Soldier: Tribute La Jinn for 500
+PASS  Chaos Sorcerer: stub cannot activate (incomplete program)
+PASS  Des Lacooda: sets itself face-down Defense
+PASS  Gear Golem: pay 800 LP to attack directly this turn
+PASS  Catapult Turtle: Activate
+PASS  Catapult Turtle: half ATK of tributed La Jinn (900)
+PASS  Thunder Dragon: Activate from hand
+PASS  Thunder Dragon: discard self, add copies from Deck
+PASS  Paladin of White Dragon: stub cannot activate (incomplete program)
+PASS  King of the Swamp: stub cannot activate (incomplete program)
+PASS  Time Wizard: Activate
+PASS  Time Wizard: call Heads, toss Heads, opp destroyed
+PASS  Barrel Dragon: 2 heads destroys the target
+PASS  Breaker Normal Summon
+PASS  Breaker: 1 Spell Counter and 1900 ATK
+PASS  Breaker: remove counter, destroy ST
+PASS  Cyber-Stein: pay 5000, SS Black Skull Dragon
+PASS  Lekunga: Activate
+PASS  Lekunga: banish first WATER
+PASS  Lekunga: banish second WATER, SS Token 700/700
+PASS  Possessed Dark Soul: Tribute self, take LV4? Celtic is 4 — should fail LV≤3
+PASS  Possessed Dark Soul: take control of Fenrir LV4 under ALO? printed 4
+PASS  Possessed Dark Soul: take Giant Soldier of Stone
+PASS  Lava Golem Standby: controller takes 1000
+PASS  Cure Mermaid Standby: +800 LP while face-up
+PASS  Cure Mermaid face-down: no Standby LP
+PASS  Spirit of the Breeze ATK: +1000 LP on Standby
+PASS  Spirit of the Breeze DEF: no Standby LP
+PASS  Armed Dragon LV3: send self, SS LV5 from Deck
+PASS  Ojama Trio: Activate
+PASS  Ojama Trio: 3 Tokens on opponent
+PASS  Relinquished: stub cannot activate (incomplete program)
+PASS  Dark Master Zorc: stub cannot activate (incomplete program)
+PASS  Orca Mega-Fortress compiles two tribute-named destroy ignitions
+PASS  Orca: Activate legal with Torpedo Fish to Tribute
+PASS  Orca: Activate starts tribute cost
+PASS  Orca: Tribute Torpedo Fish
+PASS  Orca: destroy the targeted monster
+PASS  Suijin compiles damage-calc ATK 0 Quick Effect
+PASS  Suijin: BEWD declares the attack
+PASS  Suijin activates in Damage Calculation
+PASS  Suijin: attacker ATK 0 — Suijin survived, BEWD destroyed
+PASS  Fenrir compiles SS-from-hand by banishing WATER + skip next Draw
+PASS  Fenrir cannot be Normal Summoned
+PASS  Fenrir: Activate from hand is legal with 2 WATER in GY
+PASS  Fenrir: SS procedure starts
+PASS  Fenrir: banish first WATER
+PASS  Fenrir: banish second WATER
+PASS  Fenrir Special Summoned from hand
+PASS  Fenrir can attack after sitting a turn
+PASS  Fenrir: opponent skips next Draw Phase after battle destroy
+PASS  Lava Golem cannot be Normal Summoned even with 2 tributes
+PASS  Lava Golem refusal is the printed NS lock (not tribute count)
+PASS  Lava Golem TryNormalSummon does not eat tributes
+PASS  Cyber Dragon inherent SS does not block Normal Summon
+PASS  Terraforming compiles AddFromDeckToHand (Field Spell in Deck)
+PASS  Terraforming: Activate legal in MP1 with Field Spell in Deck
+PASS  Terraforming: Activate from hand opens Field Spell search
+PASS  Terraforming: A Legendary Ocean is a legal Deck option
+PASS  Terraforming: Celtic Guardian is not a Field Spell option
+PASS  Terraforming: select ALO, search resolves, Terraforming to GY
+PASS  Terraforming: illegal with no Field Spell in Deck (Set only)
+PASS  Terraforming: still Settable
+PASS  ROTA compiles Level 4 Warrior search
+PASS  ROTA: Activate legal with Warrior in Deck
+PASS  ROTA: Activate opens filtered Deck search
+PASS  ROTA: Celtic Guardian (Warrior Lv4) is legal
+PASS  ROTA: Blue-Eyes is not a Warrior option
+PASS  ROTA: select Celtic, ROTA to GY
+PASS  Hinotama: Activate legal in MP1
+PASS  Hinotama: inflicts 500, goes to GY
+PASS  Feather Duster: Activate legal in MP1
+PASS  Feather Duster: destroys opponent S/T, not yours
+PASS  Rock Bombardment stays parked (not FullyCompiled)
+PASS  Rock Bombardment is not InflictDamageToOpponent
+PASS  Rock Bombardment: ProgramMayActivate false
+PASS  Rock Bombardment: Activate refused even with Rock in Deck
+PASS  Backfire stays parked (not FullyCompiled)
+PASS  Backfire is not InflictDamageToOpponent
+PASS  Backfire: ProgramMayActivate false
+PASS  Backfire: Activate refused with face-up FIRE on field
+PASS  Tribe-Infecting Virus stays parked (not FullyCompiled)
+PASS  Tribe-Infecting Virus is not Destroy
+PASS  Tribe-Infecting Virus: ProgramMayActivate false
+PASS  Tribe-Infecting Virus: ignition refused with discard + face-up Warrior
+PASS  Mysterious Puppeteer stays parked (not FullyCompiled)
+PASS  Mysterious Puppeteer is not GainLifePoints
+PASS  Mysterious Puppeteer: ProgramMayActivate false
+PASS  Mysterious Puppeteer: Normal Summon of another monster succeeds
+PASS  Mysterious Puppeteer: NS does not gain 500 LP
+PASS  Mysterious Puppeteer: Flip Summon of another monster succeeds
+PASS  Mysterious Puppeteer: Flip Summon does not gain 500 LP
+PASS  Token Thanksgiving stays parked (not FullyCompiled)
+PASS  Token Thanksgiving is not DestroyTokensInflictPer / GainLifePoints
+PASS  Token Thanksgiving: Token SS onto field
+PASS  Token Thanksgiving: ProgramMayActivate false
+PASS  Token Thanksgiving: Activate refused with a Token on the field
+PASS  Dragon Treasure FullyCompiled Equip +300/+300 Dragon
+PASS  Salamandra FullyCompiled Equip only FIRE +700 ATK
+PASS  Legendary Sword FullyCompiled Equip only Warrior +300/+300
+PASS  Axe of Despair FullyCompiled Equip +1000 and GY tribute to Deck
+PASS  Axe of Despair: Activate legal with a face-up monster
+PASS  Axe of Despair: Activate opens Equip target (not Set-only)
+PASS  Axe of Despair: select host, +1000 ATK
+PASS  United We Stand FullyCompiled +800 ATK/DEF per face-up monster
+PASS  United We Stand: Activate legal with a face-up monster
+PASS  United We Stand: 1 face-up monster → +800 ATK
+PASS  United We Stand: 2 face-up monsters → +1600 ATK
+PASS  Axe of Despair GY: optional tribute pending
+PASS  Axe of Despair GY: tribute Celtic, Axe on top of Deck
+PASS  Dragon Treasure: Activate legal with Dragon you control
+PASS  Dragon Treasure: Activate opens Equip target
+PASS  Dragon Treasure: BEWD legal, Celtic not in list yet
+PASS  Dragon Treasure: select BEWD, stays S/T, +300 ATK/DEF
+PASS  Dragon Treasure: refuse with only a Warrior you control
+PASS  Equip: refuse with no monster you control
+PASS  Salamandra: Activate legal with FIRE you control
+PASS  Salamandra: Activate opens FIRE-only targets
+PASS  Salamandra: FIRE is legal, Warrior is not
+PASS  Salamandra: select FIRE, +700 ATK
+PASS  Equip: attached before host leaves
+PASS  Equip: host to GY also sends Equip to GY
+PASS  RulesValidator: Equip drop on your face-up monster is legal
+PASS  RulesValidator: Equip cannot Set on a monster
+PASS  RulesValidator: Equip on empty monster zone refused
+PASS  Falling Down FullyCompiled opponent-equip take-control
+PASS  Falling Down: refuse with Archfiend but no opponent monster
+PASS  Falling Down: Activate legal with Archfiend Soldier + opp monster
+PASS  Falling Down: drop on your Archfiend is still legal (not the target)
+PASS  Falling Down: Activate opens opponent-monster targets
+PASS  Falling Down: opponent monster is legal, Archfiend Soldier is not
+PASS  Falling Down: select opp monster, take control, Equip stays
+PASS  Falling Down: Activate legal without Archfiend (maintenance, not cost)
+PASS  Falling Down: no Archfiend → Equip destroyed, control returns
+PASS  Falling Down: opponent Standby, controller takes 800
+PASS  Stress: FullyCompiled Equips activate and attach
+PASS  Ectoplasmer FullyCompiled End Phase turn-player tribute
+PASS  Ectoplasmer: Activate from hand with empty Monster Zones
+PASS  Ectoplasmer: Activate stays in S/T, not sent to GY
+PASS  Ectoplasmer: End Phase with 3000 ATK opens tribute pick
+PASS  Ectoplasmer: tribute BEWD, opponent takes 1500 (printed/2)
+PASS  Ectoplasmer: End Phase with no monster skips, no damage
+PASS  Ectoplasmer: player End Phase with no monster lets the turn end
+PASS  Ectoplasmer: opponent End Phase, they tribute, you take 1500
+PASS  Level Limit - Area B: unique leftover Continuous still refuses Activate
+PASS  Jam Breeding Machine: unique leftover Continuous still refuses Activate
+PASS  Toon World: Activate from hand (pay 1000 LP)
+PASS  Toon World: refuse with less than 1000 LP
+PASS  Labyrinth of Nightmare: Activate from Set, empty-cost Continuous Trap
+PASS  Labyrinth of Nightmare: End Phase flips turn player's face-up ATK↔DEF
+PASS  Burning Land: Activate destroys Field Spells and stays
+PASS  Burning Land: Standby, turn player takes 500
+PASS  Gravity Bind: Activate stays
+PASS  Gravity Bind: Level 8 cannot attack
+PASS  Gravity Bind: Level 3 can attack
+PASS  Insect Barrier: opponent Insect cannot attack
+PASS  Insect Barrier: opponent Rock can still attack
+PASS  Messenger of Peace: 3000 ATK cannot attack, 1300 can
+PASS  Messenger of Peace: Standby pays 100 LP
+PASS  Call of the Haunted: Activate from Set with GY monster
+PASS  Call of the Haunted: SS Celtic, trap stays linked
+PASS  Call of the Haunted: trap to GY also destroys the summoned monster
+PASS  Soul Resurrection: SS in Defense, trap stays
+PASS  Stress: FullyCompiled Continuous S/T Activate (empty MZ legal)
+PASS  Pool: FullyCompiled programs are a non-empty implemented set
+PASS  Triple-check: compiled targetless Normal Spells Activate from hand in MP1
+PASS  Vocabulary: Normal/effectless cards are structural (not silent vanilla)
+PASS  Vocabulary: shared kinds cover a majority of compiled effect cards
+PASS  Vocabulary: unique exceptions stay a short named list
+PASS  Vocabulary: Exiled Force compiles as shared Tribute→Destroy
+PASS  Vocabulary: Time Wizard is a unique exception, not a new kind
+PASS  Arena pace: opponent spell hold is at least 7s
+PASS  Arena pace: AI step is at least 3s
+PASS  Ring of Destruction cannot activate the turn it was Set
+PASS  Ring of Destruction not legal in OpponentOpenState the turn it was Set
+PASS  Ring of Destruction legal on opponent's turn after sitting a turn
+PASS  Trap Hole is not a compiled free-chain
+PASS  Trap Hole not legal in OpponentOpenState
+PASS  AI does not auto-activate Ring of Destruction on open-game-state
+PASS  Bottomless Trap Hole official text FullyCompiled
+PASS  Bottomless not legal in OpponentOpenState
+PASS  Opponent Normal Summons La Jinn (1800)
+PASS  Bottomless is legal in the summon window
+PASS  ResponseActivate glow is only on the responder snapshot
+PASS  ResponseActivationSlots only for the responder's zone
+PASS  Bottomless activates vs La Jinn
+PASS  La Jinn is banished (not GY)
+PASS  Bottomless goes to GY after resolve
+PASS  Bottomless does not open vs ATK 1400 Celtic Guardian
+PASS  Bottomless Set this turn does not answer La Jinn
+PASS  Special Summon La Jinn onto opponent field
+PASS  Bottomless answers Special Summon of La Jinn
+PASS  Trap Hole does not answer Special Summon
+PASS  SS opens a summon window
+PASS  Bottomless activates vs SS La Jinn
+PASS  SS La Jinn is banished
+PASS  Adhesion Trap Hole official text FullyCompiled
+PASS  Torrential Tribute official text FullyCompiled
+PASS  Eatgaboon official text FullyCompiled
+PASS  House of Adhesive Tape official text FullyCompiled
+PASS  Opponent NS La Jinn for Adhesion
+PASS  Adhesion is legal vs NS La Jinn
+PASS  Adhesion activates and halves original ATK
+PASS  Opponent NS La Jinn for Torrential
+PASS  Torrential is legal vs opponent NS
+PASS  Torrential destroys all monsters
+PASS  Torrential answers your own Normal Summon
+PASS  Torrential activates on your own summon and destroys it
+PASS  Eatgaboon legal vs ATK 100 NS
+PASS  Eatgaboon illegal vs ATK 1800
+PASS  Eatgaboon illegal vs SS
+PASS  House of Adhesive Tape legal vs DEF 100 NS
+PASS  House of Adhesive Tape illegal vs DEF 1000+ La Jinn
+PASS  Token Feastevil official text FullyCompiled
+PASS  Mispolymerization official text FullyCompiled
+PASS  Chain Disappearance official text FullyCompiled
+PASS  Chain Destruction official text FullyCompiled
+PASS  Blast Held by a Tribute official text FullyCompiled
+PASS  Disarmament official text FullyCompiled
+PASS  Eternal Rest official text FullyCompiled
+PASS  Token SS for Feastevil
+PASS  Token Feastevil legal vs Token SS
+PASS  Token Feastevil destroys token and deals 300
+PASS  Fusion SS for Mispolymerization
+PASS  Mispolymerization legal vs Fusion SS
+PASS  Mispolymerization returns Fusion to Extra
+PASS  Chain Disappearance SS of ATK 100
+PASS  Chain Disappearance legal vs ATK 100
+PASS  Chain Disappearance banishes field + opponent hand/Deck copies
+PASS  Chain Destruction SS of ATK 100
+PASS  Chain Destruction legal vs ATK 100
+PASS  Chain Destruction wipes hand/Deck copies, field monster stays
+PASS  Blast Held: tribute monster declares
+PASS  Blast Held legal vs Tribute Summoned attacker
+PASS  Blast Held wipes opp ATK monsters and deals 1000
+PASS  Axe equips for Eternal Rest / Disarmament
+PASS  Eternal Rest destroys equipped monster
+PASS  Disarmament destroys Equip Cards
+PASS  Slate Warrior official text FullyCompiled
+PASS  Malice Doll of Demise official text FullyCompiled
+PASS  Yomi Ship official text FullyCompiled destroyer-destroy
+PASS  Lord Poison official text FullyCompiled battle-GY Plant SS except itself
+PASS  Giant Rat official text FullyCompiled battle-GY EARTH 1500 Deck SS
+PASS  Troop Dragon official text FullyCompiled named Deck SS
+PASS  Fox Fire official text FullyCompiled End Phase SS + tribute lock
+PASS  Witch of the Black Forest official text FullyCompiled DEF 1500 search
+PASS  Giant Germ battle-GY 500 burn compiles; any-number SS leftover
+PASS  Nimble Momonga battle-GY 1000 LP compiles; any-number SS leftover
+PASS  Hyena any-number Deck SS stays leftover
+PASS  Dark Mimic LV1 official text FullyCompiled Flip draw + LV send SS
+PASS  Gravekeeper's Curse official text FullyCompiled summoned inflict 500
+PASS  Iron Blacksmith Kotetsu official text FullyCompiled Flip Equip search
+PASS  Dark Mimic LV3 battle-GY draw 1 compiles; LV1 rider leftover
+PASS  Poison Mummy official text FullyCompiled Flip inflict
+PASS  Penguin Soldier up-to-2 bounce stays leftover (not invented)
+PASS  Dekoichi scaled extra-draw stays leftover (not invented)
+PASS  Lady Assailant banish-top-3 stays leftover (not invented)
+PASS  Mother Grizzly official text FullyCompiled battle-GY Deck SS
+PASS  UFO Turtle official text FullyCompiled battle-GY Deck SS
+PASS  Masked Dragon official text FullyCompiled battle-GY Deck SS
+PASS  Pyramid Turtle official text FullyCompiled battle-GY Deck SS
+PASS  Flying Kamakiri #1 official text FullyCompiled battle-GY Deck SS
+PASS  Howling Insect official text FullyCompiled battle-GY Deck SS
+PASS  Shining Angel official text FullyCompiled battle-GY Deck SS
+PASS  Vampiric Orchis official text FullyCompiled NS named hand SS
+PASS  Decayed Commander NS named hand SS compiles; battle-damage discard leftover
+PASS  Old Vindictive Magician official text FullyCompiled Flip opp destroy
+PASS  Bite Shoes official text FullyCompiled Flip change position
+PASS  Desertapir official text FullyCompiled Flip set-FD except itself
+PASS  New-card rule: Desertapir-shaped Flip set-FD compiles without a cardId branch
+PASS  Ryu-Kishin Clown official text FullyCompiled Summoned change position
+PASS  New-card rule: Ryu-Kishin-shaped Summoned change-pos compiles without a cardId branch
+PASS  Bowganian official text FullyCompiled Standby inflict 600
+PASS  Sage's Stone leftover (no invented spell If-you-control lock)
+PASS  Release Restraint leftover (no invented tribute-named spell procedure)
+PASS  Knight's Title leftover (no invented tribute-named spell procedure)
+PASS  Mine Golem official text FullyCompiled battle-GY inflict 500
+PASS  Gravekeeper's Guard official text FullyCompiled Flip bounce opp
+PASS  Gale Lizard official text FullyCompiled Flip bounce opp
+PASS  Mask of Darkness official text FullyCompiled Flip Trap GY add
+PASS  Gigantes battle-GY destroy all S/T FullyCompiled (nomi is summon restriction)
+PASS  Des Lacooda Flip Summoned draw 1 compiles
+PASS  Swarm of Scarabs official text FullyCompiled Flip Summon destroy + set-FD
+PASS  Swarm of Locusts official text FullyCompiled Flip Summon ST destroy + set-FD
+PASS  The Thing in the Crater official text FullyCompiled destroyed-field Pyro hand SS
+PASS  Witch Doctor of Chaos official text FullyCompiled Flip either-GY banish
+PASS  Spirit Caller official text FullyCompiled Flip Level-3-or-lower Normal GY SS
+PASS  Gravekeeper's Spy official text FullyCompiled Flip series ATK<=1500 Deck SS
+PASS  Cobra Jar official text Flip token SS compiles; battle-destroyed inflict leftover
+PASS  The Creator Incarnate official text FullyCompiled tribute-this named hand SS
+PASS  Black Dragon's Chick official text FullyCompiled send-this named hand SS
+PASS  Gather Your Mind official text FullyCompiled named Deck add (shuffle absorbed; Oath OPT boilerplate)
+PASS  Venus official text FullyCompiled pay-500 named hand-or-Deck SS
+PASS  4-Starred Ladybug official text FullyCompiled Flip destroy opp Level 4
+PASS  Guardian Statue official text FullyCompiled Flip Summon bounce + set-FD
+PASS  Medusa Worm official text FullyCompiled Flip Summon destroy + set-FD
+PASS  Moai Interceptor Cannons official text FullyCompiled OPT set-FD
+PASS  Immortal of Thunder Flip gain 3000 compiles; GY lose leftover
+PASS  Golem Sentry official text FullyCompiled Flip Summon bounce + set-FD
+PASS  Guardian Sphinx official text FullyCompiled Flip Summon bounce-all + set-FD
+PASS  Slate Warrior: Flip Summon succeeds
+PASS  Slate Warrior Flip: lingering +500 ATK/DEF
+PASS  Poison Mummy Flip Summon
+PASS  Poison Mummy Flip: opponent takes 500
+PASS  Hane-Hane Flip Summon
+PASS  Hane-Hane Flip: opens bounce target
+PASS  Hane-Hane Flip: victim returned to hand
+PASS  Stealth Bird Flip Summon
+PASS  Stealth Bird Flip Summoned: inflict 1000
+PASS  Needle Worm Flip Summon
+PASS  Needle Worm Flip: mill 5 from opponent Deck
+PASS  Slate Warrior battle: La Jinn can attack Set Slate
+PASS  Slate Warrior battle: Slate to GY
+PASS  Slate Warrior battle: destroyer loses 500 ATK/DEF lingering
+PASS  Yomi Ship battle: destroyer destroyed
+PASS  Newdoria battle GY: targeted monster destroyed
+PASS  Lord Poison battle GY: Plant SS from GY, not itself
+PASS  Giant Rat battle GY: EARTH 1500- ATK SS from Deck
+PASS  Fox Fire battle: sent to GY destroyed by battle
+PASS  Fox Fire End Phase: self-SS from GY
+PASS  Giant Germ battle GY: opponent takes 500
+PASS  Giant Germ any-number SS leftover: Deck copies remain
+PASS  Dark Mimic LV3 battle GY: draw 1 (LV1 rider leftover)
+PASS  Nimble Momonga battle GY: controller gains 1000 LP
+PASS  Nimble Momonga any-number SS leftover: Deck copies remain
+PASS  Mother Grizzly battle GY: WATER 1500- ATK SS from Deck
+PASS  Pyramid Turtle battle GY: Zombie 2000- DEF SS from Deck
+PASS  Troop Dragon battle GY: named Deck SS
+PASS  Birdface battle GY: add Harpie Lady from Deck
+PASS  Mine Golem battle GY: opponent takes 500
+PASS  Bite Shoes Flip Summon
+PASS  Bite Shoes Flip: opens change-position target
+PASS  Bite Shoes Flip: victim now Defense Position
+PASS  Desertapir Flip Summon
+PASS  Desertapir Flip: opens set-FD target
+PASS  Desertapir Flip: itself is illegal
+PASS  Desertapir Flip: opp face-up is legal
+PASS  Desertapir: select Celtic
+PASS  Desertapir Flip: victim set face-down Defense
+PASS  Ryu-Kishin Clown Normal Summon
+PASS  Ryu-Kishin Clown NS: opens change-position target
+PASS  Ryu-Kishin Clown: select Celtic
+PASS  Ryu-Kishin Clown NS: victim now Defense Position
+PASS  Old Vindictive Magician Flip Summon
+PASS  Old Vindictive Magician Flip: opens opp destroy target
+PASS  Old Vindictive Magician Flip: victim destroyed
+PASS  Gravekeeper's Guard Flip Summon
+PASS  Gravekeeper's Guard Flip: opens bounce target
+PASS  Gravekeeper's Guard Flip: victim returned to hand
+PASS  Gale Lizard Flip Summon
+PASS  Gale Lizard Flip: opens bounce target
+PASS  Gale Lizard Flip: victim returned to hand
+PASS  Mask of Darkness Flip Summon
+PASS  Mask of Darkness Flip: opens Trap-in-GY choice
+PASS  Mask of Darkness Flip: Waboku added to hand
+PASS  Vampiric Orchis Normal Summon
+PASS  Vampiric Orchis NS: Special Summoned Des Dendle from hand
+PASS  Decayed Commander Normal Summon
+PASS  Decayed Commander NS: Special Summoned Zombie Tiger from hand
+PASS  Des Lacooda Flip Summon
+PASS  Des Lacooda Flip Summoned: drew 1
+PASS  Swarm of Scarabs: sets itself face-down Defense
+PASS  Swarm of Scarabs Flip Summon
+PASS  Swarm of Scarabs Flip Summon: opens opp destroy target
+PASS  Swarm of Scarabs: select Celtic
+PASS  Swarm of Scarabs Flip Summon: only the targeted monster destroyed
+PASS  Swarm of Locusts Flip Summon
+PASS  Swarm of Locusts Flip Summon: opens ST destroy target
+PASS  Swarm of Locusts: select Waboku
+PASS  Swarm of Locusts Flip Summon: opponent ST destroyed
+PASS  Golem Sentry Flip Summon
+PASS  Golem Sentry Flip Summon: opens bounce target
+PASS  Golem Sentry Flip Summon: victim returned to hand
+PASS  Guardian Sphinx Flip Summon
+PASS  Guardian Sphinx Flip Summon: bounced all opponent monsters, kept own
+PASS  Thing in the Crater destroy: SS Pyro from hand, not Warrior
+PASS  Thing in the Crater send (not destroy): does not SS from hand
+PASS  Witch Doctor Flip Summon
+PASS  Witch Doctor Flip: opens either-GY monster choice
+PASS  Witch Doctor: opp GY monster is legal
+PASS  Witch Doctor: own GY monster is legal
+PASS  Witch Doctor: GY Spell is illegal
+PASS  Witch Doctor: field monster is illegal
+PASS  Witch Doctor: select opp GY monster
+PASS  Witch Doctor: opp GY monster banished, not in GY
+PASS  Witch Doctor: own GY monster stays, field monster stays
+PASS  Spirit Caller Flip Summon
+PASS  Spirit Caller Flip: opens controller-GY monster choice
+PASS  Spirit Caller: Level 3 Normal is legal
+PASS  Spirit Caller: Level 4 Normal is illegal
+PASS  Spirit Caller: Level 2 Effect is illegal
+PASS  Spirit Caller: opponent GY is illegal
+PASS  Spirit Caller: select Level 3 Normal
+PASS  Spirit Caller: Giant Soldier Special Summoned from GY
+PASS  Gravekeeper's Spy Flip Summon
+PASS  Gravekeeper's Spy Flip: SS series ATK<=1500 from Deck
+PASS  Cobra Jar Flip Summon
+PASS  Cobra Jar Flip: Special Summoned Poisonous Snake Token 1200/1200
+PASS  The Creator Incarnate: Activate tribute-this named hand SS
+PASS  Gather Your Mind Activate
+PASS  Gather Your Mind: added named copy from Deck; decoy remains
+PASS  Venus: Activate pay 500 named SS from Deck
+PASS  4-Starred Ladybug Flip Summon
+PASS  4-Starred Ladybug Flip: opp Level 4 destroyed; Level 3 and controller Level 4 remain
+PASS  Immortal of Thunder Flip Summon
+PASS  Immortal of Thunder Flip: controller gains 3000 LP
+PASS  Moai Interceptor Cannons: sets itself face-down Defense
+PASS  Medusa Worm Flip Summon
+PASS  Medusa Worm Flip Summon: opens opp destroy target
+PASS  Medusa Worm: select Celtic
+PASS  Medusa Worm Flip Summon: only the targeted monster destroyed
+PASS  Guardian Statue Flip Summon
+PASS  Guardian Statue Flip Summon: opens bounce target
+PASS  Guardian Statue: select Celtic
+PASS  Guardian Statue Flip Summon: victim returned to hand
+PASS  Fox Fire face-up instance has tribute lock flag
+PASS  Fox Fire face-up cannot be Tributed for a Tribute Summon
+PASS  Fox Fire face-down can be Tributed
+PASS  Malice Doll sent by Continuous Spell to GY
+PASS  Malice Doll next controller Standby: Special Summoned from GY
+PASS  FirstEmpty order is 2,1,3
+--- 690 passed, 0 failed ---
+
+── Unit: CorpusTriggerStressTests ──
+PASS  Corpus: cards_db classified
+PASS  Corpus: unimplemented/stub cannot ProgramMayActivate
+PASS  Corpus: unimplemented/stub refuse Activate (fail loud)
+PASS  Corpus: FullyCompiled Field Spells Activate
+PASS  Corpus: FullyCompiled Spells Activate on a legal board
+PASS  Corpus: FullyCompiled Traps are legal in their window
+PASS  Corpus: FullyCompiled Flip monsters Flip Summon
+PASS  Corpus: FullyCompiled ignition monsters Activate from field
+PASS  Corpus: FullyCompiled Standby/aura monsters do not throw
+PASS  Corpus: implemented pool is non-empty
+corpus n=1687 structural=394 implemented=290 stub=156 unimplemented=847
+--- 10 passed, 0 failed ---
+
+── Unit: ChainRegressionTests ──
+PASS  Chain: CL1 accepts Speed 1
+PASS  Chain: CL1 accepts Speed 2
+PASS  Chain: CL1 accepts Speed 3
+PASS  Chain: Speed 1 Normal cannot chain onto Speed 1
+PASS  Chain: Speed 1 Ignition cannot chain onto Speed 2
+PASS  Chain: Speed 2 chains onto Speed 1
+PASS  Chain: Speed 2 chains onto Speed 2
+PASS  Chain: Speed 2 cannot chain onto Speed 3
+PASS  Chain: Speed 3 chains onto Speed 1
+PASS  Chain: Speed 3 chains onto Speed 2
+PASS  Chain: Speed 3 chains onto Speed 3
+PASS  Chain: no links added while resolving
+PASS  Chain: three links built
+PASS  Chain: link numbers are 1,2,3
+PASS  Chain: resolves LIFO (CL3, CL2, CL1)
+PASS  Chain: all three links resolved
+PASS  Chain: stack empty after resolution
+PASS  Chain: negated CL1 skipped, CL2 resolves first
+PASS  Chain: only one link resolved when CL1 negated
+PASS  Chain: negated link marked resolved
+PASS  Chain: empty chain resolves nothing
+--- 21 passed, 0 failed ---
+
+── Unit: CoinDiceRegressionTests ──
+PASS  Coin: queued results are deterministic (heads, tails)
+PASS  Coin: both tosses reported to bus
+PASS  Coin: last reported result is tails
+PASS  Coin: bus dequeues in toss order
+PASS  Coin: bus empty after draining
+PASS  Coin: 3-coin toss counts 2 heads
+PASS  Coin: 3 coins each reported
+PASS  Die: queued face is exact (4)
+PASS  Die: face clamps high to 6
+PASS  Die: face clamps low to 1
+PASS  Die: all rolls reported to bus
+PASS  Die: last reported face is 1
+PASS  Die: live rolls stay in 1..6
+PASS  Die: live rolls all reported
+PASS  Bus: event carries side + label context
+PASS  Engine: queued die rolls 3 and reports
+--- 16 passed, 0 failed ---
+
+── Unit: RitualRegressionTests ──
+PASS  Ritual: Hamburger Recipe FullyCompiled
+PASS  Ritual: clause is RitualSummon, names Hungry Burger, needs Level 6
+PASS  Ritual: Recipe is activatable with monster + Tributes in hand
+PASS  Ritual: activation resolves
+PASS  Ritual: Hungry Burger is on the field face-up Attack
+PASS  Ritual: Hungry Burger left the hand
+PASS  Ritual: two Tributes are in the GY
+PASS  Ritual: the Ritual Spell is in the GY
+PASS  Ritual: illegal without the Ritual Monster in hand
+PASS  Ritual: illegal with insufficient Tribute Levels (4 < 6)
+PASS  Ritual: Black Luster Ritual activatable Tributing a field Lv8
+PASS  Ritual: Black Luster Ritual resolves
+PASS  Ritual: Black Luster Soldier summoned, field Lv8 Tributed to GY
+PASS  Ritual(exact): Contract legal when Tributes can total exactly 6
+PASS  Ritual(exact): resolves and summons Hungry Burger
+PASS  Ritual(exact): chose the exact {3,3} Tribute, kept the Lv8
+PASS  Ritual(exact): illegal when no Tribute subset equals 6 (overpay rejected)
+PASS  Ritual: every Ritual Spell summons its monster (tested 16/16)
+--- 18 passed, 0 failed ---
+
+── Unit: HandTrapRegressionTests ──
+PASS  HandTrap: Kuriboh is recognized (compiled discard-from-hand Quick Effect)
+PASS  HandTrap: a vanilla monster is not a hand trap
+PASS  HandTrap: legal at Damage Calculation vs an opponent's attacker
+PASS  HandTrap: illegal if you are the attacker
+PASS  HandTrap: illegal outside the Damage Calculation window
+PASS  HandTrap: illegal when not in hand
+PASS  HandTrap: collected generically as a legal DC response
+--- 7 passed, 0 failed ---
+
+── Unit: FusionRegressionTests ──
+PASS  Fusion: Polymerization legal with materials for a non-registered fusion
+PASS  Fusion: Polymerization resolves
+PASS  Fusion: Dark Flare Knight is on the field
+PASS  Fusion: both materials sent to GY
+PASS  Fusion: fusion removed from Extra Deck
+PASS  Fusion: Polymerization sent to GY
+PASS  Fusion: Polymerization illegal without all materials
+PASS  Fusion: 3-material fusion legal (2 field + 1 hand)
+PASS  Fusion: Mokey Mokey King resolves and is summoned
+PASS  Fusion: three Mokey Mokey materials in GY
+--- 10 passed, 0 failed ---
+
+── Unit: ArchfiendRegressionTests ──
+PASS  Compile: Vilepawn upkeep = pay 500 (mandatory)
+PASS  Compile: Desrook upkeep = pay 500 (mandatory)
+PASS  Compile: Darkbishop upkeep = pay 500 (mandatory)
+PASS  Compile: Infernalqueen upkeep = pay 500 (mandatory)
+PASS  Compile: Terrorking upkeep = pay 800 (mandatory)
+PASS  Compile: Shadowknight upkeep = pay 900 (mandatory)
+PASS  Compile: Skull Archfiend = pay 500 or destroy this card
+PASS  Compile: Archfiend Soldier (vanilla) has no maintenance cost
+PASS  Standby: Vilepawn controller pays 500
+PASS  Standby: Terrorking controller pays 800
+PASS  Standby: Shadowknight controller pays 900
+PASS  Standby: two Archfiends pay both costs (500+800)
+PASS  Standby: opponent's Archfiend not charged on your Standby
+PASS  Pandemonium: your copy waives Vilepawn's cost
+PASS  Pandemonium: opponent's copy also waives it
+PASS  Skull Archfiend: pays 500 when able and stays
+PASS  Skull Archfiend: destroyed when it cannot pay
+PASS  Pandemonium: underfunded Skull Archfiend is not destroyed
+PASS  Pandemonium: non-Archfiend Messenger of Peace still pays 100
+PASS  Standby: unpayable mandatory upkeep drops to 0 and ends the duel
+--- 20 passed, 0 failed ---
+
+── Unit: ArchfiendAdvancedRegressionTests ──
+PASS  Die-roll: Vilepawn negates on face 3 and destroys the source
+PASS  Die-roll: Vilepawn does not negate on face 4 (source survives)
+PASS  Die-roll: Skull Archfiend negates on face 6
+PASS  Die-roll: Darkbishop protects another Archfiend (face 1)
+PASS  Die-roll: Darkbishop does not protect a non-Archfiend
+PASS  Die-roll: your own effect does not trigger the protection
+PASS  Die-roll integration: Offerings negated (face 3) — Vilepawn survives, Offerings gone
+PASS  Die-roll integration: Offerings resolves (face 4) — Vilepawn destroyed
+PASS  Battle-Scarred: opponent mirrors Terrorking's 800 upkeep
+PASS  Battle-Scarred: removing the trap destroys the selected monster
+PASS  Battle-Scarred: removing the monster destroys the trap
+PASS  Archfiend's Roar: pays 500 and Special Summons the target from the GY
+PASS  Archfiend's Roar: the revived monster cannot be Tributed
+PASS  Archfiend's Roar: flagged for End-Phase destruction this turn
+PASS  Archfiend's Roar: revived monster is destroyed in the End Phase
+PASS  Pandemonium: destroying an Archfiend adds a lower-Level Archfiend from Deck
+PASS  Pandemonium: no search without a face-up Pandemonium
+PASS  Pandemonium: battle destruction does not trigger the search
+PASS  Falling Down: takes control of the opponent's monster
+PASS  Falling Down: controller takes 800 during the opponent's Standby
+--- 20 passed, 0 failed ---
+
+── Text: lab deck compile (regex, no AI) ──
+PASS  lab unique=36 full=34 partial=2 emptyEffect=0
+
+── Stress: lab AI vs AI ──
+duels played=40 completed=40 turnCap=0 softLocks=0 exceptions=0
+wins: player=18 opp=22 draw/cap=0
+
+── Fuzz: battle math ──
+PASS  200 battle fuzz cases
+
+── RESULT: unitPass=1119 unitFail=0 exceptions=0 softLocks=0 ok=YES elapsedMs=4175 ──
+
+
+== SUMMARY: unitPass=1119 unitFail=0 duelsPlayed=40 completed=40 turnCap=0 softLocks=0 exceptions=0 wins(P/O/D)=18/22/0 result=PASS ==

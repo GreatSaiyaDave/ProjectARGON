@@ -1,0 +1,92 @@
+HeadlessEngine --card evidence for PR #43
+branch=cursor/fc-rock-backfire-virus-park-2e14
+commit=f2f8f4bedb156e5e6d5942e9c4f33a413aa2e493
+utc=2026-09-10T09:06:58Z
+command=bash Tools/HeadlessEngine/run.sh --card "<name>"
+
+=== --card 2026-09-10T09:06:36Z ===
+===== Rock Bombardment =====
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:00.64
+#20781762  Rock Bombardment
+  type=Trap Card  race=Normal  attr=  
+  desc: Send 1 Rock monster from your Deck to the GY; inflict 500 damage to your opponent.
+
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  timings: 
+  clauses: 0
+
+===== Backfire =====
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:00.63
+#82705573  Backfire
+  type=Trap Card  race=Continuous  attr=  
+  desc: If a face-up FIRE monster(s) you control is destroyed and sent to the GY: Inflict 500 damage to your opponent.
+
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  timings: 
+  clauses: 0
+
+===== Tribe-Infecting Virus =====
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:00.61
+#33184167  Tribe-Infecting Virus
+  type=Effect Monster  race=Aqua  attr=WATER  Lv4 1600/1000
+  desc: Discard 1 card from your hand and declare 1 Type of monster. Destroy all face-up monsters of the declared Type on the field.
+
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  timings: 
+  clauses: 0
+
+===== Mysterious Puppeteer =====
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:00.63
+#54098121  Mysterious Puppeteer
+  type=Effect Monster  race=Warrior  attr=EARTH  Lv4 1000/1500
+  desc: Each time you or your opponent Normal Summons or Flip Summons a monster, increase your Life Points by 500 points.
+
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  timings: 
+  clauses: 0
+
+===== Token Thanksgiving =====
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:00.62
+#57182235  Token Thanksgiving
+  type=Spell Card  race=Normal  attr=  
+  desc: Destroy all tokens on the field. Increase your Life Points by the number of tokens destroyed x 800 points.
+
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  timings: 
+  clauses: 0
+
