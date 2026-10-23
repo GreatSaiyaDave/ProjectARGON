@@ -78,6 +78,18 @@ namespace WRLDZ.Duel.TextEffects
                     ExceptThisCard = true,
                     MakesChainLink = false
                 }),
+            // — 23782705 Machina Sniper: Monsters cannot attack "Machina" monsters, except "Machina Sniper".
+            new AtomRegistration.Atom(
+                Start + @"Monsters cannot attack ""([^""]+)"" monsters, except ""([^""]+)""" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.CannotBeAttackTarget,
+                    NamedCard = m.Groups[1].Value,
+                    NamedCardIsSeries = true,
+                    ExceptThisCard = true,
+                    MakesChainLink = false
+                }),
 
             // Amazoness Spellcaster: Lua SelectTarget twice (a face-up archetype monster you control, then a face-up
             // monster the opponent controls); both must still be face-up and related at resolution, then each gets
