@@ -113,6 +113,20 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Controller,
                     MakesChainLink = false
                 }),
+            // — 52222372 Genex Turbine: All face-up "Genex" monsters you control gain 400 ATK.
+            new AtomRegistration.Atom(
+                Start + @"All face-up ""([^""]+)"" monsters you control gain (\d+) ATK" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.ContinuousGainAtkDef,
+                    Side = EffectSide.Controller,
+                    NamedCard = m.Groups[1].Value,
+                    NamedCardIsSeries = true,
+                    Amount = int.Parse(m.Groups[2].Value),
+                    DefAmount = 0,
+                    MakesChainLink = false
+                }),
         };
 
         static int Parse(Match m, int group, int fallback)
