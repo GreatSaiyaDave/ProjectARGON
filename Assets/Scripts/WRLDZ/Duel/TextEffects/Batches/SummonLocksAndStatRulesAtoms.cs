@@ -90,6 +90,17 @@ namespace WRLDZ.Duel.TextEffects
                     ExceptThisCard = true,
                     MakesChainLink = false
                 }),
+            // — 9666558 Golem Dragon: Your opponent cannot target face-up Dragon-Type monsters for attacks, except this one.
+            new AtomRegistration.Atom(
+                Start + @"Your opponent cannot target face-up ([A-Za-z-]+)(?:-Type)? monsters for attacks, except this one" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.CannotBeAttackTarget,
+                    RaceFilter = m.Groups[1].Value,
+                    ExceptThisCard = true,
+                    MakesChainLink = false
+                }),
 
             // Amazoness Spellcaster: Lua SelectTarget twice (a face-up archetype monster you control, then a face-up
             // monster the opponent controls); both must still be face-up and related at resolution, then each gets
