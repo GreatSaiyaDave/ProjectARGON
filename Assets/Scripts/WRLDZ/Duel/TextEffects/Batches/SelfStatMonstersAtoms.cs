@@ -113,6 +113,17 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Controller,
                     MakesChainLink = false
                 }),
+            // — 18724123 Infernity Archer: If you have no cards in your hand, this card can attack your opponent directly.
+            new AtomRegistration.Atom(
+                Start + @"If you have no cards in your hand, this card can attack your opponent directly" + End,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.CanAttackDirectly,
+                    Side = EffectSide.Controller,
+                    WhileCondition = CrvEmptyHandAndAurasRuntime.NoCardsInHand,
+                    MakesChainLink = false
+                }),
             // — 52222372 Genex Turbine: All face-up "Genex" monsters you control gain 400 ATK.
             new AtomRegistration.Atom(
                 Start + @"All face-up ""([^""]+)"" monsters you control gain (\d+) ATK" + End,

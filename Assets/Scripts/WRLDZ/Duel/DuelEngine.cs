@@ -4569,6 +4569,12 @@ namespace WRLDZ.Duel
                         return true;
                     continue;
                 }
+                if (!string.IsNullOrEmpty(clause.WhileCondition))
+                {
+                    if (TextEffects.AttackShieldsAndDamageZeroRuntime.WhileConditionMet(this, attacker, clause))
+                        return true;
+                    continue;
+                }
                 if (string.IsNullOrEmpty(clause.RequiresFaceUpName))
                     return true;
                 if (FieldSpellEffects.NamedCardIsFaceUpOnField(this, clause.RequiresFaceUpName))
