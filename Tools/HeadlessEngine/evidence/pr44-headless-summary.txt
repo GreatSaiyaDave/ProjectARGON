@@ -1,0 +1,80 @@
+PR #44 Headless evidence summary
+commit=a32dbbca28e06196e832c5c84583d6b1ff4226f9
+utc=2026-09-10T09:13:00Z
+
+quiet: unitPass=1124 unitFail=0 exceptions=0 softLocks=0 ok=YES
+duels: played=40 completed=40 turnCap=0 wins(P/O/D)=18/22/0 result=PASS
+compiler Version: 50 (unchanged)
+
+Park live+corpus (from --quiet):
+PASS  Corpus: Greenkappa stays parked (2 Set S/T destroy needs atom)
+PASS  Corpus: Greenkappa is not 1-target Destroy / MST
+PASS  Corpus: Greenkappa ProgramMayActivate is false
+PASS  Corpus: Tornado Bird stays parked (2 S/T bounce needs atom)
+PASS  Corpus: Tornado Bird is not 1-target ReturnToHand
+PASS  Corpus: Tornado Bird ProgramMayActivate is false
+PASS  Corpus: Des Feral Imp stays parked (GY-card shuffle into Deck needs atom)
+PASS  Corpus: Des Feral Imp is not AddFromGyToHand / PlaceThisOnTopOfDeck
+PASS  Corpus: Des Feral Imp ProgramMayActivate is false
+PASS  Corpus: Begone, Knave! stays parked (battle-damage bounce attacker needs atom)
+PASS  Corpus: Begone, Knave! is not ReturnToHand / YouTakeLifePointDamage
+PASS  Corpus: Begone, Knave! ProgramMayActivate is false
+PASS  Corpus: Butterfly Dagger - Elma stays parked (Equip GY-return leftover unique)
+PASS  Corpus: Butterfly Dagger - Elma Equip +300 fragment compiles; GY-return leftover
+PASS  Corpus: Butterfly Dagger - Elma is not PlaceThisOnTopOfDeck
+PASS  Corpus: Butterfly Dagger - Elma ProgramMayActivate is false
+PASS  Corpus: Greenkappa leftover unique is not FullyCompiled
+PASS  Corpus: Tornado Bird leftover unique is not FullyCompiled
+PASS  Corpus: Des Feral Imp leftover unique is not FullyCompiled
+PASS  Corpus: Begone, Knave! leftover unique is not FullyCompiled
+PASS  Corpus: Butterfly Dagger - Elma leftover unique is not FullyCompiled
+PASS  Greenkappa stays parked (not FullyCompiled)
+PASS  Greenkappa is not 1-target Destroy
+PASS  Greenkappa: ProgramMayActivate false
+PASS  Greenkappa: Flip Summon succeeds
+PASS  Greenkappa: Flip does not open 1-target destroy
+PASS  Greenkappa: both Set S/T stay (2-destroy parked)
+PASS  Tornado Bird stays parked (not FullyCompiled)
+PASS  Tornado Bird is not 1-target ReturnToHand
+PASS  Tornado Bird: ProgramMayActivate false
+PASS  Tornado Bird: Flip Summon succeeds
+PASS  Tornado Bird: Flip does not open bounce target
+PASS  Tornado Bird: both S/T stay (2-bounce parked)
+PASS  Des Feral Imp stays parked (not FullyCompiled)
+PASS  Des Feral Imp is not AddFromGyToHand / PlaceThisOnTopOfDeck
+PASS  Des Feral Imp: ProgramMayActivate false
+PASS  Des Feral Imp: Flip Summon succeeds
+PASS  Des Feral Imp: Flip does not open GY target
+PASS  Des Feral Imp: GY card stays; Deck unchanged (shuffle parked)
+PASS  Begone, Knave! stays parked (not FullyCompiled)
+PASS  Begone, Knave! is not ReturnToHand / YouTakeLifePointDamage
+PASS  Begone, Knave!: ProgramMayActivate false
+PASS  Begone, Knave!: Activate refused from Set
+PASS  Begone, Knave!: direct attack inflicts damage; attacker stays
+PASS  Butterfly Dagger - Elma stays parked (not FullyCompiled)
+PASS  Butterfly Dagger - Elma Equip +300 fragment; GY-return leftover
+PASS  Butterfly Dagger - Elma is not PlaceThisOnTopOfDeck
+PASS  Butterfly Dagger - Elma: ProgramMayActivate false
+PASS  Butterfly Dagger - Elma: Activate refused (leftover unique)
+
+--card classify:
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  clauses: 0
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  clauses: 0
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  clauses: 0
+  classify: Unimplemented
+  ProgramMayActivate: False
+  FullyCompiled: False
+  clauses: 0
+  classify: Stub
+  ProgramMayActivate: False
+  FullyCompiled: False
+  clauses: 1
