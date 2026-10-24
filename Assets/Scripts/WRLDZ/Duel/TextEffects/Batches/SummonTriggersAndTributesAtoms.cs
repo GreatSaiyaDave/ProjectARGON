@@ -119,7 +119,7 @@ namespace WRLDZ.Duel.TextEffects
                 }),
             // — 28877602 Evoltile Odonto: When this card is Normal Summoned: You can Special Summon 1 "Evolsaur" monster from your hand.
             new AtomRegistration.Atom(
-                Start + @"When this card is Normal Summoned: You can Special Summon 1 ""([^""]+)"" monster from your hand" + End,
+                Start + @"When this card is Normal Summoned: You can Special Summon 1 (?:Level \d+ )?""([^""]+)"" monster from your hand" + End,
                 m => new EffectClause
                 {
                     Timing = EffectTiming.ThisCardSummoned,
