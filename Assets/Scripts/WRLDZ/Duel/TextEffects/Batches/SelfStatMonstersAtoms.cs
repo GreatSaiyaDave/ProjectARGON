@@ -103,6 +103,19 @@ namespace WRLDZ.Duel.TextEffects
                     Action = EffectActionKind.CannotAttackDirectly,
                     MakesChainLink = false
                 }),
+            // — 27408609 Golden Homunculus: This card gains 300 ATK and DEF for each of your banished cards.
+            new AtomRegistration.Atom(
+                Start + @"This card gains (\d+) ATK and DEF for each of your banished cards" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.GainSelfAtkPerCount,
+                    Side = EffectSide.Controller,
+                    Amount = int.Parse(m.Groups[1].Value),
+                    DefAmount = int.Parse(m.Groups[1].Value),
+                    CountSource = DerivedAtkMonstersRuntime.YourBanishedCards,
+                    MakesChainLink = false
+                }),
             // — 23927545 Jurrac Protops: This card gains 100 ATK for each monster your opponent controls.
             new AtomRegistration.Atom(
                 Start + @"This card gains (\d+) ATK for each monster your opponent controls" + End,
