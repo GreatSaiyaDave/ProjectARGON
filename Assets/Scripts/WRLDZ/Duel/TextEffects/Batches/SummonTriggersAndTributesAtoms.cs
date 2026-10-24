@@ -62,7 +62,7 @@ namespace WRLDZ.Duel.TextEffects
                 }),
             // — 1533292 R-Genex Magma: When this card is Normal Summoned, you can add 1 Level 2 "R-Genex" monster from your Deck to your hand.
             new AtomRegistration.Atom(
-                Start + @"When this card is Normal Summoned, you can add 1 Level \d+ ""([^""]+)"" monster from your Deck to your hand" + End,
+                Start + @"When this card is Normal Summoned, you can add 1 Level \d+ ""([^""]+)"" (?:Effect )?Monster from your Deck to your hand" + End,
                 m => new EffectClause
                 {
                     Timing = EffectTiming.ThisCardSummoned,
