@@ -34,6 +34,21 @@ namespace WRLDZ.Duel.TextEffects
                     Side = EffectSide.Both,
                     MakesChainLink = true
                 }),
+            // — 27004302 Gem-Armadillo: When this card is Normal Summoned: You can add 1 "Gem-Knight" monster from your Deck to your hand.
+            new AtomRegistration.Atom(
+                Start + @"When this card is Normal Summoned: You can add 1 ""([^""]+)"" monster from your Deck to your hand" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.AddNamedFromDeckToHand,
+                    NamedCard = m.Groups[1].Value,
+                    NamedCardIsSeries = true,
+                    Amount = 1,
+                    FromDeck = true,
+                    RequiresNormalOrFlipSummon = true,
+                    IsOptional = true,
+                    MakesChainLink = true
+                }),
             // — 8175346 Poki Draco: When this card is Normal Summoned: You can add 1 "Poki Draco" from your Deck to your hand.
             new AtomRegistration.Atom(
                 Start + @"When this card is Normal Summoned: You can add 1 ""([^""]+)"" from your Deck to your hand" + End,
