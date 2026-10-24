@@ -119,7 +119,7 @@ namespace WRLDZ.Duel.TextEffects
                 }),
             // — 28877602 Evoltile Odonto: When this card is Normal Summoned: You can Special Summon 1 "Evolsaur" monster from your hand.
             new AtomRegistration.Atom(
-                Start + @"When this card is Normal Summoned: You can Special Summon 1 (?:Level \d+ )?""([^""]+)"" monster from your hand" + End,
+                Start + @"When this card is Normal Summoned: You can Special Summon 1 (?:Level \d+(?: or lower)? )?""([^""]+)"" monster from your hand" + End,
                 m => new EffectClause
                 {
                     Timing = EffectTiming.ThisCardSummoned,
@@ -128,6 +128,19 @@ namespace WRLDZ.Duel.TextEffects
                     NamedCard = m.Groups[1].Value,
                     NamedCardIsSeries = true,
                     RequiresNormalOrFlipSummon = true,
+                    IsOptional = true,
+                    MakesChainLink = true
+                }),
+            // — 32744558 R-Genex Overseer: When this card is Normal or Special Summoned, you can Special Summon 1 Level 3 or lower "Genex" monster from your hand.
+            new AtomRegistration.Atom(
+                Start + @"When this card is Normal or Special Summoned,? you can Special Summon 1 (?:Level \d+(?: or lower)? )?""([^""]+)"" monster from your hand" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.SpecialSummonFromHand,
+                    Side = EffectSide.Controller,
+                    NamedCard = m.Groups[1].Value,
+                    NamedCardIsSeries = true,
                     IsOptional = true,
                     MakesChainLink = true
                 }),
