@@ -175,6 +175,18 @@ namespace WRLDZ.Duel.TextEffects
                     FromDeck = true,
                     MakesChainLink = true
                 }),
+            // — 55758589 Photon Wyvern: When this card is Normal or Flip Summoned: Destroy all Set cards your opponent controls.
+            new AtomRegistration.Atom(
+                Start + @"When this card is Normal or Flip Summoned: Destroy all Set cards your opponent controls" + End,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.Destroy,
+                    Zone = EffectZoneFilter.FaceDownSpellTraps,
+                    Side = EffectSide.Opponent,
+                    RequiresNormalOrFlipSummon = true,
+                    MakesChainLink = true
+                }),
             // — 98865920 Achacha Archer: When this card is Normal or Flip Summoned: Inflict 500 damage to your opponent.
             new AtomRegistration.Atom(
                 Start + @"When this card is Normal or Flip Summoned: Inflict (\d+) damage to your opponent" + End,
