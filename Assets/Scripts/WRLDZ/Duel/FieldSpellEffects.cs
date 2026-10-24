@@ -474,6 +474,10 @@ namespace WRLDZ.Duel
                     // Goblin King: face-up monsters of the Type on the whole field, this card excluded.
                     n = TextEffects.AttackShieldsAndDamageZeroRuntime.CountFaceUpRaceExcept(engine, self, clause.RaceFilter);
                     break;
+                case TextEffects.PerCountBurnsRuntime.OppSpellTrapCards:
+                    // Neo-Spacian Flare Scarab: opponent's Spell/Trap Cards on the field.
+                    n = TextEffects.PerCountBurnsRuntime.SpellTrapZoneCards(engine?.OpponentOf(who));
+                    break;
                 case TextEffects.SanctuaryAndZeraRuntime.LpLeadWhileNamedYouControl:
                     // SanctuaryAndZera batch: The Agent of Force - Mars — your LP lead while you control the named card.
                     n = TextEffects.SanctuaryAndZeraRuntime.LpLeadCount(engine, who, clause);

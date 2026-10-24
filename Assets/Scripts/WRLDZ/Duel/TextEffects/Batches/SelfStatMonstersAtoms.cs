@@ -103,6 +103,19 @@ namespace WRLDZ.Duel.TextEffects
                     Action = EffectActionKind.CannotAttackDirectly,
                     MakesChainLink = false
                 }),
+            // — 89621922 Neo-Spacian Flare Scarab: Gains 400 ATK for each Spell/Trap your opponent controls.
+            new AtomRegistration.Atom(
+                Start + @"Gains (\d+) ATK for each Spell/Trap your opponent controls" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.GainSelfAtkPerCount,
+                    Side = EffectSide.Controller,
+                    Amount = int.Parse(m.Groups[1].Value),
+                    DefAmount = 0,
+                    CountSource = TextEffects.PerCountBurnsRuntime.OppSpellTrapCards,
+                    MakesChainLink = false
+                }),
             // — 89222931 Machine King Prototype: This card gains 100 ATK and DEF for each Machine-Type monster on the field, except this card.
             new AtomRegistration.Atom(
                 Start + @"This card gains (\d+) ATK and DEF for each ([A-Za-z-]+)(?:-Type)? monster on the field, except this card" + End,
