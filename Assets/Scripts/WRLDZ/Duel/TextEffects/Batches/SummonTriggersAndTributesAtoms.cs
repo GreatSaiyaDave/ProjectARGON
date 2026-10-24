@@ -48,6 +48,18 @@ namespace WRLDZ.Duel.TextEffects
                     IsOptional = true,
                     MakesChainLink = true
                 }),
+            // — 29116732 Daybreaker: When this card is Special Summoned: You can Special Summon 1 "Daybreaker" from your hand.
+            new AtomRegistration.Atom(
+                Start + @"When this card is Special Summoned: You can Special Summon 1 ""([^""]+)"" from your hand" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.SpecialSummonFromHand,
+                    Side = EffectSide.Controller,
+                    NamedCard = m.Groups[1].Value,
+                    IsOptional = true,
+                    MakesChainLink = true
+                }),
             // — 27004302 Gem-Armadillo: When this card is Normal Summoned: You can add 1 "Gem-Knight" monster from your Deck to your hand.
             new AtomRegistration.Atom(
                 Start + @"When this card is Normal Summoned: You can add 1 ""([^""]+)"" monster from your Deck to your hand" + End,
