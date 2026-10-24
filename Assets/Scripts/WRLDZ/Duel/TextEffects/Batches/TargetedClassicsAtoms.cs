@@ -162,6 +162,19 @@ namespace WRLDZ.Duel.TextEffects
                         MakesChainLink = true
                     };
                 }),
+            // — 81873903 Evoltile Westlo: FLIP: Special Summon 1 "Evolsaur" monster from your Deck.
+            new AtomRegistration.Atom(
+                Start + @"FLIP:\s*Special Summon 1 ""([^""]+)"" monster from your Deck" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.Flip,
+                    Action = EffectActionKind.SpecialSummonNamedFromDeckInChosenFaceUpPosition,
+                    Side = EffectSide.Controller,
+                    NamedCard = m.Groups[1].Value.Trim(),
+                    NamedCardIsSeries = true,
+                    FromDeck = true,
+                    MakesChainLink = true
+                }),
             // — 61831093: FLIP: Target 2 Set Spell/Trap Cards on the field; destroy those targets.
             new AtomRegistration.Atom(
                 Start + @"FLIP:\s*Target (\d+) Set Spell/Trap Cards on the field; destroy those targets" + End,
