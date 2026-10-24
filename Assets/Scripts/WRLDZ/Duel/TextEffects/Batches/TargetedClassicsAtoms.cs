@@ -175,6 +175,18 @@ namespace WRLDZ.Duel.TextEffects
                     FromDeck = true,
                     MakesChainLink = true
                 }),
+            // — 98865920 Achacha Archer: When this card is Normal or Flip Summoned: Inflict 500 damage to your opponent.
+            new AtomRegistration.Atom(
+                Start + @"When this card is Normal or Flip Summoned: Inflict (\d+) damage to your opponent" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.InflictDamageToOpponent,
+                    Side = EffectSide.Controller,
+                    Amount = int.Parse(m.Groups[1].Value),
+                    RequiresNormalOrFlipSummon = true,
+                    MakesChainLink = true
+                }),
             // — 61831093: FLIP: Target 2 Set Spell/Trap Cards on the field; destroy those targets.
             new AtomRegistration.Atom(
                 Start + @"FLIP:\s*Target (\d+) Set Spell/Trap Cards on the field; destroy those targets" + End,
