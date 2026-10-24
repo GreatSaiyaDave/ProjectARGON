@@ -103,6 +103,20 @@ namespace WRLDZ.Duel.TextEffects
                     Action = EffectActionKind.CannotAttackDirectly,
                     MakesChainLink = false
                 }),
+            // — 89222931 Machine King Prototype: This card gains 100 ATK and DEF for each Machine-Type monster on the field, except this card.
+            new AtomRegistration.Atom(
+                Start + @"This card gains (\d+) ATK and DEF for each ([A-Za-z-]+)(?:-Type)? monster on the field, except this card" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.GainSelfAtkPerCount,
+                    Side = EffectSide.Controller,
+                    Amount = int.Parse(m.Groups[1].Value),
+                    DefAmount = int.Parse(m.Groups[1].Value),
+                    RaceFilter = m.Groups[2].Value,
+                    CountSource = AttackShieldsAndDamageZeroRuntime.FaceUpRaceOnFieldExceptThis,
+                    MakesChainLink = false
+                }),
             // — 27408609 Golden Homunculus: This card gains 300 ATK and DEF for each of your banished cards.
             new AtomRegistration.Atom(
                 Start + @"This card gains (\d+) ATK and DEF for each of your banished cards" + End,
