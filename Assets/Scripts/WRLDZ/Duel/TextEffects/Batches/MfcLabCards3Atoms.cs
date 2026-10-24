@@ -45,6 +45,17 @@ namespace WRLDZ.Duel.TextEffects
                     }
                 }),
 
+            // — 26439287 Proto-Cyber Dragon: This card's name becomes "Cyber Dragon" while on the field.
+            new AtomRegistration.Atom(
+                SentenceStart + @"This card's name becomes ""([^""]+)"" while on the field" + SentenceEnd,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.AlwaysTreatedAsName,
+                    TreatedAsName = m.Groups[1].Value.Trim(),
+                    StaysOnField = true,
+                    MakesChainLink = false
+                }),
             // Dark Magician Girl (c38033121): "Gains 300 ATK for every "Dark Magician" or "Magician of Black Chaos"
             // in the GY." — ATK only (no DEF), either GY (ApplyNamedGyGrowth counts both players' GYs).
             new AtomRegistration.Atom(
