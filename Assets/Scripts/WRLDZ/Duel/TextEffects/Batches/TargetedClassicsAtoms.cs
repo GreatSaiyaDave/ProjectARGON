@@ -213,6 +213,16 @@ namespace WRLDZ.Duel.TextEffects
                     IsOptional = true,
                     MakesChainLink = true
                 }),
+            // — 72845813 Ally of Justice Quarantine: Neither player can Special Summon LIGHT monsters.
+            new AtomRegistration.Atom(
+                Start + @"Neither player can Special Summon (?:DARK|LIGHT|EARTH|WATER|FIRE|WIND|DIVINE) monsters" + End,
+                _ => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.NeitherPlayerCanSpecialSummon,
+                    Side = EffectSide.Both,
+                    MakesChainLink = false
+                }),
             // — 61831093: FLIP: Target 2 Set Spell/Trap Cards on the field; destroy those targets.
             new AtomRegistration.Atom(
                 Start + @"FLIP:\s*Target (\d+) Set Spell/Trap Cards on the field; destroy those targets" + End,
