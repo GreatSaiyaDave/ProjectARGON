@@ -63,6 +63,20 @@ namespace WRLDZ.Duel.TextEffects
                     IsOptional = true,
                     MakesChainLink = true
                 }),
+            // — 28877602 Evoltile Odonto: When this card is Normal Summoned: You can Special Summon 1 "Evolsaur" monster from your hand.
+            new AtomRegistration.Atom(
+                Start + @"When this card is Normal Summoned: You can Special Summon 1 ""([^""]+)"" monster from your hand" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.SpecialSummonFromHand,
+                    Side = EffectSide.Controller,
+                    NamedCard = m.Groups[1].Value,
+                    NamedCardIsSeries = true,
+                    RequiresNormalOrFlipSummon = true,
+                    IsOptional = true,
+                    MakesChainLink = true
+                }),
             // — 18063928 Tin Goldfish: When this card is Normal Summoned: You can Special Summon 1 Level 4 monster from your hand.
             new AtomRegistration.Atom(
                 Start + @"When this card is Normal Summoned: You can Special Summon 1 Level (\d+) monster from your hand" + End,
