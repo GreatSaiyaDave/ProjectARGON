@@ -199,6 +199,20 @@ namespace WRLDZ.Duel.TextEffects
                     RequiresNormalOrFlipSummon = true,
                     MakesChainLink = true
                 }),
+            // — 59575539 Krebons: When this card is targeted for an attack: You can pay 800 LP; negate the attack.
+            new AtomRegistration.Atom(
+                Start + @"When this card is targeted for an attack: You can pay (\d+) LP; negate the attack" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.HandQuickEffect,
+                    Action = EffectActionKind.NegateAttack,
+                    Side = EffectSide.Controller,
+                    PayLpAmount = int.Parse(m.Groups[1].Value),
+                    ActivatesFromHand = true,
+                    IsQuickEffect = true,
+                    IsOptional = true,
+                    MakesChainLink = true
+                }),
             // — 61831093: FLIP: Target 2 Set Spell/Trap Cards on the field; destroy those targets.
             new AtomRegistration.Atom(
                 Start + @"FLIP:\s*Target (\d+) Set Spell/Trap Cards on the field; destroy those targets" + End,
