@@ -53,6 +53,17 @@ namespace WRLDZ.Duel.TextEffects
                     RequiresThisDestroyedByBattle = true,
                     MakesChainLink = true
                 }),
+            // — 7736719 Vortex Trooper: If this card is destroyed: Draw 1 card.
+            new AtomRegistration.Atom(
+                Start + @"If this card is destroyed: Draw (\d+) card(?:s)?" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.SentFromFieldToGy,
+                    Action = EffectActionKind.Draw,
+                    Side = EffectSide.Controller,
+                    Amount = Pos(m, 1),
+                    MakesChainLink = true
+                }),
             // — 12694768 Abaki: When this card is destroyed and sent to the Graveyard by battle, both players take 500 damage.
             new AtomRegistration.Atom(
                 Start + @"When this card is destroyed (?:and sent to the (?:GY|Graveyard) )?by battle, both players take (\d+) damage" + End,
