@@ -103,6 +103,19 @@ namespace WRLDZ.Duel.TextEffects
                     Action = EffectActionKind.CannotAttackDirectly,
                     MakesChainLink = false
                 }),
+            // — 23927545 Jurrac Protops: This card gains 100 ATK for each monster your opponent controls.
+            new AtomRegistration.Atom(
+                Start + @"This card gains (\d+) ATK for each monster your opponent controls" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.GainSelfAtkPerCount,
+                    Side = EffectSide.Controller,
+                    Amount = int.Parse(m.Groups[1].Value),
+                    DefAmount = 0,
+                    CountSource = SelfStatMonstersRuntime.OppMonsterCount,
+                    MakesChainLink = false
+                }),
             // — 6285791: This card can attack your opponent directly.
             new AtomRegistration.Atom(
                 Start + @"This card can attack your opponent directly" + End,
