@@ -92,7 +92,7 @@ namespace WRLDZ.Duel.TextEffects
                 }),
             // — 13839120 Yellow Gadget: When this card is Normal or Special Summoned: You can add 1 "Green Gadget" from your Deck to your hand.
             new AtomRegistration.Atom(
-                Start + @"When this card is Normal or Special Summoned: You can add 1 ""([^""]+)"" from your Deck to your hand" + End,
+                Start + @"When this card is Normal or Special Summoned: You can add 1 ""([^""]+)"" (?:monster )?from your Deck to your hand" + End,
                 m => new EffectClause
                 {
                     Timing = EffectTiming.ThisCardSummoned,
