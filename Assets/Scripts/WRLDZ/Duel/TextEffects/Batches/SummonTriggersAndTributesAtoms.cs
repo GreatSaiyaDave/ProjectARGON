@@ -90,6 +90,19 @@ namespace WRLDZ.Duel.TextEffects
                     IsOptional = true,
                     MakesChainLink = true
                 }),
+            // — 13839120 Yellow Gadget: When this card is Normal or Special Summoned: You can add 1 "Green Gadget" from your Deck to your hand.
+            new AtomRegistration.Atom(
+                Start + @"When this card is Normal or Special Summoned: You can add 1 ""([^""]+)"" from your Deck to your hand" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ThisCardSummoned,
+                    Action = EffectActionKind.AddNamedFromDeckToHand,
+                    NamedCard = m.Groups[1].Value,
+                    Amount = 1,
+                    FromDeck = true,
+                    IsOptional = true,
+                    MakesChainLink = true
+                }),
             // — 8175346 Poki Draco: When this card is Normal Summoned: You can add 1 "Poki Draco" from your Deck to your hand.
             new AtomRegistration.Atom(
                 Start + @"When this card is Normal Summoned: You can add 1 ""([^""]+)"" from your Deck to your hand" + End,
