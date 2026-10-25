@@ -11,6 +11,7 @@ using WRLDZ.Duel;
 using WRLDZ.Duel.Rules;
 using WRLDZ.Presentation;
 using WRLDZ.UI;
+using WRLDZ.UI.MenuV6;
 
 namespace WRLDZ.UI.Shell
 {
@@ -193,6 +194,8 @@ namespace WRLDZ.UI.Shell
             public GameObject DeckMenuHost;
             public GameObject DeckRenameHost;
             public InputField NameField;
+            /// <summary>P4: the v6.3 offering hall (null = today's builder: AR, the legacy fallback).</summary>
+            public HallState Hall;
         }
 
         public static RectTransform Build(Transform modalHost, Action onClose, UiPresentation? force = null)
@@ -200,8 +203,10 @@ namespace WRLDZ.UI.Shell
             FreeUiKit.EnsureLoaded();
 
             // Same deck UI for AR holo + non-AR phone; size/opacity from Settings (MenuChromePrefs).
+            // explicit != null, not ?.: ScreenRouter is a MonoBehaviour (Unity null)
+            var router = ScreenRouter.Instance;
             var presentation = force
-                               ?? ScreenRouter.Instance?.Presentation
+                               ?? (router != null ? router.Presentation : (UiPresentation?)null)
                                ?? DualMenuPresenter.ResolveDefaultPresentation();
 
             DualMenuPresenter.Frame frame = default;
@@ -211,15 +216,23 @@ namespace WRLDZ.UI.Shell
                 onClose?.Invoke();
             }
 
+            // P4: the frame's close (the hall's back chip "Close", the legacy X chip, BACK, a tap on the dim) goes through
+            // RequestLeaveEditor, so the incomplete-deck guard holds on every way out
+            Action leave = null;
             frame = DualMenuPresenter.BuildFrame(
                 modalHost,
                 "DECK",
                 "Tap name to rename · caret to switch",
-                CloseAll,
+                () =>
+                {
+                    if (leave != null) leave();
+                    else CloseAll();
+                },
                 presentation,
                 // The builder is two card grids plus a search rail — it needs the screen, not a
                 // Compact sheet. At 72%x64% the card cells collapse to unreadable thumbnails.
-                dense: true);
+                // P4: and the offering hall is the deck builder's own (deckHall), never every dense sheet's
+                dense: true, deckHall: true);
 
             Debug.Log("[WRLDZ] DECK HubChrome overlay — Hierarchy should show PhoneMenu_DECK, not DeckMenuRoot.");
 
@@ -275,9 +288,16 @@ namespace WRLDZ.UI.Shell
             }
 
             st.OnClose = CloseAll;
+            leave = () => RequestLeaveEditor(st);
+            if (frame.Root != null && frame.Root.TryGetComponent(out DeckHall deckHall))
+                st.Hall = new HallState { Hall = deckHall, Spec = deckHall.Spec, ModalHost = modalHost };
 
-            st.Status = L(body, "", 11, new Color(0.85f, 0.9f, 0.95f, 0.9f), TextAnchor.MiddleLeft);
-            FloatingPanel.Place(st.Status.rectTransform, 0.03f, 0.006f, 0.97f, 0.046f);
+            if (st.Hall != null) HallBuildPersistent(st);
+            else
+            {
+                st.Status = L(body, "", 11, new Color(0.85f, 0.9f, 0.95f, 0.9f), TextAnchor.MiddleLeft);
+                FloatingPanel.Place(st.Status.rectTransform, 0.03f, 0.006f, 0.97f, 0.046f);
+            }
 
             // Drag layer: only captures during drag (never blocks list clicks / never paints)
             var drag = new GameObject("DragLayer", typeof(RectTransform), typeof(CanvasGroup));
@@ -303,11 +323,12 @@ namespace WRLDZ.UI.Shell
                 var phase = new GameObject("PhaseBody", typeof(RectTransform), typeof(Image))
                     .GetComponent<RectTransform>();
                 phase.SetParent(body, false);
-                FloatingPanel.Place(phase, 0.016f, 0.050f, 0.984f, 0.988f);
+                if (st.Hall != null) FloatingPanel.Stretch(phase);   // P4: the hall's stage px
+                else FloatingPanel.Place(phase, 0.016f, 0.050f, 0.984f, 0.988f);
                 // Light phase plate — transparent chrome; chips/rows carry their own contrast
                 var phaseImg = phase.GetComponent<Image>();
                 phaseImg.sprite = UiFoundation.WhiteSprite();
-                phaseImg.color = new Color(0.03f, 0.04f, 0.08f, 0.10f);
+                phaseImg.color = st.Hall != null ? Color.clear : new Color(0.03f, 0.04f, 0.08f, 0.10f);
                 phaseImg.raycastTarget = false;
 
                 // Keep inventory live
@@ -329,7 +350,7 @@ namespace WRLDZ.UI.Shell
                         // Legacy entry → editor with switcher
                         st.Phase = Phase.Editor;
                         if (st.Title != null) st.Title.text = "DECK";
-                        Status(st, "Tap name to rename · caret to switch · hold a deck for options", true);
+                        if (st.Hall == null) Status(st, "Tap name to rename · caret to switch · hold a deck for options", true);
                         LoadDeck(st);
                         BuildEditor(phase, st);
                         break;
@@ -340,7 +361,7 @@ namespace WRLDZ.UI.Shell
                         break;
                     case Phase.Editor:
                         if (st.Title != null) st.Title.text = "DECK";
-                        Status(st, "Tap the deck name to rename · caret to switch", true);
+                        if (st.Hall == null) Status(st, "Tap the deck name to rename · caret to switch", true);
                         LoadDeck(st);
                         BuildEditor(phase, st);
                         break;
@@ -351,6 +372,7 @@ namespace WRLDZ.UI.Shell
                 phase.SetAsLastSibling();
                 st.DragLayer.SetAsLastSibling();
                 if (st.Inspect != null) st.Inspect.transform.SetAsLastSibling();
+                if (st.Hall != null) HallAfterRebuild(st);
                 Canvas.ForceUpdateCanvases();
             };
             st.Rebuild();
@@ -1014,7 +1036,7 @@ namespace WRLDZ.UI.Shell
 
             const float rowH = 0.052f;
             const float gap = 0.007f;
-            const int n = 4;
+            const int n = 5;
             var total = n * rowH + (n - 1) * gap;
             var y1 = ChromeNameY0 - 0.010f;
             var y0 = y1 - total;
@@ -1040,13 +1062,25 @@ namespace WRLDZ.UI.Shell
                 GlassCyan, EdgeCyan);
             Item(1, "CHOOSE ICON", () => OpenIconPicker(phase, st, idx), GlassCyan, EdgeCyan);
             Item(2, "NEW DECK", () => TryCreateDeckBox(st), GlassQuiet, EdgeCyan);
-            Item(3, "MORE OPTIONS", () =>
+            Item(3, "CLEAR DECK", () =>
+            {
+                st.Main.Clear();
+                st.Extra.Clear();
+                st.Side.Clear();
+                st.Inv.ClearDeckBox(st.DeckIndex);
+                PersistDeck(st);
+                FreeUiKit.PlayClick();
+                st.Rebuild();
+                Status(st, "Deck cleared", true);
+            }, GlassRose, EdgeRose);
+            Item(4, "MORE OPTIONS", () =>
             {
                 PersistDeck(st);
                 st.Phase = Phase.Actions;
                 st.Rebuild();
             }, GlassQuiet, EdgeCyan);
 
+            if (st.Hall != null) HallPlaceSheet(st, sheet.GetComponent<RectTransform>());
             host.transform.SetAsLastSibling();
         }
 
@@ -1505,6 +1539,13 @@ namespace WRLDZ.UI.Shell
 
         static void BuildEditor(RectTransform phase, State st)
         {
+            // P4: the v6.3 offering hall (its altar, search band, House of Life grid; DeckCollectionScreen.Hall.cs)
+            if (st.Hall != null && !IsAr(st))
+            {
+                BuildHallEditor(phase, st);
+                return;
+            }
+
             var ar = IsAr(st);
             var wide = !ar && IsWideLayout(phase);
             const float barH = 96f;
@@ -1585,7 +1626,7 @@ namespace WRLDZ.UI.Shell
                     st.PoolGrid = ChipGrid(phase, st, 0.630f, 0.00f, 1f, 0.800f, "PoolGrid",
                         out st.PoolScroll, pinFromTop: chromeBottom + 28f);
                     RefitPool(st);
-                    var listHead = Label(phase, "CARD LIST", 12, DuelystUi.GoldHot, TextAnchor.MiddleLeft);
+                    var listHead = Label(phase, "COLLECTION", 12, DuelystUi.GoldHot, TextAnchor.MiddleLeft);
                     PinTop(listHead.rectTransform, 0.630f, 0.82f, chromeBottom, 26f);
                     st.MatchLine = L(phase, "", 11, DuelystUi.TextMuted, TextAnchor.MiddleRight);
                     PinTop(st.MatchLine.rectTransform, 0.82f, 1f, chromeBottom, 26f);
@@ -1598,7 +1639,7 @@ namespace WRLDZ.UI.Shell
                     st.PoolGrid = ChipGrid(phase, st, 0f, 0.00f, 1f, 0.320f, "PoolGrid",
                         out st.PoolScroll);
                     RefitPool(st);
-                    var listHead = Label(phase, "CARD LIST", 12, DuelystUi.GoldHot, TextAnchor.MiddleLeft);
+                    var listHead = Label(phase, "COLLECTION", 12, DuelystUi.GoldHot, TextAnchor.MiddleLeft);
                     FloatingPanel.Place(listHead.rectTransform, 0.02f, 0.320f, 0.40f, 0.358f);
                     st.MatchLine = L(phase, "", 11, DuelystUi.TextMuted, TextAnchor.MiddleRight);
                     FloatingPanel.Place(st.MatchLine.rectTransform, 0.40f, 0.320f, 0.98f, 0.358f);
@@ -1710,12 +1751,13 @@ namespace WRLDZ.UI.Shell
             }
 
             FillConstructionBoard(st);
+            if (st.Hall != null) HallDecorateNow(st);
         }
 
         static void RestoreScrollY(ScrollRect scroll, float contentY)
         {
             if (scroll == null || scroll.content == null || scroll.viewport == null) return;
-            scroll.content.GetComponent<DeckPoolFit>()?.Fit(force: true);
+            if (scroll.content.TryGetComponent(out DeckPoolFit poolFit)) poolFit.Fit(force: true);
             var max = Mathf.Max(0f, scroll.content.rect.height - scroll.viewport.rect.height);
             var y = Mathf.Clamp(contentY, 0f, max);
             var pos = scroll.content.anchoredPosition;
@@ -1725,6 +1767,12 @@ namespace WRLDZ.UI.Shell
 
         static void WriteMatchLine(State st, int deckShown = -1)
         {
+            if (st?.Hall != null)
+            {
+                HallMatchLine(st);
+                return;
+            }
+
             if (st?.MatchLine == null) return;
             var total = st.PoolRows != null ? st.PoolRows.Count : 0;
             var shown = st.PoolVisible;
@@ -1845,7 +1893,8 @@ namespace WRLDZ.UI.Shell
                 }
             }
 
-            var q = (st.Search ?? "").Trim();
+            // P4: "-word" tokens exclude (any mode); the hall's NAME / TEXT scope and its ERA chip narrow the ids first
+            var q = HallQuery(st, ids);
             var filterPool = FilterAppliesToPool(st);
             var deckIds = st.InDeck != InDeckFilter.Any ? DeckIdSet(st) : null;
             var rows = new List<PoolRow>();
@@ -2750,6 +2799,19 @@ namespace WRLDZ.UI.Shell
                     st.Archetype = i == 0 ? "" : arches[i - 1];
                     RefreshTray();
                 });
+
+            if (st.Hall != null)
+            {
+                // P4 (D13): the ERA chip = ErazFormat.InPool per card, for the era the deck is built in (TryAdd's Original)
+                FacetHeader(content.transform, "ERA");
+                FacetChips(content.transform, new[] { "ANY", "ORIGINAL" },
+                    i => (st.Hall.Era ? 1 : 0) == i,
+                    i =>
+                    {
+                        st.Hall.Era = i == 1;
+                        RefreshTray();
+                    });
+            }
         }
 
         static string[] WithAny(string[] rest)
@@ -3433,6 +3495,12 @@ namespace WRLDZ.UI.Shell
 
         static void Status(State st, string msg, bool ok)
         {
+            if (st.Hall != null)
+            {
+                HallStatus(st, msg, ok);
+                return;
+            }
+
             if (st.Status == null) return;
             st.Status.text = msg ?? "";
             st.Status.color = ok
@@ -3627,8 +3695,9 @@ namespace WRLDZ.UI.Shell
 
         static void RefitPool(State st)
         {
-            if (st?.PoolGrid is RectTransform rt)
-                rt.GetComponent<DeckPoolFit>()?.Fit(force: true);
+            var rt = st != null ? st.PoolGrid as RectTransform : null;
+            if (rt != null && rt.TryGetComponent(out DeckPoolFit fit))
+                fit.Fit(force: true);
         }
 
         /// <summary>
@@ -3670,6 +3739,13 @@ namespace WRLDZ.UI.Shell
         sealed class DeckPoolFit : MonoBehaviour
         {
             public RectTransform Viewport;
+
+            /// <summary>P4: the hall's House of Life cells (deck_&lt;layout&gt;.json geo.D.grid: 6 × 132 × 192 landscape,
+            /// 4 × 218 × 318 portrait, the name and pips under each card in its own gap); 0 = today's tile math.</summary>
+            public int HallCols;
+            public Vector2 HallCell;
+            public Vector2 HallGap;
+            public float HallPad;
             bool _fitting;
             int _lastN = -1;
             float _lastW = -1f;
@@ -3698,13 +3774,16 @@ namespace WRLDZ.UI.Shell
                 _lastN = n;
                 _lastW = w;
                 _lastH = h;
-                const float pad = DeckPoolLayout.Pad;
+                var hall = HallCols > 0 && HallCell.x > 1f && HallCell.y > 1f;
+                var pad = hall ? HallPad : DeckPoolLayout.Pad;
                 const float gap = ChipGap;
-                var cols = DeckPoolLayout.Columns(w, gap);
-                var cardW = DeckPoolLayout.CardWidth(w, cols, gap);
-                var cardH = cardW * (ChipH / ChipW);
+                var cols = hall ? HallCols : DeckPoolLayout.Columns(w, gap);
+                var cardW = hall ? HallCell.x : DeckPoolLayout.CardWidth(w, cols, gap);
+                var cardH = hall ? HallCell.y : cardW * (ChipH / ChipW);
+                var gapX = hall ? HallGap.x : gap;
+                var gapY = hall ? HallGap.y : gap;
                 var rows = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(1, n) / (float)cols));
-                var totalH = pad * 2f + rows * cardH + Mathf.Max(0, rows - 1) * gap;
+                var totalH = pad * 2f + rows * cardH + Mathf.Max(0, rows - 1) * gapY;
                 // Preserve vertical scroll. Zeroing anchoredPosition every
                 // LateUpdate jumped CARD LIST back to the top while scrolling.
                 var scrollY = rt.anchoredPosition.y;
@@ -3731,8 +3810,9 @@ namespace WRLDZ.UI.Shell
                     child.anchorMax = new Vector2(0f, 1f);
                     child.pivot = new Vector2(0f, 1f);
                     child.sizeDelta = new Vector2(cardW, cardH);
-                    child.anchoredPosition = DeckPoolLayout.ChipPos(
-                        col, row, cardW, cardH, gap);
+                    child.anchoredPosition = hall
+                        ? new Vector2(pad + col * (cardW + gapX), -(pad + row * (cardH + gapY)))
+                        : DeckPoolLayout.ChipPos(col, row, cardW, cardH, gap);
                 }
 
                 _fitting = false;

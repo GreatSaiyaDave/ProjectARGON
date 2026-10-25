@@ -44,6 +44,13 @@ namespace WRLDZ.UI.MenuV6
             var need = LayoutUtility.GetPreferredHeight(rt);
             var have = vp.rect.height * (rt.anchorMax.y - rt.anchorMin.y);
             if (have <= 1f || need <= have + .5f) return;
+            // P4 (the P3 landing: the CREDITS row sat below the fold): first the rows close up — the list's gaps to 4, its
+            // rows (the 64 / 76 px ListRows) down to a 48 px touch floor — so every row, Credits included, is on the sheet;
+            // only a list still taller than the body scrolls
+            Compact(rt, need, have);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+            need = LayoutUtility.GetPreferredHeight(rt);
+            if (need <= have + .5f) return;
             rt.anchorMin = new Vector2(rt.anchorMin.x, rt.anchorMax.y);
             rt.pivot = new Vector2(rt.pivot.x, 1f);
             rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, 0f);
@@ -55,6 +62,40 @@ namespace WRLDZ.UI.MenuV6
             sr.viewport = vp;
             sr.content = rt;
             sr.scrollSensitivity = 24f;
+        }
+
+        const float RowFloor = 48f;
+
+        static void Compact(RectTransform list, float need, float have)
+        {
+            var vlg = list.GetComponent<VerticalLayoutGroup>();
+            if (vlg != null && vlg.spacing > 4f)
+            {
+                need -= (vlg.spacing - 4f) * Mathf.Max(0, list.childCount - 1);
+                vlg.spacing = 4f;
+            }
+
+            float rows = 0f, fixedH = 0f;
+            for (var i = 0; i < list.childCount; i++)
+            {
+                var le = list.GetChild(i).GetComponent<LayoutElement>();
+                if (le == null) continue;
+                if (le.minHeight >= 60f) rows += le.minHeight;
+                else fixedH += Mathf.Max(le.minHeight, le.preferredHeight);
+            }
+
+            if (rows <= 0f) return;
+            var room = rows - (need - have);
+            var s = Mathf.Clamp(room / rows, RowFloor / 64f, 1f);
+            for (var i = 0; i < list.childCount; i++)
+            {
+                var le = list.GetChild(i).GetComponent<LayoutElement>();
+                if (le == null || le.minHeight < 60f) continue;
+                le.minHeight = Mathf.Max(RowFloor, Mathf.Round(le.minHeight * s));
+                le.preferredHeight = le.minHeight;
+            }
+
+            _ = fixedH;
         }
 
         /// <summary>The credits sheet over the current sheet; its close returns to it.</summary>

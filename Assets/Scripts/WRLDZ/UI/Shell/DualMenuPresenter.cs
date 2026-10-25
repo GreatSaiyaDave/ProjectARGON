@@ -25,7 +25,8 @@ namespace WRLDZ.UI.Shell
     /// P3 (BUILD_PLAN §6 P3 step 4): under a SanctuaryChrome marker (the overlay shells' ModalHost) the phone sheet is the
     /// v6.3 false door (<see cref="FalseDoorFrame"/>, revealed by the Puzzle-lock) at the window anchors over the map and at
     /// the Stone's contract rect over the Stone; the same names, the same Frame, the same HubChrome header / well / BACK.
-    /// The deck builder (dense) and the AR frame keep today's look until P4.
+    /// The AR frame keeps today's look. P4: the deck builder (BuildFrame deckHall) is the v6.3 offering hall (<see cref="DeckHall"/>): the
+    /// same Frame (PhoneMenu_ root, BodyWell → BodyHost, the Close chip, Title / Subtitle), full screen.
     /// </summary>
     public static class DualMenuPresenter
     {
@@ -71,13 +72,18 @@ namespace WRLDZ.UI.Shell
         /// a glanceable sheet. The Compact chrome preset is ~72%x64%, which leaves a deck board
         /// with unreadable card cells — dense screens get a near-full-bleed window instead.
         /// </param>
+        /// <param name="deckHall">
+        /// P4: the deck builder's own opt-in to the v6.3 offering hall (<see cref="DeckHall"/>). Only DeckCollectionScreen
+        /// passes it: other dense sheets (CHOOSE YOUR OPPONENT, DUEL SETUP) keep today's dense frame.
+        /// </param>
         public static Frame BuildFrame(
             Transform modalHost,
             string title,
             string subtitle,
             Action onClose,
             UiPresentation? force = null,
-            bool dense = false)
+            bool dense = false,
+            bool deckHall = false)
         {
             // explicit != null, not ?.: ScreenRouter is a MonoBehaviour (Unity null)
             var router = ScreenRouter.Instance;
@@ -85,7 +91,7 @@ namespace WRLDZ.UI.Shell
 
             return presentation == UiPresentation.ArDiskHolo
                 ? BuildArFrame(modalHost, title, subtitle, onClose, dense)
-                : BuildPhoneFrame(modalHost, title, subtitle, onClose, dense);
+                : BuildPhoneFrame(modalHost, title, subtitle, onClose, dense, deckHall);
         }
 
         /// <summary>Close avatar / leftover sheets so they cannot sit on top of the next menu.</summary>
@@ -96,8 +102,35 @@ namespace WRLDZ.UI.Shell
         }
 
         public static Frame BuildPhoneFrame(
-            Transform modalHost, string title, string subtitle, Action onClose, bool dense = false)
+            Transform modalHost, string title, string subtitle, Action onClose, bool dense = false, bool deckHall = false)
         {
+            // P4 (BUILD_PLAN §6 P4): the deck builder (its own deckHall opt-in, never "dense" alone: other dense sheets keep
+            // today's frame) is the v6.3 offering hall — the whole screen, its back chip the Close; its rows keep today's
+            // painters (the hall paints itself, never under a Sanctuary marker)
+            if (dense && deckHall)
+            {
+                try
+                {
+                    var hall = DeckHall.Build(modalHost, title, subtitle, onClose);
+                    if (hall != null)
+                        return new Frame
+                        {
+                            Root = hall.Root,
+                            BodyHost = hall.BodyHost,
+                            Dim = null,
+                            Title = hall.Title,
+                            Subtitle = hall.Subtitle,
+                            Presentation = UiPresentation.NonArPortrait
+                        };
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning("[WRLDZ MenuV6] deck hall " + title + " fell back to today's frame: " + ex.Message);
+                    var broken = modalHost != null ? modalHost.Find("PhoneMenu_" + title) : null;
+                    if (broken != null) FloatingPanel.DestroyNow(broken.gameObject);
+                }
+            }
+
             // P3: the v6.3 false door under a SanctuaryChrome marker (never the dense deck builder: P4, §11 F3)
             if (!dense && SanctuaryChrome.Under(modalHost))
             {
@@ -264,7 +297,7 @@ namespace WRLDZ.UI.Shell
                     root.offsetMax = new Vector2(m * k, m * k);
                 }
 
-                var door = FalseDoorFrame.AnyRect(root, lay, F, lh, crackKey, dimImg, k);
+                var door = FalseDoorFrame.AnyRect(root, lay, F, lh, crackKey, dimImg, k, overStone);
                 if (door == null)
                 {
                     FloatingPanel.DestroyNow(go);

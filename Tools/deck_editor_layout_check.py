@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Offline checks for the deck editor CARD LIST / construction board layout.
+"""Offline checks for the deck editor COLLECTION / construction board layout.
 
 The Cloud VM has no Unity Editor. This script:
   1. Guards the PinBelow-on-content footgun that packed chips to the right.
   2. Replays DeckPoolLayout math (pad 6, last column at width-pad).
   3. Replays DeckBoardLayout across real Game-view sizes and asserts the
      three piles share a card size, a left edge and a column pitch, and that
-     no row is sliced off the bottom of a tray.
+     no row is sliced off the bottom of a tray. P4: the board is the v6.3 hall's
+     altar (10 x 4 at the baked wells, EXTRA and SIDE on one row), fitted into
+     MenuShellOverlay under the aspect scaler (1920x1080 / match 0.5 landscape).
 
 Exit 1 on failure. Keep formulas in lockstep with
 Assets/Scripts/WRLDZ/UI/Shell/DeckCollectionScreen.cs (DeckPoolLayout)
@@ -92,7 +94,8 @@ def check_pool_fill() -> None:
 
 class Board:
     """Mirror of DeckBoardLayout. Values are read out of the C# so the two
-    cannot drift apart silently."""
+    cannot drift apart silently. P4: EXTRA and SIDE share one row under MAIN
+    (faces at XRowScale), so the budget is well(rows) + well(1 x-row face)."""
 
     def __init__(self, src: str) -> None:
         self.aspect = const_float(src, "BoardCardAspect")
@@ -111,10 +114,20 @@ class Board:
         self.well_pad = const_float(src, "WellPad")
         self.gap_x = const_float(src, "GapX")
         self.gap_y = const_float(src, "GapY")
+        self.x_scale = const_float(src, "XRowScale")
+        self.x_split = const_float(src, "XRowSplit")
+        self.x_spacing = const_float(src, "XRowSpacing")
+        self.x_head = {True: const_float(src, "XHeadExtraW"), False: const_float(src, "XHeadSideW")}
+        self.x_gap = const_float(src, "XGapX")
+        self.hall_cols = const_int(src, "HallCols")
+        self.hall_rows = const_int(src, "HallRows")
+        self.hall_slot = {"land": const_float(src, "HallSlotLand"),
+                          "port": const_float(src, "HallSlotPort")}
         self.tray_chrome = (self.tray_pad_top + self.tray_pad_bottom
                             + self.head + self.tray_spacing)
-        self.board_chrome = (self.board_pad_y * 2 + self.board_spacing * 2
-                             + self.tray_chrome * 3)
+        self.x_tray_chrome = self.tray_pad_top + self.tray_pad_bottom
+        self.board_chrome = (self.board_pad_y * 2 + self.board_spacing
+                             + self.tray_chrome + self.x_tray_chrome)
 
     def row_width(self, board_w: float) -> float:
         return max(32.0, board_w - self.board_pad_x * 2
@@ -127,6 +140,25 @@ class Board:
     def well_for(self, rows: int, card_h: float) -> float:
         return self.well_pad * 2 + rows * card_h + max(0, rows - 1) * self.gap_y
 
+    def x_well_for(self, card_h: float) -> float:
+        return self.well_for(1, card_h * self.x_scale)
+
+    def x_run(self, board_w: float, extra: bool) -> float:
+        row = max(32.0, board_w - self.board_pad_x * 2 - self.x_spacing)
+        tray = row * (self.x_split if extra else 1 - self.x_split)
+        return max(8.0, tray - self.tray_pad_x * 2 - self.x_head[extra] - self.well_pad * 2)
+
+    def hall_board(self, slot_x: float, slot_y: float, slot_w: float) -> tuple:
+        ch = slot_w * self.aspect
+        w = (self.hall_cols * slot_w + (self.hall_cols - 1) * self.gap_x
+             + (self.well_pad + self.tray_pad_x + self.board_pad_x) * 2)
+        h = (self.board_chrome + self.well_for(self.hall_rows, ch)
+             + self.x_well_for(ch) + 0.5)
+        x = slot_x - self.well_pad - self.tray_pad_x - self.board_pad_x
+        y = (slot_y - self.well_pad - self.head - self.tray_spacing
+             - self.tray_pad_top - self.board_pad_y)
+        return x, y, w, h
+
     def solve(self, board_w: float, board_h: float, main_slots: int) -> dict:
         main_slots = max(1, main_slots)
         budget = max(24.0, board_h - self.board_chrome)
@@ -137,7 +169,7 @@ class Board:
                 break
             ch = cw * self.aspect
             rows = max(1, math.ceil(main_slots / cols))
-            if self.well_for(rows, ch) + self.well_for(1, ch) * 2 > budget:
+            if self.well_for(rows, ch) + self.x_well_for(ch) > budget:
                 continue
             plan = dict(cols=cols, card_w=cw, card_h=ch, rows=rows)
             break
@@ -148,22 +180,16 @@ class Board:
                 cols -= 1
             cw = self.card_width_for(board_w, cols)
             ch = cw * self.aspect
-            room = budget - self.well_pad * 6
-            if ch * 3 > room:
-                ch = max(16.0, room / 3)
+            room = budget - self.well_pad * 4
+            if ch * (1 + self.x_scale) > room:
+                ch = max(16.0, room / (1 + self.x_scale))
                 cw = ch / self.aspect
-                cols = max(self.cols_min,
-                           min(self.cols_max,
-                               math.floor((self.row_width(board_w) + self.gap_x)
-                                          / (cw + self.gap_x))))
-                cw = self.card_width_for(board_w, cols)
-                ch = cw * self.aspect
             plan = dict(cols=cols, card_w=cw, card_h=ch,
                         rows=max(1, math.ceil(main_slots / cols)))
 
-        row_well = self.well_for(1, plan["card_h"])
+        row_well = self.x_well_for(plan["card_h"])
         main_need = self.well_for(plan["rows"], plan["card_h"])
-        main_room = budget - row_well * 2
+        main_room = budget - row_well
         if main_need <= main_room:
             main_well, scrolls, visible = main_need, False, plan["rows"]
         else:
@@ -171,12 +197,12 @@ class Board:
                                       / (plan["card_h"] + self.gap_y)))
             main_well, scrolls, visible = self.well_for(whole, plan["card_h"]), True, whole
 
-        slack = max(0.0, budget - (main_well + row_well * 2))
+        slack = max(0.0, budget - (main_well + row_well))
         if slack > 0.5:
             if scrolls:
-                row_well += slack * 0.5
+                row_well += slack
             else:
-                share = plan["rows"] + 2.0
+                share = plan["rows"] + 1.0
                 main_well += slack * (plan["rows"] / share)
                 row_well += slack * (1.0 / share)
 
@@ -186,18 +212,33 @@ class Board:
 
 
 def canvas_scale(screen_w: float, screen_h: float) -> float:
-    """CanvasScaler ScaleWithScreenSize, 1080x2340 reference, match 0.65."""
+    """P4 (BUILD_PLAN §11 F3): MenuShellOverlay opts into UiTheme.ApplyForAspect —
+    a landscape surface (wider than 1.15 x tall) takes the 1920x1080 reference at
+    match 0.5, a portrait one today's 1080x2340 at match 0.65."""
+    if screen_w > screen_h * 1.15:
+        return (screen_w / 1920.0) ** 0.5 * (screen_h / 1080.0) ** 0.5
     return (screen_w / 1080.0) ** 0.35 * (screen_h / 2340.0) ** 0.65
 
 
-# phase / board fractions measured off the built hierarchy:
-# panel → BodyWell(0.92 x, 0.76 y) → BodyHost → PhaseBody(0.968 x, 0.938 y)
-PHASE_W_FRAC = 0.660
-PHASE_H_FRAC = 0.4976
-WIDE_BOARD_X = 0.615
-WIDE_CHROME = 176.0      # searchTop 112 + searchH 56 + 8
-NARROW_CHROME = 256.0    # searchTop 192 + searchH 56 + 8
-NARROW_BOARD_Y0 = 0.360
+# The hall (deck_<lay>.json, the approved deck page): the stage, slot 0 of the
+# 10 x 4 altar, the altar slab and, in portrait, the search band under the
+# shared row (decision 12: the row ends above the band). The hall is built in
+# stage px and fitted into the overlay canvas (uniform contain), so the board
+# below is the same at every view of a layout; the canvas model gives its
+# on-screen size.
+HALL = {
+    "land": dict(stage=(1920.0, 1080.0), slot0=(72.0, 318.0),
+                 altar=(46.0, 248.0, 923.0, 958.0), below=None),
+    "port": dict(stage=(1080.0, 2340.0), slot0=(44.0, 604.0),
+                 altar=(18.0, 534.0, 1055.0, 1386.0), below=1300.0),
+}
+# EXTRA / SIDE on one row under MAIN: the board's right edge over the stage width
+# (the plan's "split 0.615 -> about 0.49")
+WIDE_BOARD_X = 0.48
+# The page's pitch (deck_land.json geo.D.altar gx 5 / gy 7; the .xrow faces 54.6 wide at a 62.6 pitch): the board
+# above is derived from the C# constants, so without this pin a changed gap would still "fit" while the cards leave
+# the baked wells. (Portrait's page gy is 8: one board spacing serves both plans, a 1 px / row P5 parity item.)
+PAGE_PITCH_LAND = dict(gap_x=5.0, gap_y=7.0, x_gap=8.0)
 
 GAME_VIEWS = (
     ("short landscape 1378x656", 1378, 656, True),
@@ -208,58 +249,80 @@ GAME_VIEWS = (
 )
 
 
-def board_rect(screen_w: float, screen_h: float, wide: bool) -> tuple[float, float]:
+def board_rect(b: "Board", screen_w: float, screen_h: float, wide: bool):
+    lay = "land" if wide else "port"
+    hall = HALL[lay]
     scale = canvas_scale(screen_w, screen_h)
-    phase_w = PHASE_W_FRAC * screen_w / scale
-    phase_h = PHASE_H_FRAC * screen_h / scale
-    if wide:
-        return WIDE_BOARD_X * phase_w, phase_h - WIDE_CHROME
-    return phase_w, (phase_h - NARROW_CHROME) - NARROW_BOARD_Y0 * phase_h
+    cw, ch = screen_w / scale, screen_h / scale
+    sw, sh = hall["stage"]
+    k = min(cw / sw, ch / sh)
+    x, y, w, h = b.hall_board(hall["slot0"][0], hall["slot0"][1], b.hall_slot[lay])
+    return lay, hall, (x, y, w, h), k, scale
 
 
 def check_board(board_src: str) -> None:
     b = Board(board_src)
     print(f"  board chrome {b.board_chrome:.0f}px "
-          f"(tray chrome {b.tray_chrome:.0f} x3)")
+          f"(MAIN tray {b.tray_chrome:.0f} + shared row {b.x_tray_chrome:.0f})")
     for label, sw, sh, wide in GAME_VIEWS:
-        bw, bh = board_rect(sw, sh, wide)
-        scale = canvas_scale(sw, sh)
+        lay, hall, (bx, by, bw, bh), k, scale = board_rect(b, sw, sh, wide)
+        slot = b.hall_slot[lay]
+        ax0, ay0, ax1, ay1 = hall["altar"]
+        if bx < ax0 - 0.5 or by < ay0 - 0.5 or bx + bw > ax1 + 0.5 or by + bh > ay1 + 0.5:
+            fail(f"{label}: board {bx:.0f},{by:.0f} {bw:.0f}x{bh:.0f} leaves the altar slab {hall['altar']}")
+        if hall["below"] is not None and by + bh > hall["below"] + 0.01:
+            fail(f"{label}: the shared row ends at {by + bh:.1f}, under the search band at {hall['below']:.0f}")
+        if wide and abs((bx + bw) / hall["stage"][0] - WIDE_BOARD_X) > 0.01:
+            fail(f"{label}: the altar split moved to {(bx + bw) / hall['stage'][0]:.3f} (WIDE_BOARD_X {WIDE_BOARD_X})")
+        if wide:
+            for key, want in PAGE_PITCH_LAND.items():
+                got = getattr(b, key)
+                if abs(got - want) > 0.01:
+                    fail(f"{label}: {key} {got:g} is not the page's {want:g} (the cards would leave the baked wells)")
         for main_n in (40, 60):
             p = b.solve(bw, bh, main_n)
             cw, ch = p["card_w"], p["card_h"]
 
-            # 1. Every pile draws the same face.
-            if cw < b.min_card and not p["scrolls"] and cw * 3 > p["budget"]:
+            # 1. MAIN lays the hall's 10 columns at the baked wells' size.
+            if p["cols"] != b.hall_cols or abs(cw - slot) > 0.5:
+                fail(f"{label}/{main_n}: {p['cols']} cols of {cw:.1f} — the hall's wells are "
+                     f"{b.hall_cols} x {slot:.0f}")
+            if cw < b.min_card and not p["scrolls"]:
                 fail(f"{label}/{main_n}: card {cw:.0f} under floor {b.min_card:.0f}")
 
             # 2. Trays fit the board exactly — no pile pushed past the edge.
-            used = (b.board_chrome + p["main_well"] + p["row_well"] * 2)
+            used = b.board_chrome + p["main_well"] + p["row_well"]
             if used > bh + 0.6:
                 fail(f"{label}/{main_n}: trays need {used:.0f}px of a {bh:.0f}px board")
 
-            # 3. Whole rows only — no card sliced at a tray edge.
+            # 3. Whole rows only — no card sliced at a tray edge; the altar shows its 4 rows.
             vis = (p["main_well"] - b.well_pad * 2 + b.gap_y) / (ch + b.gap_y)
             if p["scrolls"] and abs(vis - round(vis)) > 0.02:
                 fail(f"{label}/{main_n}: MAIN shows {vis:.2f} rows while scrolling")
-            if p["row_well"] + 0.01 < b.well_for(1, ch):
-                fail(f"{label}/{main_n}: Extra/Side well {p['row_well']:.0f} "
-                     f"clips a {ch:.0f}px card")
+            if p["visible"] != b.hall_rows:
+                fail(f"{label}/{main_n}: MAIN shows {p['visible']} rows, the altar has {b.hall_rows}")
+            if p["row_well"] + 0.01 < b.x_well_for(ch):
+                fail(f"{label}/{main_n}: shared-row well {p['row_well']:.0f} "
+                     f"clips a {ch * b.x_scale:.0f}px card")
 
-            # 4. A 15-card Extra row shares MAIN's pitch or fans inside the tray.
-            run = b.row_width(bw)
-            packed = 15 * cw + 14 * b.gap_x
-            step = cw + b.gap_x if packed <= run else (run - cw) / 14
-            if step * 14 + cw > run + 0.01:
-                fail(f"{label}/{main_n}: Extra row overruns the tray")
+            # 4. A 15-card EXTRA (or SIDE) row keeps its pitch or fans inside its half of the row.
+            xcw = cw * b.x_scale
+            for extra in (True, False):
+                run = b.x_run(bw, extra)
+                packed = 15 * xcw + 14 * b.x_gap
+                step = xcw + b.x_gap if packed <= run else (run - xcw) / 14
+                if step * 14 + xcw > run + 0.01 or step <= 0:
+                    fail(f"{label}/{main_n}: {'EXTRA' if extra else 'SIDE'} row overruns its tray")
 
+            px = cw * k * scale
             if main_n == 40:
-                print(f"  {label:26s} board {bw:.0f}x{bh:.0f} → "
+                print(f"  {label:26s} {lay} board {bw:.0f}x{bh:.0f} (fit k {k:.3f}) -> "
                       f"{p['cols']:2d} cols, card {cw:.0f}x{ch:.0f} "
-                      f"({cw*scale:.0f}x{ch*scale:.0f}px), "
+                      f"({px:.0f}x{px * b.aspect:.0f}px), "
                       f"{p['rows']} rows, {p['visible']} visible"
-                      f"{' (scrolls)' if p['scrolls'] else ''}")
+                      f"{' (scrolls)' if p['scrolls'] else ''}; shared row {xcw:.1f}x{ch * b.x_scale:.1f}")
             else:
-                print(f"  {'':26s} 60-card main → {p['cols']:2d} cols, "
+                print(f"  {'':26s} 60-card main -> {p['cols']:2d} cols, "
                       f"card {cw:.0f}, {p['rows']} rows, {p['visible']} visible"
                       f"{' (scrolls)' if p['scrolls'] else ''}")
 
@@ -316,6 +379,14 @@ def check_source_invariants(collection: str, board: str) -> None:
     # Clamped ScrollRect bottom-pins content smaller than the viewport.
     if "RectTransform.Axis.Vertical, h);" not in board:
         fail("empty pile content is not padded to the well height")
+
+    # P4: EXTRA and SIDE share one row, solved by the same plan (their face = MAIN's x XRowScale).
+    if '"XRow"' not in board or "fit.BindRow(" not in board:
+        fail("the shared EXTRA / SIDE row is missing from the construction board")
+    if "fit.FaceScale = main ? 1f : DeckBoardLayout.XRowScale;" not in board:
+        fail("the shared row no longer takes its face from MAIN's plan")
+    if "XWellFor(ch) > budget" not in board:
+        fail("Solve no longer budgets one shared row (well(rows) + well(1 x-row face))")
 
 
 def main() -> int:

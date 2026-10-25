@@ -81,6 +81,16 @@ namespace WRLDZ.EditorTools
                 }
             }
 
+            // the menu build's own checks (P3 sheets, P4 deck hall) press buttons in edit mode: every press that reaches
+            // WrldzAudio.Ensure leaves a "WRLDZ_Audio" root (DontDestroyOnLoad throws outside Play); these checks remove the
+            // strays they made (P3 landing: ~40 per run)
+            void OurCheck(string name, Action act) => Check(name, () =>
+            {
+                var before = StrayIds();
+                try { act(); }
+                finally { DestroyNewStrays(before); }
+            });
+
             sb.AppendLine("WRLDZ menu smoke");
             UiFoundation.EnsureEventSystem();
             FreeUiKit.EnsureLoaded();
@@ -325,7 +335,7 @@ namespace WRLDZ.EditorTools
             // CHOOSE YOUR DUEL (its cards, STAY), each recess ledger (its CTA label and the hint), the Ring seek, QUIT (the fold
             // question and the sign-out line; FOLD is never pressed: it signs out); SETTINGS opens SettingsScreen in the false
             // door with its CREDITS row (the boot's credit text).
-            Check("MenuV6 sheets over the Stone: DUEL, the recess ledgers, the Ring seek, QUIT, SETTINGS -> CREDITS (1920x1080, 1080x2340)", () =>
+            OurCheck("MenuV6 sheets over the Stone: DUEL, the recess ledgers, the Ring seek, QUIT, SETTINGS -> CREDITS (1920x1080, 1080x2340)", () =>
             {
                 foreach (var (w, h) in new[] { (1920, 1080), (1080, 2340) })
                     WithHub("HubSmokeV6Sheets", w, h, menu =>
@@ -439,8 +449,8 @@ namespace WRLDZ.EditorTools
 
             // P3 (D5 / §11 F5, D19): an overlay sheet wears the false door, its rows the Sanctuary look — also rows built after
             // ShowOverlay returned (SystemsSheets' Refresh closures) — its close is synchronous, and the same painters outside a
-            // marker (the duel HUD, the Overworld) keep today's look; the deck builder keeps today's frame until P4.
-            Check("MenuV6 sheets: the false door over the map, painters behind the marker, synchronous close", () =>
+            // marker (the duel HUD, the Overworld) keep today's look; the deck builder (P4: the offering hall) paints itself.
+            OurCheck("MenuV6 sheets: the false door over the map, painters behind the marker, synchronous close", () =>
             {
                 if (!SheetData.Has(MenuLayoutKind.Landscape)) throw new Exception("sheet data missing (the P3 art set is not installed)");
                 try
@@ -484,14 +494,17 @@ namespace WRLDZ.EditorTools
                     aclose.onClick.Invoke();
                     if (art != null && art.gameObject.activeSelf) throw new Exception("ARTIFACTS still visible after Close (D19)");
                     if (!artClosed) throw new Exception("ARTIFACTS Close did not reach its handler");
-                    // the deck builder keeps today's frame until P4 (MenuShell unmarks the host for it; §11 F3)
+                    // the deck builder is the offering hall (P4): MenuShell unmarks the host for it; it never takes the false door
+                    // and none of its parts is a Sanctuary painter's
                     SanctuaryChrome.Mark(modal.gameObject, false, SanctuaryHost.Overlay);
                     DeckCollectionScreen.Build(modal, () => { }, UiPresentation.NonArPortrait);
                     var deckRoot = FindNamed(modal, "PhoneMenu_DECK");
                     if (deckRoot == null) throw new Exception("DECK missing");
-                    if (deckRoot.GetComponent<FalseDoorFrame>() != null) throw new Exception("the deck builder took the false door (P4)");
+                    if (deckRoot.GetComponent<FalseDoorFrame>() != null) throw new Exception("the deck builder took the false door");
                     if (deckRoot.GetComponentsInChildren<SanctuaryPainted>(true).Length > 0)
-                        throw new Exception("the deck builder took the Sanctuary look (P4)");
+                        throw new Exception("the deck builder took the Sanctuary look");
+                    if (DeckHallSpec.WhyNot(MenuLayoutKind.Landscape) == null && deckRoot.GetComponent<DeckHall>() == null)
+                        throw new Exception("the deck builder did not build the offering hall");
                 }
                 finally
                 {
@@ -500,20 +513,91 @@ namespace WRLDZ.EditorTools
                 }
             });
 
-            Check("DeckCollection phone", () =>
+            OurCheck("DeckCollection phone", () =>
             {
                 DeckCollectionScreen.Build(host, () => { }, UiPresentation.NonArPortrait);
                 RequireLabel(host, "MAIN  ");
                 RequireLabel(host, "EXTRA  ");
                 RequireLabel(host, "SIDE  ");
-                RequireLabel(host, "CARD LIST");
+                RequireLabel(host, "COLLECTION");
             });
-            Check("DeckCollection AR holo", () =>
+            OurCheck("DeckCollection AR holo", () =>
             {
                 DeckCollectionScreen.Build(host, () => { }, UiPresentation.ArDiskHolo);
                 RequireLabel(host, "MAIN  ");
                 RequireLabel(host, "EXTRA  ");
                 RequireLabel(host, "SIDE  ");
+            });
+            // P4 (BUILD_PLAN §6 P4 verify): the offering hall in both plans — the frame contract (PhoneMenu_DECK, its direct
+            // BodyWell, the back chip named Close), the two-space tray titles and COLLECTION, the tabs (BINDER hidden, D13),
+            // the Caret, the shared EXTRA / SIDE row, the Scale and the box; then the hall's checks on the deck in memory (the
+            // Close guard with MAIN emptied in memory, "-word", the inspect sheet, DRAW 5 UI-only). Nothing is saved.
+            OurCheck("Deck hall: the offering hall, its labels, the shared row, the Close guard, DRAW 5 (1920x1080, 1080x2340)", () =>
+            {
+                foreach (var (w, hh, kind) in new[] { (1920, 1080, MenuLayoutKind.Landscape), (1080, 2340, MenuLayoutKind.Portrait) })
+                {
+                    var tag = w + "x" + hh + ": ";
+                    var why = DeckHallSpec.WhyNot(kind);
+                    if (why != null) throw new Exception(tag + why + " (the P4 art set is not installed)");
+                    var dh = new GameObject("DeckHallSmoke", typeof(RectTransform)).GetComponent<RectTransform>();
+                    dh.SetParent(canvas, false);
+                    FloatingPanel.Stretch(dh);
+                    try
+                    {
+                        MenuAspect.Force(w, hh);
+                        DeckCollectionScreen.Build(dh, () => { }, UiPresentation.NonArPortrait);
+                        var root = FindNamed(dh, "PhoneMenu_DECK");
+                        if (root == null) throw new Exception(tag + "PhoneMenu_DECK missing");
+                        var hall = root.GetComponent<DeckHall>();
+                        if (hall == null) throw new Exception(tag + "the deck builder did not build the hall");
+                        if (hall.Kind != kind) throw new Exception(tag + "the hall took the " + hall.Kind + " plan");
+                        if (Kid(root, "BodyWell") == null) throw new Exception(tag + "the hall lost its direct BodyWell");
+                        var close = CompAt<Button>(FindNamed(root, "Close"));
+                        if (close == null) throw new Exception(tag + "no back chip named Close");
+                        foreach (var l in new[] { "MAIN  ", "EXTRA  ", "SIDE  ", "COLLECTION", "DECK", "SAVE", "DRAW 5", "TOME", "TRADE", "ALL" })
+                            RequireLabel(root, l);
+                        foreach (var t in root.GetComponentsInChildren<Text>(true))
+                            if (t != null && t.text == "BINDER") throw new Exception(tag + "BINDER is shown (D13: no source)");
+                        foreach (var n in new[] { "Caret", "XRow", "MaatScale", "InspectPopup", "Save" })
+                            if (FindNamed(root, n) == null) throw new Exception(tag + n + " missing");
+                        if (root.GetComponentsInChildren<SanctuaryPainted>(true).Length > 0)
+                            throw new Exception(tag + "a Sanctuary painter painted the hall");
+                        var probe = root.GetComponent<DeckCollectionScreen.HallProbe>();
+                        if (probe == null) throw new Exception(tag + "no hall probe");
+                        var r = probe.Run();
+                        if (string.IsNullOrEmpty(r)) throw new Exception(tag + "the hall probe reported nothing");
+                        // the hall is the deck builder's own opt-in: another dense sheet (CHOOSE YOUR OPPONENT, DUEL SETUP pass
+                        // dense) keeps today's dense frame
+                        var other = DualMenuPresenter.BuildFrame(dh, "DENSE SMOKE", "sub", () => { }, UiPresentation.NonArPortrait,
+                            dense: true);
+                        if (other.Root == null) throw new Exception(tag + "a dense non-deck frame did not build");
+                        if (other.Root.GetComponent<DeckHall>() != null)
+                            throw new Exception(tag + "a dense non-deck frame took the deck hall");
+                    }
+                    finally
+                    {
+                        MenuAspect.ClearForce();
+                        UnityEngine.Object.DestroyImmediate(dh.gameObject);
+                    }
+                }
+            });
+            OurCheck("Deck builder legacy fallback (no hall data): today's builder with COLLECTION", () =>
+            {
+                var lh = new GameObject("DeckLegacySmoke", typeof(RectTransform)).GetComponent<RectTransform>();
+                lh.SetParent(canvas, false);
+                FloatingPanel.Stretch(lh);
+                try
+                {
+                    DeckHallSpec.ForceLegacy = true;
+                    DeckCollectionScreen.Build(lh, () => { }, UiPresentation.NonArPortrait);
+                    if (lh.GetComponentInChildren<DeckHall>(true) != null) throw new Exception("the forced legacy build took the hall");
+                    foreach (var l in new[] { "MAIN  ", "EXTRA  ", "SIDE  ", "COLLECTION" }) RequireLabel(lh, l);
+                }
+                finally
+                {
+                    DeckHallSpec.ForceLegacy = false;
+                    UnityEngine.Object.DestroyImmediate(lh.gameObject);
+                }
             });
             Check("Inventory phone", () =>
             {
@@ -977,7 +1061,7 @@ namespace WRLDZ.EditorTools
                 DestroyNamed("OverworldMapCanvas");
             });
 
-            Check("DeckCollection caret opens on-hand dropdown", () =>
+            OurCheck("DeckCollection caret opens on-hand dropdown", () =>
             {
                 DeckCollectionScreen.Build(host, () => { }, UiPresentation.NonArPortrait);
                 var caret = FindNamed(host, "Caret");
@@ -1357,6 +1441,45 @@ namespace WRLDZ.EditorTools
             }
 
             return null;
+        }
+
+        static readonly string[] StrayNames = { "WRLDZ_Audio", "WRLDZ_Sfx" };
+
+        /// <summary>The scene roots an edit-mode button press can leave behind (see OurCheck).</summary>
+        static System.Collections.Generic.HashSet<GameObject> StrayIds()
+        {
+            var ids = new System.Collections.Generic.HashSet<GameObject>();
+            for (var s = 0; s < UnityEngine.SceneManagement.SceneManager.sceneCount; s++)
+            {
+                var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(s);
+                if (!scene.isLoaded) continue;
+                foreach (var go in scene.GetRootGameObjects())
+                    if (go != null && Array.IndexOf(StrayNames, go.name) >= 0)
+                        ids.Add(go);
+            }
+
+            return ids;
+        }
+
+        /// <summary>Remove the strays made since <paramref name="before"/> (never one that was there already).</summary>
+        static int DestroyNewStrays(System.Collections.Generic.HashSet<GameObject> before)
+        {
+            if (Application.isPlaying) return 0;
+            var n = 0;
+            for (var s = 0; s < UnityEngine.SceneManagement.SceneManager.sceneCount; s++)
+            {
+                var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(s);
+                if (!scene.isLoaded) continue;
+                foreach (var go in scene.GetRootGameObjects())
+                {
+                    if (go == null || Array.IndexOf(StrayNames, go.name) < 0) continue;
+                    if (before != null && before.Contains(go)) continue;
+                    UnityEngine.Object.DestroyImmediate(go);
+                    n++;
+                }
+            }
+
+            return n;
         }
 
         static void DestroyNamed(string name)

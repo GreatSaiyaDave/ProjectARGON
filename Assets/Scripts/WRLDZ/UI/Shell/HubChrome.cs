@@ -602,6 +602,13 @@ namespace WRLDZ.UI.Shell
 
         public static RectTransform ListHead(Transform host, string text)
         {
+            // P4 (the P3 landing: SETTINGS' MENU / DEVICE / DUEL showed only their tick): the v6.3 section cap
+            if (SanctuaryPaint.On(host))
+            {
+                var head = SanctuaryPaint.Head(host, text);
+                if (head != null) return head;
+            }
+
             var go = new GameObject("Head", typeof(RectTransform), typeof(LayoutElement));
             go.transform.SetParent(host, false);
             go.GetComponent<LayoutElement>().minHeight = 32f;

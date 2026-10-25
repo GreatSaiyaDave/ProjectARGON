@@ -176,7 +176,8 @@ namespace WRLDZ.UI.MenuV6
         {
             if (img == null) return;
             var stone = SanctuaryChrome.OverStone(parent);
-            var a = stone ? MenuV6Linear.Shade(.8 * .9 * .92) : MenuChromePrefs.DimAlpha;
+            // P4: over the Stone the dim is solved on the dark room (ShadeDark): Shade() doubled the room's darkening
+            var a = stone ? MenuV6Linear.ShadeDark(.8 * .9 * .92) : MenuChromePrefs.DimAlpha;
             img.color = new Color(DimInk.r, DimInk.g, DimInk.b, a);
             SanctuaryPainted.Tag(img, "OverlayDim");
         }
@@ -263,8 +264,12 @@ namespace WRLDZ.UI.MenuV6
             var slot = cta ? Type(t, "recess", "go") : Type(t, "recess", "", 0);
             if (tt != null && slot != null)
             {
-                Style(tt, slot, keepSize: true, color: ink);
+                // P4 (the P3 landing: SETTINGS / BAZAAR rows read small): a list row takes the ledger row's own size
+                // (texts.recess, Cairo 19 px at the stage scale) when it is larger than the caller's budget; capsules keep theirs
+                var rowSize = row && slot.Size > tt.fontSize;
+                Style(tt, slot, keepSize: !rowSize, color: ink);
                 if (!cta && slot.Weight < 700) tt.fontStyle = FontStyle.Bold;
+                if (rowSize) tt.verticalOverflow = VerticalWrapMode.Overflow;
             }
 
             var blurb = t.Find("Blurb");
@@ -308,6 +313,76 @@ namespace WRLDZ.UI.MenuV6
             rt.anchorMax = new Vector2(x1, y1);
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
+        }
+
+        /// <summary>
+        /// P4: ListHead under the marker — the ledgers' section cap (texts.recess "cap": Cairo 700 caps, the page's tracking and
+        /// ochre), on a row tall enough for its line (the legacy head's 32 px row truncated a display-size line to nothing),
+        /// with a short gold rule under it. Null when the sheet data is missing (the caller builds today's head).
+        /// </summary>
+        public static RectTransform Head(Transform host, string text)
+        {
+            if (host == null) return null;
+            var slot = Type(host, "recess", "cap");
+            if (slot == null) return null;
+            var k = SheetDraw.CanvasK(host);
+            var go = new GameObject("Head", typeof(RectTransform), typeof(LayoutElement));
+            go.transform.SetParent(host, false);
+            var le = go.GetComponent<LayoutElement>();
+            le.minHeight = Mathf.Max(36f, slot.Size * 2.4f);
+            le.preferredHeight = le.minHeight;
+            le.flexibleWidth = 1f;
+            var t = new GameObject("Text", typeof(RectTransform), typeof(Text)).GetComponent<Text>();
+            t.transform.SetParent(go.transform, false);
+            TextFx.Apply(t, slot, text ?? "");
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
+            t.alignment = TextAnchor.LowerLeft;
+            Anchor(t.rectTransform, 0.02f, 0.30f, 0.98f, 1f);
+            var rule = new GameObject("Tick", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+            rule.transform.SetParent(go.transform, false);
+            rule.sprite = UiFoundation.WhiteSprite();
+            rule.color = new Color(LineGold.r, LineGold.g, LineGold.b, .7f);
+            rule.raycastTarget = false;
+            var rt = rule.rectTransform;
+            rt.anchorMin = new Vector2(0.02f, 0.12f);
+            rt.anchorMax = new Vector2(0.02f, 0.12f);
+            rt.pivot = new Vector2(0f, .5f);
+            rt.sizeDelta = new Vector2(48f * k, Mathf.Max(1f, 1.5f * k));
+            SanctuaryPainted.Tag(t, "ListHead");
+            return go.GetComponent<RectTransform>();
+        }
+
+        /// <summary>P4: a sheet's status line (SystemsSheets' wallet / result line) as a ledger strip: the strip cel under it
+        /// and the ledger's row type at its row size, no cyan, no heavy outline.</summary>
+        public static void StatusStrip(Text status)
+        {
+            if (status == null) return;
+            var slot = Type(status.transform, "recess", "", 0);
+            if (slot == null) return;
+            var sp = Part(status.transform, "recess", "strip");
+            if (sp != null && status.transform.parent != null)
+            {
+                var plate = new GameObject("StatusStrip", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+                plate.transform.SetParent(status.transform.parent, false);
+                plate.transform.SetSiblingIndex(status.transform.GetSiblingIndex());
+                plate.sprite = sp;
+                plate.type = Image.Type.Sliced;
+                plate.raycastTarget = false;
+                SheetDraw.SliceAt(plate, SheetDraw.CanvasK(status.transform));
+                var a = status.rectTransform;
+                var p = plate.rectTransform;
+                p.anchorMin = new Vector2(Mathf.Max(0f, a.anchorMin.x - .01f), a.anchorMin.y);
+                p.anchorMax = new Vector2(Mathf.Min(1f, a.anchorMax.x + .01f), a.anchorMax.y);
+                p.offsetMin = p.offsetMax = Vector2.zero;
+                SanctuaryPainted.Tag(plate, "StatusStrip");
+            }
+
+            Style(status, slot, keepSize: false, color: Label, align: TextAnchor.MiddleLeft);
+            status.horizontalOverflow = HorizontalWrapMode.Wrap;
+            status.verticalOverflow = VerticalWrapMode.Overflow;
+            status.resizeTextForBestFit = false;
+            SanctuaryPainted.Tag(status, "StatusLine");
         }
 
         /// <summary>HeaderBar's title / subtitle type (the sheets' own: texts.quit .h, texts.recess .sub).</summary>

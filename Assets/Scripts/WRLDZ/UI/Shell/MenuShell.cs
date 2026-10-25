@@ -16,7 +16,9 @@ namespace WRLDZ.UI.Shell
     /// <item><see cref="CreateOverlay"/> — map/hub modal only (no second nav bar)</item>
     /// </list>
     /// P3 (BUILD_PLAN D5 / §11 F5): the ModalHost carries a SanctuaryChrome marker, so every sheet mounted here wears the v6.3
-    /// false door and the HubChrome painters paint its rows in the sanctuary look (the deck builder keeps today's until P4).
+    /// false door and the HubChrome painters paint its rows in the sanctuary look (the deck builder paints itself: the hall).
+    /// P4 (§11 F3): the overlay canvas opts into the aspect plan (D1) — a landscape surface takes the 1920×1080 reference at
+    /// match 0.5, so every sheet renders at the landscape scale the stills were judged at; a portrait one keeps today's.
     /// </summary>
     public class MenuShell : MonoBehaviour
     {
@@ -62,7 +64,9 @@ namespace WRLDZ.UI.Shell
             UiFoundation.EnsureEventSystem();
             FreeUiKit.EnsureLoaded();
 
-            var canvas = WrldzTheme.Canvas("MenuShellOverlay", sortOrder);
+            // P4 (§11 F3): the aspect plan, in the same commit as the deck relayout and the deck guard's canvas model
+            var canvas = WrldzTheme.Canvas("MenuShellOverlay", sortOrder, aspect: true);
+            MenuAspectScaler.Attach(canvas);
             var shell = canvas.gameObject.AddComponent<MenuShell>();
             shell.OverlayOnly = true;
             shell.BuildOverlay(canvas);
@@ -229,7 +233,8 @@ namespace WRLDZ.UI.Shell
         public void ShowOverlay(MenuId id)
         {
             DualMenuPresenter.HideTransientMenus();
-            // P3: the deck builder keeps today's look until P4 (§11 F3); every other sheet is a v6.3 sheet
+            // the deck builder paints itself (P4: the offering hall), never through the Sanctuary painters; every other sheet is
+            // a v6.3 sheet
             if (ModalHost != null) SanctuaryChrome.Mark(ModalHost.gameObject, id != MenuId.DeckCollection, _host);
 
             // Overlay shells hide when empty — show canvas when opening a sheet

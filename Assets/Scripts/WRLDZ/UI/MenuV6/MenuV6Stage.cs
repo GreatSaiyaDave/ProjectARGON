@@ -1772,7 +1772,8 @@ namespace WRLDZ.UI.MenuV6
             if (_slatesGroup == null && Parts.Slates != null) _slatesGroup = SheetDraw.Group(Parts.Slates.gameObject);
             if (_tilesGroup == null && Tiles != null) _tilesGroup = SheetDraw.Group(Tiles.gameObject);
             if (_statusGroup == null && Status != null) _statusGroup = SheetDraw.Group(Status.gameObject);
-            var a = MenuV6Linear.Fade(SheetMath.RoomDom(MenuV6MathF.Clamp01(dim)));
+            // P4: solved over the dark room with the real sRGB curve (Fade's over-black power law hid the slates, P3 landing)
+            var a = MenuV6Linear.FadeDark(SheetMath.RoomDom(MenuV6MathF.Clamp01(dim)));
             SheetDraw.SetA(_slatesGroup, a);
             SheetDraw.SetA(_tilesGroup, a);
             SheetDraw.SetA(_statusGroup, a);

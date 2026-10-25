@@ -64,7 +64,7 @@ namespace WRLDZ.UI.MenuV6
         public bool Closing => !double.IsNaN(_t1);
 
         /// <summary>The Stone's flat-dim opacity at rest (#dim.flat .92 × .8 × .9), Linear-corrected.</summary>
-        static float FlatDim(double k) => MenuV6Linear.Shade(.92 * .8 * .9 * MenuV6MathF.Clamp01(k));
+        static float FlatDim(double k) => MenuV6Linear.ShadeDark(.92 * .8 * .9 * MenuV6MathF.Clamp01(k));
 
         protected bool Init(MenuV6Stage stone, RectTransform host, Image dim, SheetKind kind)
         {

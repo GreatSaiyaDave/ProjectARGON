@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace WRLDZ.UI.MenuV6
 {
@@ -58,6 +59,36 @@ namespace WRLDZ.UI.MenuV6
             var r = canvasRoot.rect;
             if (r.width <= 0f || r.height <= 0f) return 1f;
             return Mathf.Min(r.width / stage.x, r.height / stage.y);
+        }
+    }
+
+    /// <summary>
+    /// P4 (§11 F3): keeps an aspect-plan canvas's scaler on the plan of the current surface (MenuShellOverlay): a Game view
+    /// turned from landscape to portrait (or a capture's forced size) re-applies <see cref="UiTheme.ApplyForAspect"/>; the
+    /// sheets re-anchor, nothing is rebuilt. Edit mode keeps what the canvas was built with.
+    /// </summary>
+    [DisallowMultipleComponent]
+    public sealed class MenuAspectScaler : MonoBehaviour
+    {
+        CanvasScaler _scaler;
+        bool _land;
+
+        public static MenuAspectScaler Attach(RectTransform canvas)
+        {
+            if (canvas == null) return null;
+            if (!canvas.TryGetComponent(out MenuAspectScaler f)) f = canvas.gameObject.AddComponent<MenuAspectScaler>();
+            f._scaler = canvas.GetComponent<CanvasScaler>();
+            f._land = MenuAspect.IsLandscape;
+            return f;
+        }
+
+        void LateUpdate()
+        {
+            if (!Application.isPlaying || _scaler == null) return;
+            var land = MenuAspect.IsLandscape;
+            if (land == _land) return;
+            _land = land;
+            UiTheme.ApplyForAspect(_scaler, MenuAspect.Surface);
         }
     }
 }

@@ -667,6 +667,10 @@ namespace WRLDZ.UI.Shell
             FloatingPanel.Place(status.rectTransform, 0.02f, 0.01f, 0.98f, 0.10f);
             status.alignment = TextAnchor.MiddleLeft;
             status.color = DuelystUi.Cyan;
+            // P4 (the P3 landing: BAZAAR kept the big cyan currency line): in the v6.3 sheets the status line is a ledger
+            // strip — the strip cel behind it, the ledger's row type (Cairo, the label ochre-cream), sized as its rows
+            if (WRLDZ.UI.MenuV6.SanctuaryPaint.On(body))
+                WRLDZ.UI.MenuV6.SanctuaryPaint.StatusStrip(status);
 
             var scroll = new GameObject("List", typeof(RectTransform), typeof(Image), typeof(ScrollRect));
             scroll.transform.SetParent(body, false);

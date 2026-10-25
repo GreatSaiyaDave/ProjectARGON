@@ -199,7 +199,8 @@ namespace WRLDZ.UI.MenuV6
         void DrawDim(double u, double v)
         {
             var o = SheetMath.DimOpacity(SheetKind.Duel, u, v);   // #dim opacity (.8 dim)
-            var flat = MenuV6Linear.Shade(.92 * o);
+            // P4: the dim solved over the dark room (the P3 landing: Shade() left the room ~2× too dark)
+            var flat = MenuV6Linear.ShadeDark(.92 * o);
             if (_dimPlate != null) _dimPlate.color = new Color(1, 1, 1, Mathf.Clamp01(flat / .92f));
             foreach (var q in _dimQuads) q.color = new Color(3 / 255f, 2 / 255f, 6 / 255f, flat);
         }

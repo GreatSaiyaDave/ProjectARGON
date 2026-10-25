@@ -380,6 +380,21 @@ namespace WRLDZ.UI.MenuV6
         bool _cardsLoaded;
         readonly List<int> _cardIds = new();
 
+        /// <summary>P4: the deck hall's box (RelicBox) drives the lid / rise / light / Wdjat itself (open at rest, shut by SAVE)
+        /// instead of the plaque's hover; null = the menu's hover state.</summary>
+        public Func<double, (double lid, double rise, double light, double eye)> State;
+
+        /// <summary>P4: the cards standing in the box (the edited deck's first 3); loaded again on the next draw.</summary>
+        public void SetCards(IList<int> ids)
+        {
+            _cardIds.Clear();
+            if (ids != null) _cardIds.AddRange(ids);
+            _cardsLoaded = false;
+            foreach (var c in _cards)
+                if (c != null)
+                    c.Tex = null;
+        }
+
         public override bool Build(RigContext ctx, object host, Rect frame)
         {
             Init("box", ctx, host, frame);
@@ -447,8 +462,14 @@ namespace WRLDZ.UI.MenuV6
 
         public override void Tick(double t)
         {
-            var hv = Ctx.Plaque != null ? MenuV6RigMath.Clamp01(Ctx.Plaque.Value(t)) : 0;
-            MenuV6RigMath.BoxState(t, hv, out var lid, out var rise, out var light, out var eye, out _);
+            double lid, rise, light, eye;
+            if (State != null)
+                (lid, rise, light, eye) = State(t);
+            else
+            {
+                var hv = Ctx.Plaque != null ? MenuV6RigMath.Clamp01(Ctx.Plaque.Value(t)) : 0;
+                MenuV6RigMath.BoxState(t, hv, out lid, out rise, out light, out eye, out _);
+            }
             MenuV6RigMath.BoxLid(lid, out var k1, out var k2);
             var lift = Hb * (.14 * k1 + .56 * k2);
             var back = -D * .66 * k2;

@@ -60,6 +60,49 @@ namespace WRLDZ.UI.MenuV6
             return (float)Math.Pow(a, 2.2);
         }
 
+        /// <summary>The sRGB transfer (IEC 61966-2-1), both ways: the toe below 0.04045 is linear, which a pure 2.2 power
+        /// misses on the dark room.</summary>
+        public static double ToLinear(double c) => c <= .04045 ? c / 12.92 : Math.Pow((c + .055) / 1.055, 2.4);
+
+        public static double ToSrgb(double l) => l <= .0031308 ? l * 12.92 : 1.055 * Math.Pow(l, 1 / 2.4) - .055;
+
+        /// <summary>The room's mean level under a sheet (sRGB 33 / 255: the Stone room's slates and walls at rest, the P3
+        /// landing's captures) and the #dim.flat ink rgb(3, 2, 6).</summary>
+        public const double RoomDark = 33 / 255.0, DimInkLevel = 3.6 / 255.0;
+
+        /// <summary>
+        /// P4 (the P3 landing: the room behind an open sheet came out ~2× too dark): the Unity alpha of the page's flat dim of
+        /// opacity <paramref name="a"/> over the dark room, solved with the real sRGB curve at <see cref="RoomDark"/>:
+        /// lin(bg)(1 − u) + lin(ink) u = lin(bg (1 − a) + ink a). <see cref="Shade"/>'s 1 − (1 − a)^2.2 assumes a pure power
+        /// curve, so on a room that dims into the sRGB toe it darkens about twice as much as the page (a = .66: .908 vs .78;
+        /// p4/dimfix/dim_model.py: the sky band then measures 14.4 vs the page's 14.6).
+        /// </summary>
+        public static float ShadeDark(double a, double bg = RoomDark, double ink = DimInkLevel)
+        {
+            if (Off) return (float)(a < 0 ? 0 : a > 1 ? 1 : a);
+            if (a <= 0) return 0f;
+            if (a >= 1) return 1f;
+            double lb = ToLinear(bg), li = ToLinear(ink), lt = ToLinear(bg * (1 - a) + ink * a);
+            var d = lb - li;
+            return d <= 1e-9 ? (float)a : (float)Math.Max(0, Math.Min(1, (lb - lt) / d));
+        }
+
+        /// <summary>
+        /// P4: the room's DOM (the slates' text and chrome, the recess labels) faded to page opacity <paramref name="a"/> over
+        /// the dark room: the Unity alpha whose linear blend gives the page's sRGB mix for content of level
+        /// <paramref name="fg"/> over <paramref name="bg"/> (real sRGB curve). <see cref="Fade"/> (a^2.2) is exact over black
+        /// only; the slates' dark plates fade near-linearly, their bright text near a^2.2: .6 over .13 is the middle.
+        /// </summary>
+        public static float FadeDark(double a, double fg = .6, double bg = RoomDark)
+        {
+            if (Off) return (float)(a < 0 ? 0 : a > 1 ? 1 : a);
+            if (a <= 0) return 0f;
+            if (a >= 1) return 1f;
+            double lf = ToLinear(fg), lb = ToLinear(bg), lt = ToLinear(a * fg + (1 - a) * bg);
+            var d = lf - lb;
+            return d <= 1e-9 ? (float)a : (float)Math.Max(0, Math.Min(1, (lt - lb) / d));
+        }
+
         /// <summary>A dark "over" op (a shadow, the scan lines' ink) of page alpha <paramref name="a"/>: in linear light a
         /// dark layer darkens less, so its alpha rises to 1 − (1 − a)^2.2 (exact for black over any background).</summary>
         public static float Shade(double a)

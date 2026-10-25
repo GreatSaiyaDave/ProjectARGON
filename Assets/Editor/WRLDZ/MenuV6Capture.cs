@@ -442,8 +442,11 @@ namespace WRLDZ.EditorTools
             if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p2") || _phase.StartsWith("p3")))
                 yield return P2Shots();
             // P3 (BUILD_PLAN §6 P3 verify): the Stone's sheets at fixed sheet times, both plans, and the false door over an overlay
-            if (!string.IsNullOrEmpty(_phase) && _phase.StartsWith("p3"))
+            if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p3") || _phase.StartsWith("p4")))
                 yield return P3Shots();
+            // P4 (BUILD_PLAN §6 P4 verify): the offering hall, both plans
+            if (!string.IsNullOrEmpty(_phase) && _phase.StartsWith("p4"))
+                yield return P4Shots();
 
             // 4. WORLD MAP last: it leaves the scene
             yield return SetSize(1920, 1080);
@@ -691,15 +694,18 @@ namespace WRLDZ.EditorTools
                     continue;
                 }
 
+                // P4 (the P3 landing's compare): the sheet times of the approved stills themselves — v63_menu_03 at u 3.4, the
+                // ledgers (story v63_menu_08, deck v63_relics_03) at u 1.2, the Ring 04 / 04b / 04c at u 1.9 / 2.2 / 2.4 (2.4 is
+                // RingSheet.GoAt, where the seek holds and leaves the scene: shot a hair before it, the same held frame)
                 var plan = new (string control, string id, double[] us)[]
                 {
-                    ("Hero", "duel", new[] { .35, .8, 1.3, 1.9, 2.6, 4.0 }),
-                    ("Dest_DECK", "deck", new[] { 3.0 }),
+                    ("Hero", "duel", new[] { .35, .8, 1.3, 1.9, 2.6, 3.4, 4.0 }),
+                    ("Dest_DECK", "deck", new[] { 1.2, 3.0 }),
                     ("Dest_BAG", "bag", new[] { 3.0 }),
-                    ("Dest_STORY", "story", new[] { .5, 1.0, 1.6, 3.0 }),
+                    ("Dest_STORY", "story", new[] { .5, 1.0, 1.2, 1.6, 3.0 }),
                     ("Dest_BAZAAR", "bazaar", new[] { 3.0 }),
                     ("Tert_VIEW", "view", new[] { 3.0 }),
-                    ("MapBack", "ring", new[] { .4, .9, 1.5, 2.0, 2.35 }),
+                    ("MapBack", "ring", new[] { .4, .9, 1.5, 1.9, 2.0, 2.2, 2.35, RingSheet.GoAt - .001 }),
                     ("Quit", "quit", new[] { .6, 3.0 })
                 };
                 foreach (var (control, id, us) in plan)
@@ -822,6 +828,166 @@ namespace WRLDZ.EditorTools
                 Rebuild();
                 yield return Wait(.4f);
             }
+        }
+
+        /// <summary>
+        /// P4: for 1920×1080 and 1080×2340 — the deck builder (the offering hall) opened through the hub's overlay shell
+        /// (MenuShell.ShowOverlay(DeckCollection), the DECK ledger's route), on the owner's real decks, held at hall times: the
+        /// collection at 1.5 s (v63_deck_01, the entrance done) and the editor at rest (6.8 s, v63_deck_04's time), the inspect
+        /// sheet on the first collection card at rest (v63_deck_03), the +1 flight drawn on its own (HallProbe.FlyPreview:
+        /// no TryAdd) at u .2 / .4 / .6 and the landing burst at .9, a search with chips (an EXCLUDE word typed through the
+        /// field + the MONSTER chip, in memory; the chip pop at .2 and at rest), the deck select (the Caret's tap opens the
+        /// on-hand deck list; no deck is switched), DRAW 5 open, the box shut the way SAVE shuts it (.2 / .32 / 1.77 s:
+        /// v63_deck_05, shot without saving; HallProbe.Seal) and the lid lifting again as a deck select lifts it (.1 / .25 / .5).
+        /// The hall is closed by ClearOverlays (never through the back chip: no save).
+        /// </summary>
+        IEnumerator P4Shots()
+        {
+            foreach (var (w, h, lay) in new[] { (1920, 1080, "land"), (1080, 2340, "port") })
+            {
+                yield return SetSize(w, h);
+                var menu = Rebuild();
+                yield return Wait(.6f);
+                MenuShell shell = null;
+                foreach (var s in FindObjectsByType<MenuShell>())
+                    if (s != null && s.OverlayOnly && shell == null)
+                        shell = s;
+                if (shell == null)
+                {
+                    _notes.Add("p4 " + lay + ": no overlay shell");
+                    continue;
+                }
+
+                shell.ShowOverlay(MenuId.DeckCollection);
+                yield return Wait(.3f);
+                var hall = shell.ModalHost != null ? shell.ModalHost.GetComponentInChildren<DeckHall>(true) : null;
+                var probe = hall != null ? hall.GetComponent<DeckCollectionScreen.HallProbe>() : null;
+                if (hall == null || probe == null)
+                {
+                    _notes.Add("p4 " + lay + ": the deck builder did not build the hall: " + DeckHall.WhyNot());
+                    shell.ClearOverlays();
+                    continue;
+                }
+
+                foreach (var at in new[] { 1.5, 6.8 })
+                {
+                    hall.FreezeAt(at);
+                    yield return null;
+                    yield return new WaitForEndOfFrame();
+                    Shot("p4_" + lay + "_deck_t" + at.ToString("0.00", CultureInfo.InvariantCulture), 1);
+                }
+
+                MenuV6Clock.Unfreeze();
+                if (probe.ShowFirstCard())
+                {
+                    hall.FreezeAt(hall.Now + 2.0);
+                    yield return null;
+                    yield return new WaitForEndOfFrame();
+                    Shot("p4_" + lay + "_deck_inspect", 1);
+                    MenuV6Clock.Unfreeze();
+                    // the +1 flight, drawn only (no TryAdd: the deck is not touched)
+                    var tf = hall.Now;
+                    if (probe.FlyPreview())
+                    {
+                        foreach (var du in new[] { .2, .4, .6, .9 })
+                        {
+                            hall.FreezeAt(tf + du);
+                            yield return null;
+                            yield return new WaitForEndOfFrame();
+                            Shot("p4_" + lay + "_deck_plus1_u" + du.ToString("0.00", CultureInfo.InvariantCulture), 1);
+                        }
+
+                        MenuV6Clock.Unfreeze();
+                        yield return Wait(1.6f);
+                    }
+                    else _notes.Add("p4 " + lay + ": no +1 flight (no MAIN slot)");
+
+                    probe.HideCard();
+                    yield return Wait(1.6f);
+                }
+                else _notes.Add("p4 " + lay + ": no collection card to inspect");
+
+                // a search with chips (in memory: the EXCLUDE word through the field, the MONSTER chip)
+                var tq = hall.Now;
+                var q = probe.SearchPreview();
+                if (q != null)
+                {
+                    foreach (var du in new[] { .2, 1.2 })
+                    {
+                        hall.FreezeAt(tq + du);
+                        yield return null;
+                        yield return new WaitForEndOfFrame();
+                        Shot("p4_" + lay + "_deck_search_" + du.ToString("0.0", CultureInfo.InvariantCulture), 1);
+                    }
+
+                    MenuV6Clock.Unfreeze();
+                    probe.ClearSearch();
+                    yield return Wait(.6f);
+                }
+                else _notes.Add("p4 " + lay + ": nothing to search (empty collection)");
+
+                // the deck select: the Caret's own tap opens the on-hand deck list (no deck is picked)
+                var caret = Find(hall.transform, "Caret");
+                if (caret != null)
+                {
+                    var ped = new PointerEventData(EventSystem.current);
+                    ExecuteEvents.Execute(caret.gameObject, ped, ExecuteEvents.pointerDownHandler);
+                    ExecuteEvents.Execute(caret.gameObject, ped, ExecuteEvents.pointerUpHandler);
+                    yield return Wait(.5f);
+                    hall.FreezeAt(hall.Now);
+                    yield return null;
+                    yield return new WaitForEndOfFrame();
+                    Shot("p4_" + lay + "_deck_select", 1);
+                    MenuV6Clock.Unfreeze();
+                    if (Find(hall.transform, "DeckDropdown") == null) _notes.Add("p4 " + lay + ": the Caret opened no DeckDropdown");
+                    ped = new PointerEventData(EventSystem.current);
+                    ExecuteEvents.Execute(caret.gameObject, ped, ExecuteEvents.pointerDownHandler);
+                    ExecuteEvents.Execute(caret.gameObject, ped, ExecuteEvents.pointerUpHandler);
+                    yield return Wait(.4f);
+                }
+                else _notes.Add("p4 " + lay + ": no Caret");
+
+                if (probe.DrawFive(true))
+                {
+                    hall.FreezeAt(hall.Now + 2.0);
+                    yield return null;
+                    yield return new WaitForEndOfFrame();
+                    Shot("p4_" + lay + "_deck_draw5", 1);
+                    MenuV6Clock.Unfreeze();
+                    probe.DrawFive(false);
+                }
+                else _notes.Add("p4 " + lay + ": MAIN is empty (no DRAW 5 shot)");
+
+                probe.Seal();
+                var t0 = hall.Now;
+                foreach (var dt in new[] { .2, .32, 1.77 })
+                {
+                    hall.FreezeAt(t0 + dt);
+                    yield return null;
+                    yield return new WaitForEndOfFrame();
+                    Shot("p4_" + lay + "_deck_sealed_" + dt.ToString("0.00", CultureInfo.InvariantCulture), 1);
+                }
+
+                MenuV6Clock.Unfreeze();
+                // the lid lifts again, as a deck select (or the next edit) lifts it
+                probe.Unseal();
+                var tl = hall.Now;
+                foreach (var dv in new[] { .1, .25, .5 })
+                {
+                    hall.FreezeAt(tl + dv);
+                    yield return null;
+                    yield return new WaitForEndOfFrame();
+                    Shot("p4_" + lay + "_deck_lid_" + dv.ToString("0.00", CultureInfo.InvariantCulture), 1);
+                }
+
+                MenuV6Clock.Unfreeze();
+                Rects("p4_" + lay + "_deck", hall.transform);
+                shell.ClearOverlays();
+                yield return null;
+            }
+
+            Rebuild();
+            yield return Wait(.4f);
         }
 
         /// <summary>Tear the menu down (its overlays, host and canvas), as <see cref="Rebuild"/> does before it builds.</summary>
@@ -1125,15 +1291,18 @@ namespace WRLDZ.EditorTools
 
         /// <summary>Every named RectTransform under the menu canvas → screen rect, bottom-left origin
         /// ({"screen":[W,H],"origin":"bottom-left","rects":{path:[x,y,w,h]}}, the compare.py contract).</summary>
-        void Rects(string name, DuelDiskMenuUI menu)
+        void Rects(string name, DuelDiskMenuUI menu) => Rects(name, menu != null ? menu.MenuCanvas : null);
+
+        /// <summary>Every named RectTransform's screen rect under <paramref name="root"/> (P4: the hall's own root).</summary>
+        void Rects(string name, Transform root)
         {
             var sb = new StringBuilder();
             sb.Append("{\"screen\": [").Append(Screen.width).Append(", ").Append(Screen.height)
                 .Append("], \"origin\": \"bottom-left\", \"rects\": {");
             var first = true;
             var corners = new Vector3[4];
-            if (menu != null && menu.MenuCanvas != null)
-                foreach (var rt in menu.MenuCanvas.GetComponentsInChildren<RectTransform>(true))
+            if (root != null)
+                foreach (var rt in root.GetComponentsInChildren<RectTransform>(true))
                 {
                     if (rt == null || !rt.gameObject.activeInHierarchy) continue;
                     rt.GetWorldCorners(corners);
@@ -1143,7 +1312,7 @@ namespace WRLDZ.EditorTools
                     var y1 = Mathf.Max(corners[0].y, corners[2].y);
                     if (!first) sb.Append(", ");
                     first = false;
-                    sb.Append(Q(PathOf(rt, menu.MenuCanvas))).Append(": [").Append(F(x0)).Append(", ").Append(F(y0))
+                    sb.Append(Q(PathOf(rt, root))).Append(": [").Append(F(x0)).Append(", ").Append(F(y0))
                         .Append(", ").Append(F(x1 - x0)).Append(", ").Append(F(y1 - y0)).Append("]");
                 }
 

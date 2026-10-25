@@ -239,7 +239,7 @@ namespace WRLDZ.UI.MenuV6
         /// rect), <paramref name="crackKey"/> the cracks_sheets key built for that host.
         /// </summary>
         public static FalseDoorFrame AnyRect(RectTransform root, MenuLayoutKind lay, Rect fStage, float lintel, string crackKey,
-            Image dim, float k)
+            Image dim, float k, bool overStone = false)
         {
             if (root == null) return null;
             var json = SheetData.Root(lay);
@@ -261,6 +261,7 @@ namespace WRLDZ.UI.MenuV6
             f.Door.SetAsFirstSibling();
             f._dim = dim;
             f._dimBase = dim != null ? dim.color.a : 0f;
+            f._opaqueBody = overStone;
             f.PaintAnyRect(json);
             f.Cracks = f.BuildCracks(f.Door, crackKey, f.CrackFrame(crackKey));
             // the seams and the clasp ride above the clip (the page draws them on its courier canvas): a sibling that follows
@@ -292,7 +293,7 @@ namespace WRLDZ.UI.MenuV6
             var nine = RJ.D(frames, "nine");
             var tiles = RJ.D(frames, "tiles");
             var common = RJ.D(json, "commonParts");
-            var fill = MenuChromePrefsAlpha();
+            var fill = FillAlpha();
             // the whole frame at the fill's opacity, then its lintel band again at full (the lintel stays opaque)
             Slice(RJ.D(nine, "frame9"), "Frame9", Grow(F, 6), fill);
             var f9 = Door.Find("Frame9");
@@ -330,6 +331,12 @@ namespace WRLDZ.UI.MenuV6
             try { return WRLDZ.UI.Shell.MenuChromePrefs.PanelAlpha; }
             catch { return .94f; }
         }
+
+        bool _opaqueBody;
+
+        /// <summary>P4 (the P3 landing: with Transparency · Filament the Stone's labels showed through a sheet): over the Stone
+        /// the door's body is opaque, as the page's sheet is; the Transparency setting keeps the map visible round a sheet.</summary>
+        float FillAlpha() => _opaqueBody ? 1f : MenuChromePrefsAlpha();
 
         static Rect Grow(Rect r, float d) => new(r.x - d, r.y - d, r.width + 2 * d, r.height + 2 * d);
 
@@ -454,7 +461,7 @@ namespace WRLDZ.UI.MenuV6
             _well.color = new Color(0f, 0f, 0f, 0f);
             if (_fill == null) return;
             var c = _fill.color;
-            c.a = MenuChromePrefsAlpha();
+            c.a = FillAlpha();
             _fill.color = c;
         }
 

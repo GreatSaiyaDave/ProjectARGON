@@ -15,6 +15,13 @@ namespace WRLDZ.UI.Shell
     {
         static void BuildInspect(Transform body, State st)
         {
+            // P4: the hall's inspect sheet rises from the thumb band over the right column (DeckCollectionScreen.Hall.cs)
+            if (st.Hall != null)
+            {
+                BuildHallInspect(body, st);
+                return;
+            }
+
             var root = new GameObject("InspectPopup", typeof(RectTransform), typeof(Image));
             root.transform.SetParent(body, false);
             FloatingPanel.Place(root.GetComponent<RectTransform>(), 0.05f, 0.10f, 0.95f, 0.74f);
@@ -116,6 +123,12 @@ namespace WRLDZ.UI.Shell
 
         static void HideInspect(State st)
         {
+            if (st?.Hall != null)
+            {
+                HideHallInspect(st);
+                return;
+            }
+
             if (st?.Inspect != null)
                 st.Inspect.SetActive(false);
         }
@@ -123,6 +136,12 @@ namespace WRLDZ.UI.Shell
         static void ShowInspect(State st, int id)
         {
             if (st.Inspect == null) return;
+            if (st.Hall != null)
+            {
+                ShowHallInspect(st, id);
+                return;
+            }
+
             st.SelectedId = id;
             st.Inspect.SetActive(true);
             st.Inspect.transform.SetAsLastSibling();

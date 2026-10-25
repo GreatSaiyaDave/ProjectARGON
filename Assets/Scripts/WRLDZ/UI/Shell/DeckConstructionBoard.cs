@@ -18,13 +18,16 @@ namespace WRLDZ.UI.Shell
     /// </summary>
     public static partial class DeckCollectionScreen
     {
-        const float BoardCardAspect = 1.44f;
+        // P4 (BUILD_PLAN §6 P4 step 4): the altar of the v6.3 offering hall — 10 columns of the page's 78 × 114 wells
+        // (landscape; 94 × 137 portrait), so the aspect is the page's 114 / 78.
+        const float BoardCardAspect = 1.4615f;
         const float MaxCardW = 156f;
         // Floor for a legible face. The solver drops under it only when even
         // one row per pile would not fit — a squat card beats a clipped row.
         const float MinCardW = 44f;
-        const int MainColsMin = 8;
-        const int MainColsMax = 20;
+        // P4: Main always lays 10 columns (the hall's baked wells); more cards scroll whole rows.
+        const int MainColsMin = 10;
+        const int MainColsMax = 10;
 // Tall enough for WrldzType.Readable titles. 20px clipped a ~36px count.
         const float HeadBarH = 40f;
 
@@ -46,6 +49,8 @@ namespace WRLDZ.UI.Shell
         /// Pure board geometry. No Unity types beyond Mathf so the numbers can
         /// be replayed off-Editor. Keep in lockstep with
         /// Tools/deck_editor_layout_check.py.
+        /// P4: EXTRA and SIDE share one row under MAIN (the page's .xrow), their faces at <see cref="XRowScale"/> of MAIN's
+        /// (the page's 54.6 / 78), so the budget is well(rows) + well(1 at the x-row face), not well(rows) + 2 × well(1).
         /// </summary>
         internal static class DeckBoardLayout
         {
@@ -57,14 +62,41 @@ namespace WRLDZ.UI.Shell
             public const float TrayPadBottom = 3f;
             public const float TraySpacing = 1f;
             public const float WellPad = 2f;
-            public const float GapX = 4f;
-            public const float GapY = 3f;
+            public const float GapX = 5f;
+            public const float GapY = 7f;
 
-            /// <summary>Tray height above and below its card rows.</summary>
+            /// <summary>The shared row's faces against MAIN's (the page: 54.6 × 79.8 over 78 × 114).</summary>
+            public const float XRowScale = 0.7f;
+
+            /// <summary>EXTRA's share of the shared row (SIDE takes the rest; the page's SIDE label starts at x 421 of 58-911).</summary>
+            public const float XRowSplit = 0.42f;
+
+            public const float XRowSpacing = 4f;
+
+            /// <summary>The inline pile labels left of the shared-row wells ("EXTRA  3/15", "SIDE  0/15"): the page's
+            /// cards start at x 198.8 and 530.2 (deck_land.json geo.els.xrowItems).</summary>
+            public const float XHeadExtraW = 127f;
+            public const float XHeadSideW = 103f;
+
+            /// <summary>The shared row's own pitch gap (the page's .xrow: 62.6 px between 54.6 px faces).</summary>
+            public const float XGapX = 8f;
+
+            /// <summary>The hall's altar: 10 × 4 wells (BUILD_PLAN §6 P4 step 4).</summary>
+            public const int HallCols = 10;
+            public const int HallRows = 4;
+
+            /// <summary>The page's slot widths (deck_land / deck_port.json geo.D.altar.sw).</summary>
+            public const float HallSlotLand = 78f;
+            public const float HallSlotPort = 94f;
+
+            /// <summary>MAIN's tray height above and below its card rows.</summary>
             public const float TrayChrome = TrayPadTop + TrayPadBottom + HeadBarH + TraySpacing;
 
-            /// <summary>Board height that is never available to card rows.</summary>
-            public const float BoardChrome = BoardPadY * 2f + BoardSpacing * 2f + TrayChrome * 3f;
+            /// <summary>A shared-row tray: its label is inline, so only the pads.</summary>
+            public const float XTrayChrome = TrayPadTop + TrayPadBottom;
+
+            /// <summary>Board height that is never available to card rows (MAIN's tray + the shared row's).</summary>
+            public const float BoardChrome = BoardPadY * 2f + BoardSpacing + TrayChrome + XTrayChrome;
 
             public struct Plan
             {
@@ -88,10 +120,32 @@ namespace WRLDZ.UI.Shell
             public static float WellFor(int rows, float cardH) =>
                 WellPad * 2f + rows * cardH + Mathf.Max(0, rows - 1) * GapY;
 
+            /// <summary>The shared row's well for MAIN's face height <paramref name="cardH"/>.</summary>
+            public static float XWellFor(float cardH) => WellFor(1, cardH * XRowScale);
+
+            /// <summary>The well run of one shared-row pile (EXTRA when <paramref name="extra"/>, else SIDE) on a board.</summary>
+            public static float XRun(float boardW, bool extra)
+            {
+                var row = Mathf.Max(32f, boardW - BoardPadX * 2f - XRowSpacing);
+                var tray = row * (extra ? XRowSplit : 1f - XRowSplit);
+                return Mathf.Max(8f, tray - TrayPadX * 2f - (extra ? XHeadExtraW : XHeadSideW) - WellPad * 2f);
+            }
+
+            /// <summary>The hall's board (stage px) for slot 0 at (<paramref name="slotX"/>, <paramref name="slotY"/>) and
+            /// <paramref name="slotW"/>-wide slots: the cards land in the baked wells (BUILD_PLAN §6 P4 step 4).</summary>
+            public static void HallBoard(float slotX, float slotY, float slotW, out float x, out float y, out float w,
+                out float h)
+            {
+                var ch = slotW * BoardCardAspect;
+                w = HallCols * slotW + (HallCols - 1) * GapX + (WellPad + TrayPadX + BoardPadX) * 2f;
+                h = BoardChrome + WellFor(HallRows, ch) + XWellFor(ch) + 0.5f;
+                x = slotX - WellPad - TrayPadX - BoardPadX;
+                y = slotY - WellPad - HeadBarH - TraySpacing - TrayPadTop - BoardPadY;
+            }
+
             /// <summary>
-            /// Biggest card that still shows every MAIN row plus the Extra and
-            /// Side rows. Falls back to the smallest legible card (and lets
-            /// MAIN scroll) when the board is too short for the whole deck.
+            /// Biggest card that still shows every MAIN row plus the shared EXTRA / SIDE row. Falls back to the smallest
+            /// legible card (and lets MAIN scroll) when the board is too short for the whole deck.
             /// </summary>
             public static Plan Solve(float boardW, float boardH, int mainSlots)
             {
@@ -106,7 +160,7 @@ namespace WRLDZ.UI.Shell
                     if (cw < MinCardW) break;
                     var ch = cw * BoardCardAspect;
                     var rows = Mathf.Max(1, Mathf.CeilToInt(mainSlots / (float)cols));
-                    if (WellFor(rows, ch) + WellFor(1, ch) * 2f > budget) continue;
+                    if (WellFor(rows, ch) + XWellFor(ch) > budget) continue;
                     plan.Cols = cols;
                     plan.CardW = cw;
                     plan.CardH = ch;
@@ -118,22 +172,17 @@ namespace WRLDZ.UI.Shell
                 if (!solved)
                 {
                     // Nothing fits whole. Take the smallest legible card, and if
-                    // even one row per pile overflows, shrink under the floor —
-                    // a squat card beats a row sliced off at the tray edge.
+                    // even one MAIN row and the shared row overflow, shrink under the
+                    // floor — a squat card beats a row sliced off at the tray edge.
                     var cols = MainColsMax;
                     while (cols > MainColsMin && CardWidthFor(boardW, cols) < MinCardW) cols--;
                     var cw = CardWidthFor(boardW, cols);
                     var ch = cw * BoardCardAspect;
-                    var room = budget - WellPad * 6f;
-                    if (ch * 3f > room)
+                    var room = budget - WellPad * 4f;
+                    if (ch * (1f + XRowScale) > room)
                     {
-                        ch = Mathf.Max(16f, room / 3f);
+                        ch = Mathf.Max(16f, room / (1f + XRowScale));
                         cw = ch / BoardCardAspect;
-                        cols = Mathf.Clamp(
-                            Mathf.FloorToInt((RowWidth(boardW) + GapX) / (cw + GapX)),
-                            MainColsMin, MainColsMax);
-                        cw = CardWidthFor(boardW, cols);
-                        ch = cw * BoardCardAspect;
                     }
 
                     plan.Cols = cols;
@@ -142,9 +191,9 @@ namespace WRLDZ.UI.Shell
                     plan.MainRows = Mathf.Max(1, Mathf.CeilToInt(mainSlots / (float)cols));
                 }
 
-                plan.RowWell = WellFor(1, plan.CardH);
+                plan.RowWell = XWellFor(plan.CardH);
                 var mainNeed = WellFor(plan.MainRows, plan.CardH);
-                var mainRoom = budget - plan.RowWell * 2f;
+                var mainRoom = budget - plan.RowWell;
                 if (mainNeed <= mainRoom)
                 {
                     plan.MainWell = mainNeed;
@@ -162,18 +211,18 @@ namespace WRLDZ.UI.Shell
 
                 // Spend the leftover on breathing room, split by row count, so
                 // no tray is left with a dead band under its cards.
-                var used = plan.MainWell + plan.RowWell * 2f;
+                var used = plan.MainWell + plan.RowWell;
                 var slack = Mathf.Max(0f, budget - used);
                 if (slack > 0.5f)
                 {
                     if (plan.MainScrolls)
                     {
                         // Growing MAIN here would expose the top of the next row.
-                        plan.RowWell += slack * 0.5f;
+                        plan.RowWell += slack;
                     }
                     else
                     {
-                        var share = plan.MainRows + 2f;
+                        var share = plan.MainRows + 1f;
                         plan.MainWell += slack * (plan.MainRows / share);
                         plan.RowWell += slack * (1f / share);
                     }
@@ -187,11 +236,11 @@ namespace WRLDZ.UI.Shell
             /// too wide for its tray fans its faces the way Extra/Side overlap
             /// in a real client.
             /// </summary>
-            public static float StepFor(float run, int n, float cardW)
+            public static float StepFor(float run, int n, float cardW, float gap = GapX)
             {
-                if (n <= 1) return cardW + GapX;
-                var packed = n * cardW + (n - 1) * GapX;
-                return packed <= run ? cardW + GapX : (run - cardW) / (n - 1);
+                if (n <= 1) return cardW + gap;
+                var packed = n * cardW + (n - 1) * gap;
+                return packed <= run ? cardW + gap : (run - cardW) / (n - 1);
             }
         }
 
@@ -222,8 +271,23 @@ namespace WRLDZ.UI.Shell
 
             var fit = board.gameObject.AddComponent<DeckBoardFit>();
             st.MainTray = MakePileTray(board, st, Section.Main, fit);
-            st.ExtraTray = MakePileTray(board, st, Section.Extra, fit);
-            st.SideTray = MakePileTray(board, st, Section.Side, fit);
+            // P4: EXTRA and SIDE side by side on one row (the page's .xrow)
+            var xrow = new GameObject("XRow", typeof(RectTransform), typeof(HorizontalLayoutGroup),
+                typeof(LayoutElement)).GetComponent<RectTransform>();
+            xrow.SetParent(board, false);
+            var hlg = xrow.GetComponent<HorizontalLayoutGroup>();
+            hlg.spacing = DeckBoardLayout.XRowSpacing;
+            hlg.childAlignment = TextAnchor.UpperLeft;
+            hlg.childControlWidth = true;
+            hlg.childControlHeight = true;
+            hlg.childForceExpandWidth = false;
+            hlg.childForceExpandHeight = true;
+            var xle = xrow.GetComponent<LayoutElement>();
+            xle.flexibleHeight = 0f;
+            xle.flexibleWidth = 1f;
+            st.ExtraTray = MakePileTray(xrow, st, Section.Extra, fit);
+            st.SideTray = MakePileTray(xrow, st, Section.Side, fit);
+            fit.BindRow(xle);
             fit.Bind(board);
         }
 
@@ -233,7 +297,7 @@ namespace WRLDZ.UI.Shell
             var name = section.ToString();
             var main = section == Section.Main;
             var tray = new GameObject(name + "Tray", typeof(RectTransform), typeof(Image), typeof(Button),
-                typeof(VerticalLayoutGroup), typeof(LayoutElement))
+                typeof(LayoutElement))
                 .GetComponent<RectTransform>();
             tray.SetParent(board, false);
             var img = tray.GetComponent<Image>();
@@ -246,19 +310,46 @@ namespace WRLDZ.UI.Shell
             img.raycastTarget = true;
             var le = tray.GetComponent<LayoutElement>();
             le.flexibleHeight = 0f;
-            le.flexibleWidth = 1f;
-            var inner = tray.GetComponent<VerticalLayoutGroup>();
-            inner.padding = new RectOffset(
-                (int)DeckBoardLayout.TrayPadX, (int)DeckBoardLayout.TrayPadX,
-                (int)DeckBoardLayout.TrayPadTop, (int)DeckBoardLayout.TrayPadBottom);
-            inner.spacing = DeckBoardLayout.TraySpacing;
-            inner.childAlignment = TextAnchor.UpperLeft;
-            inner.childControlWidth = true;
-            inner.childControlHeight = true;
-            inner.childForceExpandWidth = true;
-            // Only the well is flexible. Force-expand would grow the header and
-            // leave a gap between a pile's title and its card faces.
-            inner.childForceExpandHeight = false;
+            le.flexibleWidth = main ? 1f : section == Section.Extra
+                ? DeckBoardLayout.XRowSplit
+                : 1f - DeckBoardLayout.XRowSplit;
+            if (!main)
+            {
+                le.minWidth = 0f;
+                le.preferredWidth = 0f;
+            }
+
+            HorizontalOrVerticalLayoutGroup inner;
+            if (main)
+            {
+                inner = tray.gameObject.AddComponent<VerticalLayoutGroup>();
+                inner.padding = new RectOffset(
+                    (int)DeckBoardLayout.TrayPadX, (int)DeckBoardLayout.TrayPadX,
+                    (int)DeckBoardLayout.TrayPadTop, (int)DeckBoardLayout.TrayPadBottom);
+                inner.spacing = DeckBoardLayout.TraySpacing;
+                inner.childAlignment = TextAnchor.UpperLeft;
+                inner.childControlWidth = true;
+                inner.childControlHeight = true;
+                inner.childForceExpandWidth = true;
+                // Only the well is flexible. Force-expand would grow the header and
+                // leave a gap between a pile's title and its card faces.
+                inner.childForceExpandHeight = false;
+            }
+            else
+            {
+                // the shared row: the label inline, left of the well
+                inner = tray.gameObject.AddComponent<HorizontalLayoutGroup>();
+                inner.padding = new RectOffset(
+                    (int)DeckBoardLayout.TrayPadX, (int)DeckBoardLayout.TrayPadX,
+                    (int)DeckBoardLayout.TrayPadTop, (int)DeckBoardLayout.TrayPadBottom);
+                inner.spacing = 0f;
+                inner.childAlignment = TextAnchor.UpperLeft;
+                inner.childControlWidth = true;
+                inner.childControlHeight = true;
+                inner.childForceExpandWidth = false;
+                inner.childForceExpandHeight = true;
+            }
+
             var btn = tray.GetComponent<Button>();
             btn.targetGraphic = img;
             btn.transition = Selectable.Transition.None;
@@ -272,9 +363,20 @@ namespace WRLDZ.UI.Shell
 
             var headBar = new GameObject("Head", typeof(RectTransform), typeof(LayoutElement));
             headBar.transform.SetParent(tray, false);
-            headBar.GetComponent<LayoutElement>().minHeight = HeadBarH;
-            headBar.GetComponent<LayoutElement>().preferredHeight = HeadBarH;
-            headBar.GetComponent<LayoutElement>().flexibleHeight = 0f;
+            var headLe = headBar.GetComponent<LayoutElement>();
+            if (main)
+            {
+                headLe.minHeight = HeadBarH;
+                headLe.preferredHeight = HeadBarH;
+                headLe.flexibleHeight = 0f;
+            }
+            else
+            {
+                var headW = section == Section.Extra ? DeckBoardLayout.XHeadExtraW : DeckBoardLayout.XHeadSideW;
+                headLe.minWidth = headW;
+                headLe.preferredWidth = headW;
+                headLe.flexibleWidth = 0f;
+            }
 
             var head = Label(headBar.transform, PileTitle(section, 0), 13, DuelystUi.TextCream,
                 TextAnchor.MiddleLeft);
@@ -335,6 +437,7 @@ namespace WRLDZ.UI.Shell
 
             var fit = content.AddComponent<DeckPileFit>();
             fit.SingleRow = !main;
+            fit.FaceScale = main ? 1f : DeckBoardLayout.XRowScale;
             fit.Viewport = well.GetComponent<RectTransform>();
             fit.Board = boardFit;
 
@@ -383,7 +486,8 @@ namespace WRLDZ.UI.Shell
             HighlightPiles(st);
             // Slot counts drive the row count, which drives the card size for
             // every pile — resolve the board before the piles lay themselves out.
-            st.BoardHost?.GetComponent<DeckBoardFit>()?.Solve(force: true);
+            // explicit null checks, not ?.: a destroyed board / a missing component is Unity's fake null (P4 unull scan)
+            if (st.BoardHost != null && st.BoardHost.TryGetComponent(out DeckBoardFit boardFit)) boardFit.Solve(force: true);
         }
 
         static void FillPile(State st, Transform host, List<int> ids, int ghostMin,
@@ -394,7 +498,7 @@ namespace WRLDZ.UI.Shell
             var count = ids?.Count ?? 0;
             var slots = section == Section.Main
                 ? Mathf.Max(ghostMin, count)
-                : Mathf.Max(count, TcgRules.ExtraDeckMax);
+                : st.Hall != null ? Mathf.Max(count, HallXRowEmpties) : Mathf.Max(count, TcgRules.ExtraDeckMax);
 
             for (var i = 0; i < slots; i++)
             {
@@ -413,8 +517,7 @@ namespace WRLDZ.UI.Shell
                 }
             }
 
-            var fit = host.GetComponent<DeckPileFit>();
-            fit?.Fit(force: true);
+            if (host.TryGetComponent(out DeckPileFit fit)) fit.Fit(force: true);
         }
 
         static void GhostFace(Transform host)
@@ -433,27 +536,39 @@ namespace WRLDZ.UI.Shell
             var mainN = st.Main?.Count ?? 0;
             var extraN = st.Extra?.Count ?? 0;
             var sideN = st.Side?.Count ?? 0;
+            // P4: in the hall the tabs and the Scale carry MAIN's count (its tray title stays, unpainted); the shared row's
+            // titles take the page's .xrow .lab colour
+            var cream = st.Hall != null ? HallLabelInk : DuelystUi.TextCream;
+            var danger = st.Hall != null ? HallDangerInk : DuelystUi.Danger;
             if (st.MainCountLab != null)
             {
                 st.MainCountLab.text = PileTitle(Section.Main, mainN);
                 var legal = mainN >= TcgRules.MainDeckMin && mainN <= TcgRules.MainDeckMax;
-                st.MainCountLab.color = legal ? DuelystUi.TextCream : DuelystUi.Danger;
+                st.MainCountLab.color = st.Hall != null ? Color.clear : legal ? DuelystUi.TextCream : DuelystUi.Danger;
             }
 
             if (st.ExtraCountLab != null)
             {
                 st.ExtraCountLab.text = PileTitle(Section.Extra, extraN);
                 st.ExtraCountLab.color = extraN > TcgRules.ExtraDeckMax
-                    ? DuelystUi.Danger
-                    : DuelystUi.TextCream;
+                    ? danger
+                    : cream;
             }
 
             if (st.SideCountLab != null)
             {
                 st.SideCountLab.text = PileTitle(Section.Side, sideN);
                 st.SideCountLab.color = sideN > TcgRules.SideDeckMax
-                    ? DuelystUi.Danger
-                    : DuelystUi.TextCream;
+                    ? danger
+                    : cream;
+            }
+
+            if (st.Hall != null)
+            {
+                // P4: the tabs, the shape strip and the Scale of Ma'at carry the counts
+                if (st.MainMeter != null) st.MainMeter.transform.parent.gameObject.SetActive(false);
+                HallCountsChanged(st);
+                return;
             }
 
             if (st.MainMeter != null)
@@ -471,6 +586,13 @@ namespace WRLDZ.UI.Shell
 
         static void HighlightPiles(State st)
         {
+            if (st.Hall != null)
+            {
+                // P4: the hall's tabs show the section (the page draws no tray glow)
+                HallSectionChanged(st);
+                return;
+            }
+
             GlowTray(st.MainTray, st.Section == Section.Main && !IsAr(st));
             GlowTray(st.ExtraTray, st.Section == Section.Extra && !IsAr(st));
             GlowTray(st.SideTray, st.Section == Section.Side && !IsAr(st));
@@ -507,6 +629,7 @@ namespace WRLDZ.UI.Shell
 
             readonly Dictionary<Section, Pile> _piles = new();
             RectTransform _board;
+            LayoutElement _row;
             bool _solving;
             float _lastW = -1f;
             float _lastH = -1f;
@@ -520,6 +643,9 @@ namespace WRLDZ.UI.Shell
                 _board = board;
                 Solve(force: true);
             }
+
+            /// <summary>P4: the shared EXTRA / SIDE row (its height = the x-row well + its tray pads).</summary>
+            public void BindRow(LayoutElement row) => _row = row;
 
             public void Register(Section section, LayoutElement trayLe,
                 LayoutElement wellLe, Image plate, DeckPileFit fit)
@@ -567,6 +693,12 @@ namespace WRLDZ.UI.Shell
                 Apply(Section.Main, Plan.MainWell);
                 Apply(Section.Extra, Plan.RowWell);
                 Apply(Section.Side, Plan.RowWell);
+                if (_row != null)
+                {
+                    var rowH = Plan.RowWell + DeckBoardLayout.XTrayChrome;
+                    _row.minHeight = rowH;
+                    _row.preferredHeight = rowH;
+                }
                 // Settle the tray/well rects now — the piles read vp.rect, and a
                 // deferred rebuild would lay them out against the old heights.
                 if (settle)
@@ -577,13 +709,13 @@ namespace WRLDZ.UI.Shell
 
                 if (!settle) return;
                 foreach (var pile in _piles.Values)
-                    pile.Fit?.Fit(force: true);
+                    if (pile.Fit != null) pile.Fit.Fit(force: true);
             }
 
             void Apply(Section section, float wellH)
             {
                 if (!_piles.TryGetValue(section, out var pile) || pile == null) return;
-                var trayH = wellH + DeckBoardLayout.TrayChrome;
+                var trayH = wellH + (section == Section.Main ? DeckBoardLayout.TrayChrome : DeckBoardLayout.XTrayChrome);
                 if (pile.TrayLe != null)
                 {
                     pile.TrayLe.minHeight = trayH;
@@ -616,6 +748,8 @@ namespace WRLDZ.UI.Shell
         sealed class DeckPileFit : MonoBehaviour
         {
             public bool SingleRow;
+            /// <summary>P4: the shared row draws MAIN's face at DeckBoardLayout.XRowScale.</summary>
+            public float FaceScale = 1f;
             public RectTransform Viewport;
             public DeckBoardFit Board;
 
@@ -655,6 +789,11 @@ namespace WRLDZ.UI.Shell
                 const float pad = DeckBoardLayout.WellPad;
                 var cardW = plan.CardW;
                 var cardH = plan.CardH;
+                if (FaceScale > 0f && FaceScale < 1f)
+                {
+                    cardW *= FaceScale;
+                    cardH *= FaceScale;
+                }
                 // Keep the scroll offset, clamped — rebuilding after every add
                 // must not throw the pile back to the top.
                 var scrollY = rt.anchoredPosition.y;
@@ -672,7 +811,8 @@ namespace WRLDZ.UI.Shell
                 if (SingleRow)
                 {
                     var run = Mathf.Max(cardW, w - pad * 2f);
-                    var step = DeckBoardLayout.StepFor(run, n, cardW);
+                    var step = DeckBoardLayout.StepFor(run, n, cardW,
+                        FaceScale < 1f ? DeckBoardLayout.XGapX : DeckBoardLayout.GapX);
                     // Centre the row in whatever height the tray ended up with,
                     // so leftover space reads as margin instead of a dead band.
                     var top = Mathf.Max(pad, (h - cardH) * 0.5f);
