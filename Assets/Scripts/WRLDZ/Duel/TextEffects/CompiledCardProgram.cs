@@ -1787,12 +1787,6 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         GainAtkDefUntilEndOfBattlePhase,
         /// <summary>
-        /// — 79853073: while face-up, this card gains Amount ATK and DefAmount DEF during this damage calculation
-        /// only when battling a monster matching RaceFilter (<see cref="EffectTiming.DamageCalculation"/>, continuous).
-        /// Read by BattleBoostsRuntime.ApplyFor via DamageStepDefBonus/DamageStepAtkBonus.
-        /// </summary>
-        GainAtkDefThisDamageCalculationVsRace,
-        /// <summary>
         /// NegationMonsters batch (v161) — Freed the Matchless General / Frontier Wiseman / Tyrant Dragon
         /// (ContinuousWhileFaceUp marker): "Negate any Spell (Trap) effects that target this card (a Warrior-Type
         /// monster you control), and if you do, destroy that card." (ygopro EVENT_CHAIN_SOLVING + NegateEffect, then
@@ -2255,11 +2249,6 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         SpecialSummonDrawnThisInDefenseDamageDrawerAndChangeRace,
         /// <summary>
-        /// — 87557188: FLIP — reveal all face-down cards on the field (no flip effects activate), then
-        /// return them to face-down. Logs names for the activator; nothing else changes.
-        /// </summary>
-        RevealAllFaceDownCardsThenReturn,
-        /// <summary>
         /// PerCopyDeck batch (v163) — Pharaoh's Treasure: this card is shuffled face-up into its controller's Deck instead
         /// of going to the GY (ygopro CancelToGrave + SendtoDeck + ReverseInDeck); that copy carries the card's
         /// <see cref="EffectTiming.DrawnFaceUpFromDeck"/> trigger (<see cref="PerCopyDeckRuntime.ShuffleThisFaceUpIntoYourDeck"/>).
@@ -2715,11 +2704,6 @@ namespace WRLDZ.Duel.TextEffects
         /// EFFECT_INDESTRUCTABLE_BATTLE, IsAttackBelow; <see cref="BattleDestroyedTriggersRuntime.BattleIndestructible"/>).
         /// </summary>
         CannotBeDestroyedByBattleWithMonsterAtkAtMost,
-        /// <summary>
-        /// — 52077741: while face-up, this card cannot be destroyed by battle with a monster whose ATK is
-        /// Amount or higher (e.g. 1900 or more). Read by BattleDestroyedTriggersRuntime.BattleIndestructible.
-        /// </summary>
-        CannotBeDestroyedByBattleWithMonsterAtkAtLeast,
         /// <summary>
         /// GuardiansAndEquipEvents batch — Guardian Elma / Chopman the Desperate Outlaw: the summon trigger's target, an Equip
         /// Spell in the controller's GY that can equip to this card (Lua CheckEquipTarget), is equipped to this card
@@ -4266,6 +4250,11 @@ namespace WRLDZ.Duel.TextEffects
         /// </summary>
         DeclareCardNameThenCheckGyBottomMatchBanishOrSpsummon,
         /// <summary>
+        /// — 87557188: FLIP — reveal all face-down cards on the field (no flip effects activate), then
+        /// return them to face-down. Logs names for the activator; nothing else changes.
+        /// </summary>
+        RevealAllFaceDownCardsThenReturn,
+        /// <summary>
         /// - 81820689: Select 1 card in your opponent's hand and see it (reveal to the activator). The card stays
         /// in the opponent's hand. Uses AskCardPick over CardInOppHand candidates.
         /// </summary>
@@ -4286,6 +4275,17 @@ namespace WRLDZ.Duel.TextEffects
         /// — 97809599: Pay 1000 LP; look at all face-down cards on opp's field.
         /// </summary>
         LookAtOppFaceDownCardsPayLp,
+        /// <summary>
+        /// — 52077741: while face-up, this card cannot be destroyed by battle with a monster whose ATK is
+        /// Amount or higher (e.g. 1900 or more). Read by BattleDestroyedTriggersRuntime.BattleIndestructible.
+        /// </summary>
+        CannotBeDestroyedByBattleWithMonsterAtkAtLeast,
+        /// <summary>
+        /// — 79853073: while face-up, this card gains Amount ATK and DefAmount DEF during this damage calculation
+        /// only when battling a monster matching RaceFilter (<see cref="EffectTiming.DamageCalculation"/>, continuous).
+        /// Read by BattleBoostsRuntime.ApplyFor via DamageStepDefBonus/DamageStepAtkBonus.
+        /// </summary>
+        GainAtkDefThisDamageCalculationVsRace,
     }
 
 
