@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using Unity.Profiling;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -48,6 +49,10 @@ namespace WRLDZ.EditorTools
         const string KPrevSize = K + "PrevSizeIndex";
         const string KAdded = K + "AddedSizes";
         const double WatchdogSeconds = 480.0;
+
+        /// <summary>P5: the session's budget (P5 adds the dread / smoke stills, the 17 s pop-scan sequences and the
+        /// Profiler window to the P3 + P4 shots; ueval.py capture waits 900 s).</summary>
+        static double Watchdog(string phase) => !string.IsNullOrEmpty(phase) && phase.StartsWith("p5") ? 840.0 : WatchdogSeconds;
         const string RunnerName = "MenuV6CaptureRunner";
 
         static MenuV6Capture()
@@ -192,9 +197,10 @@ namespace WRLDZ.EditorTools
                 TrySpawn();
                 // the session's own budget starts when the runner starts (the Play-entry reload is the watchdog above)
                 var t0 = SessionState.GetFloat(KRunStart, SessionState.GetFloat(KStartTime, 0f));
-                if (EditorApplication.timeSinceStartup - t0 > WatchdogSeconds && string.IsNullOrEmpty(SessionState.GetString(KResult, "")))
+                var wd = Watchdog(SessionState.GetString(KPhase, ""));
+                if (EditorApplication.timeSinceStartup - t0 > wd && string.IsNullOrEmpty(SessionState.GetString(KResult, "")))
                 {
-                    SessionState.SetString(KResult, "fail: watchdog (" + WatchdogSeconds + " s) — the session stalled");
+                    SessionState.SetString(KResult, "fail: watchdog (" + wd + " s) — the session stalled");
                     EditorApplication.ExitPlaymode();
                 }
             }
@@ -442,11 +448,16 @@ namespace WRLDZ.EditorTools
             if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p2") || _phase.StartsWith("p3")))
                 yield return P2Shots();
             // P3 (BUILD_PLAN §6 P3 verify): the Stone's sheets at fixed sheet times, both plans, and the false door over an overlay
-            if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p3") || _phase.StartsWith("p4")))
+            if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p3") || _phase.StartsWith("p4") || _phase.StartsWith("p5")))
                 yield return P3Shots();
-            // P4 (BUILD_PLAN §6 P4 verify): the offering hall, both plans
-            if (!string.IsNullOrEmpty(_phase) && _phase.StartsWith("p4"))
+            // P4 (BUILD_PLAN §6 P4 verify): the offering hall, both plans (P5: again, through the DECK route: the P4 landing's
+            // capture found no overlay shell)
+            if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p4") || _phase.StartsWith("p5")))
                 yield return P4Shots();
+            // P5 (BUILD_PLAN §6 P5 verify): the dread ladder, the live smoke, the title's fog, the safe area, Battery Saver,
+            // the pop-scan sequences and the Profiler's batch count, both plans
+            if (!string.IsNullOrEmpty(_phase) && _phase.StartsWith("p5"))
+                yield return P5Shots();
 
             // 4. WORLD MAP last: it leaves the scene
             yield return SetSize(1920, 1080);
@@ -848,18 +859,31 @@ namespace WRLDZ.EditorTools
                 yield return SetSize(w, h);
                 var menu = Rebuild();
                 yield return Wait(.6f);
-                MenuShell shell = null;
-                foreach (var s in FindObjectsByType<MenuShell>())
-                    if (s != null && s.OverlayOnly && shell == null)
-                        shell = s;
-                if (shell == null)
+                // P5 (the P4 landing: the hub makes its overlay shell lazily, so none existed to look up): the deck builder is
+                // opened the way the player opens it — the DECK recess, then its ledger's CTA (OpenDeckHub); the legacy menu's
+                // DECK tile goes there at once
+                var dest = Find(menu.MenuCanvas, "Dest_DECK");
+                if (dest == null)
                 {
-                    _notes.Add("p4 " + lay + ": no overlay shell");
+                    _notes.Add("p4 " + lay + ": no Dest_DECK control");
                     continue;
                 }
 
-                shell.ShowOverlay(MenuId.DeckCollection);
+                Click(dest.gameObject);
+                yield return null;
+                var deckCta = Find(menu.MenuCanvas, "Cta");
+                var deckCtaBtn = deckCta != null ? deckCta.GetComponent<Button>() : null;
+                if (deckCtaBtn != null) deckCtaBtn.onClick.Invoke();
                 yield return Wait(.3f);
+                var shell = menu.HubShell;
+                if (shell == null || shell.ModalHost == null)
+                {
+                    _notes.Add("p4 " + lay + ": the DECK route opened no hub overlay shell");
+                    Close(menu);
+                    continue;
+                }
+
+                yield return Wait(.3f);   // the ledger sheet closes itself on its CTA (RecessSheet.OnCta), then the route runs
                 var hall = shell.ModalHost != null ? shell.ModalHost.GetComponentInChildren<DeckHall>(true) : null;
                 var probe = hall != null ? hall.GetComponent<DeckCollectionScreen.HallProbe>() : null;
                 if (hall == null || probe == null)
@@ -990,6 +1014,226 @@ namespace WRLDZ.EditorTools
             yield return Wait(.4f);
         }
 
+        /// <summary>
+        /// P5: for 1920×1080 and 1080×2340 — the idle ladder at the page's reference times (out_p5/raw/&lt;layout&gt;/idle/refs:
+        /// the first omen 18.468 + .2 / .45 / .8 / 1.3 / 2 / 2.6, the whisper 34.1-36.1), the story beat (#dread, d0 2.8) at the
+        /// approved cut's frame times (menu_dread_demo / menu_dread_portrait; the dread stills 6.3 / 8.6 / 12.2 / 13.6 / 15.2 /
+        /// 17.8, portrait 4.8 / 13.6), the Profiler's render counters at rest / in the omen / at the sky-lid (budget_p5.json,
+        /// with MenuV6Budget's quad counts), the portrait safe area under a simulated 110 / 60 px inset, the back key
+        /// (<see cref="BackShots"/>), Battery Saver (the test override: the player's setting is never touched), a 17 s idle at
+        /// 30 fps (t 4-21: the live smoke and the first omen, for hrpop.py) and the title's fog at raw 24.9 / 25. The menu is
+        /// rebuilt at rest afterwards.
+        /// </summary>
+        IEnumerator P5Shots()
+        {
+            var I = CultureInfo.InvariantCulture;
+            var idleT = new[] { 2.8, 18.468, 18.668, 18.918, 19.268, 19.768, 20.468, 21.068, 34.1, 34.5, 35.0, 35.6, 36.1 };
+            var storyT = new[]
+            {
+                2.8, 3.8, 4.8, 5.3, 5.8, 6.3, 6.8, 7.3, 7.8, 8.3, 8.6, 8.8, 9.3, 9.8, 10.3, 10.8, 11.3, 11.8, 12.2, 12.3, 12.8, 13.3, 13.6,
+                13.8, 14.3, 14.8, 15.2, 15.8, 16.8, 17.8, 18.8, 19.766667
+            };
+            var budget = new StringBuilder("{");
+            var firstLay = true;
+            foreach (var (w, h, lay) in new[] { (1920, 1080, "land"), (1080, 2340, "port") })
+            {
+                yield return SetSize(w, h);
+                var menu = Rebuild();
+                yield return Wait(.8f);
+                var stone = menu.Stone;
+                if (stone == null)
+                {
+                    _notes.Add("p5 " + lay + ": the legacy menu built; no P5 shots");
+                    continue;
+                }
+
+                if (stone.Dread == null) _notes.Add("p5 " + lay + ": no dread ladder (dread data missing)");
+                if (stone.Smoke == null)
+                    _notes.Add("p5 " + lay + ": no live smoke (" + (CelSmokeShader.Get() == null ? "the shader is missing or does not compile" : "smoke data missing") + ")");
+
+                foreach (var t in idleT)
+                {
+                    MenuV6Clock.Freeze((float)t);
+                    yield return null;
+                    yield return new WaitForEndOfFrame();
+                    Shot("p5_" + lay + "_idle_t" + t.ToString("0.000", I), 1);
+                }
+
+                if (stone.Dread != null)
+                {
+                    stone.Dread.PlayStory(0);
+                    foreach (var t in storyT)
+                    {
+                        MenuV6Clock.Freeze((float)t);
+                        yield return null;
+                        yield return new WaitForEndOfFrame();
+                        Shot("p5_" + lay + "_story_t" + t.ToString("0.000", I), 1);
+                    }
+
+                    stone.Dread.StopStory();
+                }
+
+                budget.Append(firstLay ? "" : ",").Append("\n  ").Append(Q(lay)).Append(": {");
+                firstLay = false;
+                yield return Profile(stone, "rest", 2.8, false, budget, true);
+                yield return Profile(stone, "omen", 19.268, false, budget, false);
+                yield return Profile(stone, "story_skylid", 13.6, true, budget, false);
+                budget.Append('}');
+
+                if (lay == "port" && stone.Safe != null)
+                {
+                    var cs = new Vector3[4];
+                    stone.Stage.GetWorldCorners(cs);
+                    var k = (cs[2].x - cs[0].x) / 1080f;
+                    SafeArea.Override = Rect.MinMaxRect(cs[0].x, cs[0].y + 60f * k, cs[2].x, cs[2].y - 110f * k);
+                    stone.Safe.Apply(true);
+                    MenuV6Clock.Freeze(2.8f);
+                    yield return null;
+                    yield return new WaitForEndOfFrame();
+                    Shot("p5_port_safe_top110_bottom60_t2.8", 1);
+                    SafeArea.Override = null;
+                    stone.Safe.Apply(true);
+                }
+
+                yield return BackShots(menu, lay);
+
+                WrldzTheme.BatterySaverOverride = true;
+                menu = Rebuild();
+                yield return Wait(.6f);
+                foreach (var t in new[] { 2.8, 19.268 })
+                {
+                    MenuV6Clock.Freeze((float)t);
+                    yield return null;
+                    yield return new WaitForEndOfFrame();
+                    Shot("p5_" + lay + "_saver_t" + t.ToString("0.000", I), 1);
+                }
+
+                WrldzTheme.BatterySaverOverride = null;
+                MenuV6Clock.Unfreeze();
+
+                menu = Rebuild();
+                yield return Wait(.6f);
+                var seq = Path.Combine(_out, "p5_" + lay + "_idle_4-21s_30fps");
+                Directory.CreateDirectory(seq);
+                for (var i = 0; i <= 17 * 30; i++)
+                {
+                    MenuV6Clock.Freeze(4f + i / 30f);
+                    yield return null;
+                    yield return new WaitForEndOfFrame();
+                    Frame(Path.Combine(seq, "f" + i.ToString("000") + ".jpg"));
+                }
+
+                MenuV6Clock.Unfreeze();
+                yield return TitleFogShots(w >= h ? MenuLayoutKind.Landscape : MenuLayoutKind.Portrait, lay);
+                Rebuild();
+                yield return Wait(.4f);
+            }
+
+            budget.Append("\n}\n");
+            try { File.WriteAllText(Path.Combine(_out, "budget_p5.json"), budget.ToString()); }
+            catch (Exception ex) { _notes.Add("budget_p5.json: " + ex.Message); }
+        }
+
+        /// <summary>P5 (BUILD_PLAN §6 P5 step 3; the P5 review): the back key on a live clock. <see cref="MenuBack.Press"/> is
+        /// what WrldzInput.KeyDown(Escape) runs (the Editor cannot press a phone's back button): CHOOSE YOUR DUEL at rest, back
+        /// (the popover's STAY: the sheet's own close) and the Stone after it; SETTINGS in the hub's overlay shell at rest,
+        /// back (the top sheet's Close) and the Stone after it; then back on the bare menu (nothing). Each press's result goes
+        /// to the notes. The deck builder is never backed out of here (its Close runs RequestLeaveEditor, which saves a
+        /// complete deck).</summary>
+        IEnumerator BackShots(DuelDiskMenuUI menu, string lay)
+        {
+            var back = menu != null ? menu.Back : null;
+            if (back == null)
+            {
+                _notes.Add("p5 " + lay + " back: no MenuBack on the main menu");
+                yield break;
+            }
+
+            MenuV6Clock.Unfreeze();
+            foreach (var (control, id, open, after) in new[] { ("Hero", "duel", 4.5f, 2.2f), ("Tert_SET", "settings", 2.6f, 2.6f) })
+            {
+                var c = Find(menu.MenuCanvas, control);
+                if (c == null)
+                {
+                    _notes.Add("p5 " + lay + " back " + id + ": control " + control + " missing");
+                    continue;
+                }
+
+                Click(c.gameObject);
+                yield return Wait(open);
+                yield return new WaitForEndOfFrame();
+                Shot("p5_" + lay + "_back_" + id + "_open", 1);
+                var ok = back.Press();
+                _notes.Add("p5 " + lay + " back on " + id + ": " + back.Last + (ok ? "" : " (not handled)"));
+                yield return Wait(after);
+                yield return new WaitForEndOfFrame();
+                Shot("p5_" + lay + "_back_" + id + "_after", 1);
+                Close(menu);
+                yield return null;
+            }
+
+            var bare = back.Press();
+            _notes.Add("p5 " + lay + " back on the bare menu: " + back.Last + (bare ? " (it did something)" : ""));
+        }
+
+        /// <summary>P5: the Profiler's render counters (last frame of 12, the clock frozen at <paramref name="t"/>) and
+        /// MenuV6Budget's own counts, as one JSON member.</summary>
+        IEnumerator Profile(MenuV6Stage stone, string label, double t, bool story, StringBuilder sb, bool first)
+        {
+            if (story && stone.Dread != null) stone.Dread.PlayStory(0);
+            MenuV6Clock.Freeze((float)t);
+            yield return null;
+            var names = new[] { "Batches Count", "SetPass Calls Count", "Draw Calls Count", "Triangles Count", "Vertices Count" };
+            var recs = new ProfilerRecorder[names.Length];
+            for (var i = 0; i < names.Length; i++) recs[i] = ProfilerRecorder.StartNew(ProfilerCategory.Render, names[i], 16);
+            for (var f = 0; f < 12; f++) yield return null;
+            var counts = MenuV6Budget.Measure(stone.Root, stone);
+            sb.Append(first ? "" : ", ").Append(Q(label)).Append(": {");
+            for (var i = 0; i < names.Length; i++)
+            {
+                var v = recs[i].Valid ? recs[i].LastValue.ToString(CultureInfo.InvariantCulture) : "null";
+                sb.Append(Q(names[i])).Append(": ").Append(v).Append(", ");
+                recs[i].Dispose();
+            }
+
+            sb.Append("\"counts\": ").Append(MenuV6Budget.Json(counts)).Append('}');
+            if (story && stone.Dread != null) stone.Dread.StopStory();
+            MenuV6Clock.Unfreeze();
+        }
+
+        /// <summary>P5: the live title (its fog) at raw 24.9 / 25 (v63_portrait_03 / 05, v63_title 24.9); the menu is torn
+        /// down first (its opaque canvas sorts above the title's 49).</summary>
+        IEnumerator TitleFogShots(MenuLayoutKind kind, string lay)
+        {
+            ClearMenu();
+            RectTransform tc = null;
+            TitleStage ts = null;
+            try
+            {
+                tc = WrldzTheme.Canvas("TitleCaptureCanvas", 49, aspect: true);
+                ts = TitleStage.Build(tc, kind, new TitleStage.Options { Video = false, StartRaw = TitleStage.GenEndRaw });
+            }
+            catch (Exception ex)
+            {
+                _notes.Add("p5 " + lay + " title: " + ex.Message);
+            }
+
+            if (ts != null)
+            {
+                if (ts.Fog == null) _notes.Add("p5 " + lay + " title: no live fog");
+                foreach (var raw in new[] { 24.9, 25.0 })
+                {
+                    ts.Freeze(raw);
+                    yield return null;
+                    yield return new WaitForEndOfFrame();
+                    Shot("p5_" + lay + "_title_raw" + raw.ToString("0.0", CultureInfo.InvariantCulture), 1);
+                }
+            }
+
+            if (tc != null) Destroy(tc.gameObject);
+            yield return null;
+        }
+
         /// <summary>Tear the menu down (its overlays, host and canvas), as <see cref="Rebuild"/> does before it builds.</summary>
         static void ClearMenu()
         {
@@ -1019,6 +1263,8 @@ namespace WRLDZ.EditorTools
         void Finish(bool ok, string fail)
         {
             MenuV6Clock.Unfreeze();
+            WrldzTheme.BatterySaverOverride = null;   // P5: never left on (the player's own setting was never touched)
+            SafeArea.Override = null;
             MenuV6Capture.RunnerDone(ok ? "ok " + _shots.Count + " shots" : "fail: " + fail);
         }
 

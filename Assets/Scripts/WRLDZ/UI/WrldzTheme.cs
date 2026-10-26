@@ -72,6 +72,10 @@ namespace WRLDZ.UI
         }
 
         const string BatterySaverPref = "wrldz.batterySaver";
+
+        /// <summary>P5 tests and captures: read Battery Saver as on / off without touching the player's setting (null = the
+        /// setting). Never persisted.</summary>
+        public static bool? BatterySaverOverride;
         static int _batterySaver = -1; // -1 = not read from PlayerPrefs yet
 
         /// <summary>
@@ -82,6 +86,7 @@ namespace WRLDZ.UI
         {
             get
             {
+                if (BatterySaverOverride.HasValue) return BatterySaverOverride.Value;
                 if (_batterySaver < 0)
                 {
                     try { _batterySaver = PlayerPrefs.GetInt(BatterySaverPref, 0) != 0 ? 1 : 0; }

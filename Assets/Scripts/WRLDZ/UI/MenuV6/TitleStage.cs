@@ -174,6 +174,7 @@ namespace WRLDZ.UI.MenuV6
                 var name = RJ.S(L, "name") ?? "?";
                 try
                 {
+                    if (name == "nut") BuildFog();   // P5: the title's fog banks, under Nut's part (anime_v61_title.js:150)
                     if (RJ.Has(L, "rig")) BuildRig(RJ.S(L, "rig"), gfx, lay);
                     else if (RJ.Has(L, "book")) BuildBook(RJ.S(L, "book"), gfx);
                     else if (RJ.Has(L, "cracks")) BuildTears();
@@ -302,6 +303,23 @@ namespace WRLDZ.UI.MenuV6
             img.color = new Color(1f, 1f, 1f, Mathf.Clamp01((float)a * gain));
             if (name == "stone_emiBlur")
                 _tick.Add(tb => SetA(img, .5 * (.55 + .25 * Math.Sin(.9 * tb)) * gain));   // anime_v61_title.js:148 br
+        }
+
+        /// <summary>P5: the live cel fog (18 banks, kind blackT; null without the P5 data or the shader: the title had none).</summary>
+        public TitleFog Fog { get; private set; }
+
+        void BuildFog()
+        {
+            try
+            {
+                Fog = TitleFog.Build(Stage, _stageRect, Kind);
+                if (Fog != null) _tick.Add(tb => Fog.Tick(tb));
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ MenuV6] title fog skipped: " + ex.Message);
+                Fog = null;
+            }
         }
 
         static void SetA(Graphic g, double a)

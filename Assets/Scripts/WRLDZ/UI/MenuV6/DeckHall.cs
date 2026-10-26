@@ -39,6 +39,9 @@ namespace WRLDZ.UI.MenuV6
         public Text Subtitle { get; private set; }
         public CrackLayer Cracks { get; private set; }
 
+        /// <summary>P5: the hall's safe-area bands (portrait: the header, the thumb band).</summary>
+        public SafeArea Safe { get; internal set; }
+
         /// <summary>Menu seconds at the open; <see cref="Now"/> is the hall's own time since then.</summary>
         public double T0 { get; private set; }
 
@@ -285,6 +288,8 @@ namespace WRLDZ.UI.MenuV6
             b.targetGraphic = img;
             b.transition = Selectable.Transition.None;
             if (onClick != null) b.onClick.AddListener(() => onClick());
+            // P5 (SPEC §9.4, portrait_p5.json taps): a portrait target under 56 px gets an invisible 56 px pad (visuals unchanged)
+            if (MenuAspect.Current == MenuLayoutKind.Portrait) TapPad.Ensure(img.rectTransform, r);
             return b;
         }
 

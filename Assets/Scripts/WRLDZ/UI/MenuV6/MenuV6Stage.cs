@@ -99,6 +99,15 @@ namespace WRLDZ.UI.MenuV6
         /// <summary>What the entrance drives (P2).</summary>
         internal readonly StageParts Parts = new();
 
+        /// <summary>P5: the dread ladder (null when dread_&lt;layout&gt;.json is not installed: the Stone stays at rest).</summary>
+        public DreadLadder Dread { get; private set; }
+
+        /// <summary>P5: the live cel smoke in the plate's place (null = the P1 plate).</summary>
+        public SmokeField Smoke { get; private set; }
+
+        /// <summary>P5: the safe-area bands (Screen.safeArea).</summary>
+        public SafeArea Safe { get; private set; }
+
         Handlers _h;
         Rect _stageRect;
         Vector2 _lastRootSize;
@@ -232,6 +241,23 @@ namespace WRLDZ.UI.MenuV6
 
             _noise = LoadNoiseRow();
             Torch = TorchFlicker.Attach(gameObject, _noise);
+            // P5: the dread ladder before the layers, so its rungs can take their z places as the layers are laid
+            try
+            {
+                Dread = DreadLadder.Attach(gameObject, Kind);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ MenuV6] dread ladder skipped (the Stone stays at rest): " + ex.Message);
+                Dread = null;
+            }
+
+            _ctx.Dread = Dread;
+            if (Torch != null && Dread != null)
+            {
+                var dl = Dread;
+                Torch.Sg = t => dl.At(t).Sg;
+            }
             foreach (var L in Layout.Layers)
             {
                 switch (L.Group)
@@ -258,10 +284,25 @@ namespace WRLDZ.UI.MenuV6
                 }
             }
 
+            // P5: the breach's layers into one node that grows on the omen, with the dread eyes between the P1 eyes and its
+            // over plate
+            if (Dread != null)
+            {
+                try
+                {
+                    Dread.BuildBreach(_ctx, fx, _stageRect, StaticOf("breach_under"), FlipOf("eye_13"), FlipOf("eye_11"), StaticOf("breach_over"));
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning("[WRLDZ MenuV6] dread eyes skipped: " + ex.Message);
+                }
+            }
+
             if (Land) BuildSlateTexts(slateL, slateR, controls);
             else BuildPortraitTexts(slateL, controls);
             BuildControlTexts(controls);
             BuildPlaceholder(ph5);
+            if (!Land) HomeBar(ph5);
 
             var statusRect = Land ? StatusLand : StatusPort;
             Status = TextFx.Label(Stage, "Status", StatusSlot(statusRect), "", _stageRect);
@@ -293,10 +334,143 @@ namespace WRLDZ.UI.MenuV6
             Parts.Eyes = Eyes;
             // P2: the entrance (the boot handoff over the kept title canvas, or the cold open). It replaces the old Tiles
             // stagger: the page's own entrance staggers the labels, DUEL, the bezels and the pylon rows.
-            if (Application.isPlaying && Entry != MenuEntry.Mode.None)
+            // P5 (SPEC §8.7 Battery Saver): the entrance collapses to one 200 ms crossfade (no stagger)
+            var saver = WrldzTheme.BatterySaver;
+            if (Application.isPlaying && Entry != MenuEntry.Mode.None && !saver)
                 Entrance = MenuEntrance.Attach(this, Entry == MenuEntry.Mode.FromTitle);
-            if (Application.isPlaying && Entrance == null)
+            if (Application.isPlaying && saver)
+            {
+                var rg = MenuMotion.EnsureGroup(Root.gameObject);
+                rg.alpha = 0f;
+                MenuMotion.PlayOn(Root.gameObject, MenuMotion.Fade(rg, 0f, 1f, .2f));
+            }
+            else if (Application.isPlaying && Entrance == null)
                 MenuMotion.PlayOn(Tiles.gameObject, MenuMotion.StaggerChildren(Tiles, 0.26f, 0.045f));
+
+            // P5: the safe-area bands (after the entrance and the stagger took their nodes)
+            try
+            {
+                Safe = SafeArea.ForMenu(this, Parts, Kind);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ MenuV6] safe area skipped: " + ex.Message);
+            }
+
+            if (Dread != null) Dread.Apply(MenuV6Clock.Now);
+        }
+
+        Graphic StaticOf(string id) => _static.TryGetValue(id, out var img) ? img : null;
+
+        Graphic FlipOf(string id)
+        {
+            if (!_flip.TryGetValue(id, out var go) || go == null) return null;
+            var raw = go.GetComponent<RawImage>();
+            return raw;
+        }
+
+        /// <summary>P5: a stretched node for one of the ladder's rungs at the current z (not a rig host: never destroyed with
+        /// the rigs, never faded by the entrance).</summary>
+        RectTransform DreadHost(Transform parent, string name)
+        {
+            var h = new GameObject("Dread_" + name, typeof(RectTransform)).GetComponent<RectTransform>();
+            h.SetParent(parent, false);
+            UiTheme.Stretch(h);
+            return h;
+        }
+
+        /// <summary>P5: the ladder's rungs that follow a layer (the page's draw order: menu.js:665-677).</summary>
+        void DreadAfter(RectTransform group, string id)
+        {
+            if (Dread == null || id == null) return;
+            try
+            {
+                switch (id)
+                {
+                    case "breach_fissure":
+                        Dread.BuildAfterFissure(_ctx, DreadHost(group, "fissure"), _stageRect);
+                        break;
+                    case "smoke":
+                        Dread.BuildBolts(DreadHost(group, "bolts"), _stageRect);
+                        break;
+                    case "nut_crack":
+                        Dread.BuildBloom(DreadHost(group, "bloom"), _stageRect);
+                        break;
+                    case "vignette_right":
+                        Dread.BuildGrade(_ctx, DreadHost(group, "grade"), _stageRect, this);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ MenuV6] dread rung after " + id + " skipped: " + ex.Message);
+            }
+        }
+
+        /// <summary>P5: the live cel smoke over the P1 plate (z 21); the plate stays the fallback.</summary>
+        void LiveSmoke(Image plate, MenuV6Layout.Layer L)
+        {
+            try
+            {
+                Smoke = SmokeField.Attach(plate, L.Rect, _stageRect, Kind, () => MenuV6Clock.Now);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ MenuV6] live smoke kept the baked plate: " + ex.Message);
+                Smoke = null;
+                if (plate != null) plate.enabled = true;
+            }
+        }
+
+        /// <summary>P5: the grade's crack copy (DreadLadder): the breaks over the grade at <paramref name="k"/> for the gaps and
+        /// .35 k for the rest of the break (CRK.wrapDrop's cut-outs), no bolts, no stutter ghosts.</summary>
+        public CrackLayer GradeCrackCopy(Transform host, Func<double> k)
+        {
+            var set = CrackSetOf();
+            if (set == null || Cracks == null || host == null || k == null) return null;
+            var drv = new MenuCrackDriver(set.Nets, Entry == MenuEntry.Mode.FromTitle)
+            {
+                GradeCopy = true, Rest = Entry == MenuEntry.Mode.None || WrldzTheme.BatterySaver, AlphaK = () => .35 * k()
+            };
+            // Battery Saver: the copy draws at the frame the Stone's own cracks hold (they never move again), else the live
+            // clock (P5 review: a held copy stayed empty, so the grade darkened the breaks the page spares)
+            double CopyClock()
+            {
+                var main = Cracks;
+                return WrldzTheme.BatterySaver && main != null && !double.IsNaN(main.LastT) ? main.LastT : CrackClockNow();
+            }
+
+            var L = CrackLayer.Create(host, "CracksGrade_live", _stageRect, set, set.Nets, drv, CopyClock);
+            if (L == null) return null;
+            L.GapAlpha = k;
+            L.Render(CopyClock());
+            return L;
+        }
+
+        /// <summary>P5 (portrait_p5.json homebar): the portrait home-indicator bar, in the Editor only (on a phone the OS
+        /// draws its own), just under the placeholder strip's plate (the still shows it through that plate).</summary>
+        void HomeBar(RectTransform ph5)
+        {
+            if (!Application.isEditor || ph5 == null) return;
+            try
+            {
+                var ta = MenuV6Art.Data("portrait_p5");
+                var root = ta != null ? MenuV6Json.Parse(ta.text) as Dictionary<string, object> : null;
+                var hb = RJ.D(root, "homebar");
+                var sp = MenuV6Art.Sprite(RJ.S(hb, "file"));
+                if (sp == null) return;
+                var go = new GameObject("HomeBar", typeof(RectTransform), typeof(Image));
+                go.transform.SetParent(ph5, false);
+                go.transform.SetSiblingIndex(0);
+                var img = go.GetComponent<Image>();
+                img.sprite = sp;
+                img.raycastTarget = false;
+                MenuV6Layout.Place(img.rectTransform, RJ.R(hb, "rect"), _stageRect);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ MenuV6] home bar: " + ex.Message);
+            }
         }
 
         RectTransform Group(string name)
@@ -339,7 +513,10 @@ namespace WRLDZ.UI.MenuV6
             if (set == null || set.Nets.Count == 0) return false;
             try
             {
-                var drv = new MenuCrackDriver(set.Nets, Entry == MenuEntry.Mode.FromTitle) { Rest = Entry == MenuEntry.Mode.None };
+                var drv = new MenuCrackDriver(set.Nets, Entry == MenuEntry.Mode.FromTitle)
+                {
+                    Rest = Entry == MenuEntry.Mode.None || WrldzTheme.BatterySaver   // P5: Battery Saver opens on the grown breaks
+                };
                 Cracks = CrackLayer.Create(group, "CracksU_live", _stageRect, set, set.Nets, drv, CrackClockNow);
                 if (Cracks == null) return false;
                 Cracks.Render(CrackClockNow());
@@ -369,7 +546,18 @@ namespace WRLDZ.UI.MenuV6
                 var full = new GameObject("Full", typeof(RectTransform)).GetComponent<RectTransform>();
                 full.SetParent(clip, false);
                 MenuV6Layout.Place(full, _stageRect, clipRect);
-                var drv = new NutCrackDriver(set.Nut, set.RiftRun, Entry == MenuEntry.Mode.FromTitle);
+                var drv = new NutCrackDriver(set.Nut, set.RiftRun, Entry == MenuEntry.Mode.FromTitle && !WrldzTheme.BatterySaver);
+                // P5: the omen and the apparition run her fracture to its end and widen it (anime_v61_cracks.js:595-598)
+                if (Dread != null)
+                {
+                    var dl = Dread;
+                    drv.Dread = t =>
+                    {
+                        var S = dl.At(t);
+                        return (DreadMath.NutRun(S), DreadMath.NutOpen(S));
+                    };
+                }
+
                 NutCracks = CrackLayer.Create(full, "NutCrack_live", _stageRect, set, new[] { set.Nut }, drv, CrackClockNow,
                     nestedCanvas: false);
                 if (NutCracks == null)
@@ -380,6 +568,13 @@ namespace WRLDZ.UI.MenuV6
 
                 NutCracks.Render(CrackClockNow());
                 Parts.NutDriver = drv;
+                // P5: the sky-lid apparition at the page's place, inside Nut's clip after her fracture (story only)
+                if (Dread != null)
+                {
+                    try { Dread.BuildSkyLid(_ctx, full, _stageRect); }
+                    catch (Exception ex) { Debug.LogWarning("[WRLDZ MenuV6] sky-lid skipped: " + ex.Message); }
+                }
+
                 return true;
             }
             catch (Exception ex)
@@ -392,6 +587,30 @@ namespace WRLDZ.UI.MenuV6
         /// <summary>Tests (MenuSmokeTest, edit mode): run the entrance (the boot handoff or the cold open) at a few times on
         /// this Stone and put it back at rest; throws what a frame throws.</summary>
         public void ProbeEntrance(bool enter, params double[] times) => MenuEntrance.Probe(this, enter, times);
+
+        /// <summary>P5 tests (edit mode): the dread ladder at menu times <paramref name="times"/> (the idle schedule, or the
+        /// story beat), every rung and every rig that reads it drawn at each, then the Stone back at rest; throws what a
+        /// frame throws.</summary>
+        public void ProbeDread(bool story, params double[] times)
+        {
+            if (Dread == null) return;
+            void Tick(double t)
+            {
+                if (Life != null) Life.TickNow();
+                if (Torch != null) Torch.Apply((float)t);
+                if (NutCracks != null) NutCracks.Render(CrackClockNow());
+                if (Smoke != null) Smoke.Tick(true);
+            }
+
+            try
+            {
+                Dread.Probe(story, Tick, times);
+            }
+            finally
+            {
+                Tick(MenuV6Clock.Now);
+            }
+        }
 
         /// <summary>The through-the-dim copy (#crkB, anime_v61_cracks.js:673): the same breaks over a sheet's dim at 30 %
         /// (floor breaks at sp.lit), no light, no bolts. <paramref name="dimGroup"/> fades it with its dim.</summary>
@@ -548,6 +767,7 @@ namespace WRLDZ.UI.MenuV6
             {
                 if (L.Id == "stone_B" || L.Id == "keystone_over_f1") Torch.DriveAlpha(img, gain);
                 else if (L.Id == "torch_pool_b0") Torch.DrivePool(img, gain, TorchPoolSwing);
+                else if (L.Id == "torch_pool_b1") Torch.DrivePoolWide(img, img.color.a);   // P5: the ladder dims it (1 - .5 sg)
             }
 
             if (!string.IsNullOrEmpty(L.Id)) _static[L.Id] = img;
@@ -604,13 +824,23 @@ namespace WRLDZ.UI.MenuV6
         void FxLayer(RectTransform group, MenuV6Layout.Layer L)
         {
             // P2: Nut's sky fracture as a live break (anime_v61_cracks.js:592-602) in the baked plate's place
-            if (L.Id == "nut_crack" && LiveNutCrack(group, L)) return;
+            if (L.Id == "nut_crack" && LiveNutCrack(group, L))
+            {
+                DreadAfter(group, L.Id);
+                return;
+            }
+
             // the recesses' hover / press draw after the live pictos, before the Ring echo (anime_menu_v6.js:97)
             if (L.Id == "ring_refract" && !_hosts.ContainsKey("recess")) Host(group, "recess", _stageRect);
             var img = StaticLayer(group, _stageRect, L);
-            if (!FxHooks.TryGetValue(L.Id ?? "", out var hook)) return;
-            if (img != null) Replaced(hook.rig, img.gameObject);
-            if (hook.host) Host(group, hook.rig, _stageRect);
+            if (L.Id == "smoke" && img != null) LiveSmoke(img, L);   // P5: the live cel smoke (the plate stays the fallback)
+            if (FxHooks.TryGetValue(L.Id ?? "", out var hook))
+            {
+                if (img != null) Replaced(hook.rig, img.gameObject);
+                if (hook.host) Host(group, hook.rig, _stageRect);
+            }
+
+            DreadAfter(group, L.Id);   // P5: the dread ladder's rungs that follow this layer
         }
 
         RectTransform Host(Transform parent, string rig, Rect frame, int sibling = -1)

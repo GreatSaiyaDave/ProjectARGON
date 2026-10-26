@@ -91,9 +91,26 @@ namespace WRLDZ.UI.MenuV6
 
             Space = SheetDraw.StageSpace(host, stone, "SheetStage");
             _t0 = MenuV6Clock.Now;
+            // P5 (SPEC §8.7 Battery Saver): end states only: the sheet opens at its rest (CHOOSE YOUR DUEL with its cards
+            // already face up) under one 150 ms crossfade, and closes at once
+            if (Application.isPlaying && WrldzTheme.BatterySaver)
+            {
+                _t0 -= SaverRestU(kind);
+                _saverGroup = SheetDraw.Group(host.gameObject);
+                _saverGroup.alpha = 0f;
+                _saverAt = Time.unscaledTime;
+            }
+
             stone.SetKeystoneShown(false);
             return true;
         }
+
+        CanvasGroup _saverGroup;
+        float _saverAt = -1f;
+
+        /// <summary>The sheet time of its rest (Battery Saver): the DUEL contract dealt and turned (u 4), a ledger / QUIT at
+        /// rest (u 3); the Ring seek's end (its own route then leaves for the map).</summary>
+        public static double SaverRestU(SheetKind k) => k == SheetKind.Duel ? 4.0 : 3.0;
 
         /// <summary>The content node over the frame (clipped with it), faded by the content envelope.</summary>
         protected RectTransform MakeContent()
@@ -144,6 +161,7 @@ namespace WRLDZ.UI.MenuV6
                 return;
             }
 
+            if (WrldzTheme.BatterySaver) _t1 = MenuV6Clock.Now - SheetMath.EndAfterClose(Kind);   // P5: end states only
             Step();
         }
 
@@ -192,6 +210,13 @@ namespace WRLDZ.UI.MenuV6
         void LateUpdate()
         {
             if (!Application.isPlaying || _done) return;
+            if (_saverGroup != null && _saverAt >= 0f)
+            {
+                var a = Mathf.Clamp01((Time.unscaledTime - _saverAt) / .15f);
+                _saverGroup.alpha = a;
+                if (a >= 1f) _saverAt = -1f;
+            }
+
             Step();
         }
 

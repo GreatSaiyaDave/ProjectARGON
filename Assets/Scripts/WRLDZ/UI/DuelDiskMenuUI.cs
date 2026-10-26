@@ -63,6 +63,38 @@ namespace WRLDZ.UI
             GoTheme.EnsureAssets();
             WrldzTheme.ApplyPortrait();
             BuildVisuals();
+            // P5 (BUILD_PLAN §6 P5 step 3): Android back / Escape through WrldzInput
+            Back = MenuBack.Attach(gameObject, BackStep);
+        }
+
+        /// <summary>The back key's handler (P5), for tests.</summary>
+        public MenuBack Back { get; private set; }
+
+        /// <summary>One back press: the top sheet's Close, else the popover's STAY (its own close), else nothing.</summary>
+        bool BackStep()
+        {
+            if (_hubShell != null && MenuBack.CloseTopSheet(_hubShell))
+            {
+                if (Back != null) Back.Mark("sheet");
+                return true;
+            }
+
+            if (_sheet != null || _popoverHost != null)
+            {
+                ClosePopover();
+                if (Back != null) Back.Mark("popover");
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>P5: a sheet, popover or hub overlay is over the Stone (the dread ladder starts no beat under it).</summary>
+        bool SomethingOver()
+        {
+            if (_sheet != null || _popoverHost != null) return true;
+            if (_hubShell == null || _hubShell.Root == null || _hubShell.ModalHost == null) return false;
+            return _hubShell.Root.gameObject.activeInHierarchy && _hubShell.ModalHost.childCount > 0;
         }
 
         void OnDestroy()
@@ -125,6 +157,7 @@ namespace WRLDZ.UI
             };
             var stage = MenuV6Stage.Build(canvas, handlers, kind, Entry);
             _v6 = stage;
+            if (stage.Dread != null) stage.Dread.Suppressed = SomethingOver;
             _root = stage.Root;
             _status = stage.Status;
             if (stage.Missing.Count > 0)

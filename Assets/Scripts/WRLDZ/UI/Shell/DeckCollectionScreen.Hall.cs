@@ -132,6 +132,9 @@ namespace WRLDZ.UI.Shell
             h.EnterAt = hall.Now;
             hall.OnTick(t => HallTick(st, t));
             UiFoundation.GetOrAdd<HallProbe>(hall.gameObject).Bound = st;
+            // P5 (BUILD_PLAN §6 P5 step 2): the portrait header and thumb band keep clear of the phone's safe-area insets
+            try { hall.Safe = SafeArea.ForHall(hall); }
+            catch (Exception ex) { Debug.LogWarning("[WRLDZ MenuV6] deck safe area skipped: " + ex.Message); }
             // the editor's layer last: its sheets (FILTER, the leave guard, the deck menu) cover the header and the band
             hall.BodyHost.SetAsLastSibling();
         }

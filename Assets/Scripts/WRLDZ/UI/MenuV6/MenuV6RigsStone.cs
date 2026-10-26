@@ -262,9 +262,10 @@ namespace WRLDZ.UI.MenuV6
             }
 
             // the page's flick at this t (menu.js:653): the same curve TorchFlicker drives Stone B with
-            var flick = MenuV6Math.Flick(t, Ctx.Noise);
+            var ds = Ctx.DreadAt(t);
+            var flick = MenuV6Math.Flick(t, Ctx.Noise, ds.Sg);
             var hovD = Ctx.Door != null ? MenuV6RigMath.Clamp01(Ctx.Door.Value(t)) : 0;
-            var eye = MenuV6RigMath.KeystoneEye(t, hovD);
+            var eye = MenuV6RigMath.KeystoneEye(t, hovD) * DreadMath.KeystoneGutter(ds);   // P5: the omen's gutter (menu.js:836)
             if (Ctx.KeystoneEye != null) eye = Ctx.KeystoneEye(t, eye);
             _p.Draw(t, flick, eye, MenuV6RigMath.KeystoneGlint(t), MenuV6RigMath.KeystoneHot(t), MenuV6RigMath.KeystoneIris(t));
         }
@@ -834,9 +835,13 @@ namespace WRLDZ.UI.MenuV6
         {
             var hovR = Ctx.Ring != null ? MenuV6RigMath.Clamp01(Ctx.Ring.Value(t)) : 0;
             for (var i = 0; i < 5; i++) _rot[i] = MenuV6RigMath.RingRot(t, i, hovR);
+            // P5: the ladder's strain (menu.js:768-774; near / tear are the demo clock's only: 0 in the idle and the story)
+            var sg = Ctx.DreadAt(t).Sg;
+            for (var i = 0; i < 5; i++) _glow[i] = i == 2 ? Math.Min(1, .7 * sg) : i == 1 || i == 3 ? 0 : .25 * sg;
             _d.Draw(t, new RingDraw.State
             {
-                A = 1, I = .72 + .2 * hovR, Seed = _seed, Sweep = 0, Aura = Math.Min(1.4, Math.Max(0, .4 * hovR)), Found = 2,
+                A = 1, I = .72 + .2 * hovR + .45 * sg, Seed = _seed, Sweep = Math.Min(1, Math.Max(0, sg)),
+                Aura = Math.Min(1.4, Math.Max(0, .8 * sg + .4 * hovR)), Found = 2,
                 Motes = 14, Rot = _rot, PivX = _px, PivY = _py, Glow = _glow
             });
             if (_refract != null)
@@ -880,11 +885,15 @@ namespace WRLDZ.UI.MenuV6
         {
             _glow.Clear();
             _tongues.Clear();
-            Spr(_glow, MenuV6Glow.Kind.Fire, _x, _y - 10 * _sc, 96 * _sc, .34, MenuV6Linear.Torch);
+            // P5: the torch gutters on the ladder (menu.js:670: alpha E.bg (1 - .55 sg), size (1 - .25 sg))
+            var sg = Ctx.DreadAt(t).Sg;
+            var fa = 1 - .55 * sg;
+            var sc = _sc * (1 - .25 * sg);
+            Spr(_glow, MenuV6Glow.Kind.Fire, _x, _y - 10 * sc, 96 * sc, .34 * fa, MenuV6Linear.Torch);
             foreach (var (k, rgb, ph) in MenuV6RigMath.Tongues)
             {
-                var n = MenuV6RigMath.Tongue(_x, _y, t, 9 * _sc * k + 2 * _sc, 34 * _sc * k + 4 * _sc, ph, 6, _xs, _ys);
-                _tongues.Poly(_xs, _ys, n, Col(rgb, 1));
+                var n = MenuV6RigMath.Tongue(_x, _y, t, 9 * sc * k + 2 * sc, 34 * sc * k + 4 * sc, ph, 6, _xs, _ys);
+                _tongues.Poly(_xs, _ys, n, Col(rgb, fa));
             }
 
             _glow.Commit();
@@ -965,17 +974,18 @@ namespace WRLDZ.UI.MenuV6
         public override void Tick(double t)
         {
             var fl = MenuV6RigMath.BreachFl(t);
+            var sg = Ctx.DreadAt(t).Sg;   // P5: the glows rise with the strain (menu_v41.js:57-59)
             if (_crack != null)
             {
                 _crack.Clear();
-                _crack.Rect(_cr, QuadList.Full, new Color(1, 1, 1, (float)MenuV6MathF.Clamp01(MenuV6RigMath.CrackGlowAlpha(fl) * _gain)));
+                _crack.Rect(_cr, QuadList.Full, new Color(1, 1, 1, (float)MenuV6MathF.Clamp01(MenuV6RigMath.CrackGlowAlpha(fl, sg) * _gain)));
                 _crack.Commit();
             }
 
             if (_fissure != null)
             {
                 _fissure.Clear();
-                _fissure.Rect(_fr, QuadList.Full, new Color(1, 1, 1, (float)MenuV6MathF.Clamp01(MenuV6RigMath.FissureGlowAlpha(fl) * _gain)));
+                _fissure.Rect(_fr, QuadList.Full, new Color(1, 1, 1, (float)MenuV6MathF.Clamp01(MenuV6RigMath.FissureGlowAlpha(fl, sg) * _gain)));
                 _fissure.Commit();
             }
         }

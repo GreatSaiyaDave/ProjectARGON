@@ -142,7 +142,9 @@ namespace WRLDZ.UI.MenuV6
             public CrackNet N;
             public CrackNetGraphic Lips, Gap, Depth, Top;
             public readonly CrackMesh LipsM = new(), GapM = new(), DepthM = new(), TopM = new();
-            public long Key = long.MinValue;
+            public long Key = long.MinValue;    // the alpha / the gaps' alpha (rebuilt at once when it moves)
+            public long KeyO = long.MinValue;   // the breathe (P5: 1/400 steps, a few nets per frame)
+            public double LastE = double.NaN;   // the extent the meshes were built at
             public double LastDrift = double.NaN;
         }
 
@@ -162,6 +164,24 @@ namespace WRLDZ.UI.MenuV6
 
         public ICrackDriver Driver;
         public Func<double> Clock;
+
+        /// <summary>P5: the gaps' (and their depth bands') alpha instead of the items' largest (the grade's crack copy: the
+        /// gaps at ea, the rest of the break at the items' .35 ea); null = the page's one drawVoidIn alpha.</summary>
+        public Func<double> GapAlpha;
+
+        /// <summary>P5 (BUILD_PLAN §6 P5 step 7, the P2 review's 75k verts / 2.4 ms per frame): the breathe and the creep
+        /// moved every net past its rebuild key nearly every frame. Open is now keyed at 1/<see cref="OpenSteps"/> (a .25 %
+        /// width step: ~.05 px on a 20 px break); the breathe and the creep's small steps (the extent at .125 px, under
+        /// <see cref="ExtentJump"/>) share a budget of <see cref="BreatheBudget"/> nets per frame (round robin); an alpha
+        /// change and an extent jump (the grow-in) rebuild at once. Modelled with the real driver and painter over 60 s of
+        /// the menu idle (p5/perf): landscape 11.5 -> 3.9 nets / frame, 1.33 -> .54 ms, p95 1.70 -> .80 ms; portrait 6.2 -> 2.6.</summary>
+        public const double OpenSteps = 400;
+
+        public const double ExtentJump = 2;
+
+        public int BreatheBudget = 4;
+        int _rr;
+        bool _rendered;
         public CrackSet Set { get; private set; }
         public int VertexCount { get; private set; }
 
@@ -233,18 +253,19 @@ namespace WRLDZ.UI.MenuV6
 
         void LateUpdate()
         {
+            // Battery Saver (SPEC §8.7: end states, no seam runs, no lightning): the layer holds the frame it last drew. The
+            // grade's crack copy (GapAlpha) keeps following the grade, which keeps its timing in Battery Saver; its clock is the
+            // Stone's held frame (MenuV6Stage.GradeCrackCopy), so it spares exactly the breaks on screen (P5 review)
+            if (_rendered && WrldzTheme.BatterySaver && GapAlpha == null) return;
             if (Clock != null) Render(Clock());
         }
 
-        static long KeyOf(in CrackItem it)
-        {
-            // rebuild when the extent moved .125 px, the breathe 1/2000, the alpha 1/400
-            unchecked
-            {
-                long e = (long)Math.Round(it.E * 8), o = (long)Math.Round(it.Open * 2000), a = (long)Math.Round(it.A * 400);
-                return (e * 4001 + o) * 401 + a;
-            }
-        }
+        /// <summary>The clock time of the last <see cref="Render"/> (NaN before the first): the frame a held layer shows.</summary>
+        public double LastT { get; private set; } = double.NaN;
+
+        static long KeyOf(in CrackItem it) => (long)Math.Round(it.A * 400);   // the alpha 1/400 (extent and breathe apart)
+
+        static long KeyOpen(in CrackItem it) => (long)Math.Round(it.Open * OpenSteps);
 
         /// <summary>Draw the layer for clock t (play mode: every frame; edit mode: once, from the builder).</summary>
         public void Render(double t)
@@ -256,10 +277,17 @@ namespace WRLDZ.UI.MenuV6
             // the gaps' alpha: the layer's largest (the page's one drawVoidIn over the union)
             double am = 0;
             foreach (var it in _items) am = Math.Max(am, it.A);
+            if (GapAlpha != null) am = on ? Math.Max(0, Math.Min(1, GapAlpha())) : 0;
+            var depthA = GapAlpha != null;
             var verts = 0;
             var drift = tc * RealmDrift;
-            for (var i = 0; i < _g.Count; i++)
+            // edit mode and a frozen capture clock draw every net exact at once (the stills); the live menu spreads the soft steps
+            var budget = Application.isPlaying && !MenuV6Clock.Frozen ? Math.Max(1, BreatheBudget) : int.MaxValue;
+            var n0 = _g.Count;
+            if (n0 > 0) _rr = (_rr + 1) % n0;
+            for (var ii = 0; ii < n0; ii++)
             {
+                var i = (ii + _rr) % n0;
                 var g = _g[i];
                 var idx = -1;
                 for (var j = 0; j < _items.Count; j++)
@@ -271,9 +299,17 @@ namespace WRLDZ.UI.MenuV6
 
                 var has = idx >= 0 && _items[idx].A > .004 && _items[idx].E >= 1;
                 var key = has ? KeyOf(_items[idx]) ^ ((long)Math.Round(am * 400) << 50) : long.MinValue + 1;
-                if (key != g.Key)
+                var keyO = has ? KeyOpen(_items[idx]) : long.MinValue + 1;
+                var e = has ? _items[idx].E : double.NaN;
+                var jump = has != !double.IsNaN(g.LastE) || (has && Math.Abs(e - g.LastE) >= ExtentJump);
+                var soft = key == g.Key && !jump && (keyO != g.KeyO || (has && Math.Round(e * 8) != Math.Round(g.LastE * 8)));
+                if (soft && budget <= 0) soft = false;   // its turn comes next frame (round robin)
+                else if (soft) budget--;
+                if (key != g.Key || jump || soft)
                 {
                     g.Key = key;
+                    g.KeyO = keyO;
+                    g.LastE = e;
                     g.LipsM.Clear();
                     g.GapM.Clear();
                     g.DepthM.Clear();
@@ -286,7 +322,7 @@ namespace WRLDZ.UI.MenuV6
                         {
                             _paint.Lips(g.N, sh, it.A, g.LipsM);
                             _paint.Gaps(g.N, sh, am, _realm ? new Color32(255, 255, 255, 255) : CrackPainter.RealmDeep, g.GapM);
-                            _paint.DepthBands(g.N, sh, it.A, g.DepthM, true);
+                            _paint.DepthBands(g.N, sh, depthA ? am : it.A, g.DepthM, true);
                             _paint.Rest(g.N, sh, it.A, it.E, g.TopM);
                         }
                     }
@@ -355,6 +391,8 @@ namespace WRLDZ.UI.MenuV6
 
             _waverOn = wv;
             VertexCount = verts;
+            _rendered = true;
+            LastT = t;
         }
 
         double ExtentOf(CrackNet n)
@@ -384,6 +422,10 @@ namespace WRLDZ.UI.MenuV6
         /// <summary>The through-the-dim copy: items take sp.lit (anime_v61_cracks.js:673).</summary>
         public bool DimCopy;
 
+        /// <summary>P5: the copy over the dread grade (CRK.wrapDrop's cut-outs): items at <see cref="AlphaK"/>, no bolts, no
+        /// stutter ghosts; the layer's <see cref="CrackLayer.GapAlpha"/> carries the gaps.</summary>
+        public bool GradeCopy;
+
         /// <summary>The Stone at rest (no entrance: edit mode, captures, a menu rebuilt without a token): the breaks are grown
         /// from t = 0 and only creep and breathe.</summary>
         public bool Rest;
@@ -409,6 +451,7 @@ namespace WRLDZ.UI.MenuV6
             var intro = Rest ? 1 : Intro(_enter, t);
             var k = AlphaK != null ? AlphaK() : 1;
             if (DimCopy && k <= .01) return false;
+            if (GradeCopy && k <= .002) return false;
             foreach (var n in _nets)
             {
                 var sps = CrackTime.Spasm(tc, n.Seed);
@@ -420,12 +463,12 @@ namespace WRLDZ.UI.MenuV6
                 });
             }
 
-            if (DimCopy) waver = 0;
+            if (DimCopy || GradeCopy) waver = 0;
             return true;
         }
 
         public double MistA => 0;   // the menu's floor mist stays in the baked smoke plate until P5's live smoke (decision)
-        public CrackBeat[] Bolts => DimCopy ? null : _bolts;
+        public CrackBeat[] Bolts => DimCopy || GradeCopy ? null : _bolts;
         public double BoltA => _eA;
     }
 
@@ -439,6 +482,10 @@ namespace WRLDZ.UI.MenuV6
         readonly bool _enter;
         readonly CrackBeat[] _stut = CrackTime.Schedule(912, 21.5, 43, 71, 200);
         public Func<double> AlphaK;
+
+        /// <summary>P5: the dread ladder's run (0..1, to the fracture's end) and widening (+ .4 max(omen, .6 appar)) at t
+        /// (anime_v61_cracks.js:595-598); null = at rest.</summary>
+        public Func<double, (double run, double open)> Dread;
 
         public NutCrackDriver(CrackNet nut, double riftRun, bool enter)
         {
@@ -455,9 +502,13 @@ namespace WRLDZ.UI.MenuV6
             if (e <= .01 || _n == null) return false;
             var ent = _enter ? MenuV6Math.InOut(MenuV6Math.Seg(t, 1.9, 2.95)) : 1;
             if (ent <= .0005) return false;
+            var run = 0.0;
+            var open = 0.0;
+            if (Dread != null) (run, open) = Dread(t);
             items.Add(new CrackItem
             {
-                N = _n, E = _n.L * _riftRun * ent, A = e, Open = 1 + .03 * Math.Sin(tc * Math.PI * 2 / 5.3 + _n.Seed), Mist = 0
+                N = _n, E = _n.L * MenuV6Math.Lerp(_riftRun, 1, run) * ent, A = e,
+                Open = 1 + .03 * Math.Sin(tc * Math.PI * 2 / 5.3 + _n.Seed) + open, Mist = 0
             });
             return true;
         }

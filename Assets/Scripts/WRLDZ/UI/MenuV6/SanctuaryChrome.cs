@@ -382,8 +382,17 @@ namespace WRLDZ.UI.MenuV6
             status.horizontalOverflow = HorizontalWrapMode.Wrap;
             status.verticalOverflow = VerticalWrapMode.Overflow;
             status.resizeTextForBestFit = false;
+            // P5 (the P4 landing: the BAZAAR wallet text sat flush against the strip's left edge): the text keeps the ledger
+            // rows' inset inside its strip, StripInset stage px each side (decided: the strip cel's lip + 8 px)
+            var pad = StripInset * SheetDraw.CanvasK(status.transform);
+            var srt = status.rectTransform;
+            srt.offsetMin = new Vector2(srt.offsetMin.x + pad, srt.offsetMin.y);
+            srt.offsetMax = new Vector2(srt.offsetMax.x - pad, srt.offsetMax.y);
             SanctuaryPainted.Tag(status, "StatusLine");
         }
+
+        /// <summary>P5: the status line's inset inside its ledger strip (stage px).</summary>
+        public const float StripInset = 18f;
 
         /// <summary>HeaderBar's title / subtitle type (the sheets' own: texts.quit .h, texts.recess .sub).</summary>
         public static void HeaderType(Text title, Text sub)

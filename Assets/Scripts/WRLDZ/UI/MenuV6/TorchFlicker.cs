@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,7 +16,15 @@ namespace WRLDZ.UI.MenuV6
     public sealed class TorchFlicker : MonoBehaviour
     {
         readonly List<(Graphic g, float gain)> _flickAlpha = new();
-        Graphic _poolB0;
+        Graphic _poolB0, _poolB1;
+        float _poolB1A = -1f;
+
+        /// <summary>P5: the dread ladder's strain at t (0 = at rest): the flick x (1 − .75 sg), the pool x (1 − .6 sg), the
+        /// wide pool x (1 − .5 sg) (menu.js:653-658).</summary>
+        public Func<double, double> Sg;
+
+        /// <summary>SPEC §8.7 Battery Saver: one slow torch pulse (a 4.5 s sine about the flick's mean) instead of the flicker.</summary>
+        public static double SaverPulse(double t) => .55 + .25 * Math.Sin(t * Math.PI * 2 / 4.5);
         float _poolGain = 1f, _poolSwing = float.NaN;
         double[] _noise;
         float _last = -1f;
@@ -55,19 +64,35 @@ namespace WRLDZ.UI.MenuV6
             _poolSwing = swing;
         }
 
+        /// <summary>P5: the wide pool (b1) at its rest alpha <paramref name="restA"/>, dimmed by the ladder (1 − .5 sg).</summary>
+        public void DrivePoolWide(Graphic g, float restA)
+        {
+            _poolB1 = g;
+            _poolB1A = restA;
+        }
+
         public void Apply(float t)
         {
-            var flick = (float)MenuV6Math.Flick(t, _noise);
+            double sg = 0;
+            if (Sg != null)
+            {
+                try { sg = Sg(t); }
+                catch { sg = 0; }
+            }
+
+            var flick = WrldzTheme.BatterySaver ? (float)(SaverPulse(t) * (1 - .75 * sg)) : (float)MenuV6Math.Flick(t, _noise, sg);
             Flick = flick;
             for (var i = 0; i < _flickAlpha.Count; i++)
                 SetAlpha(_flickAlpha[i].g, Mathf.Clamp01(flick * _flickAlpha[i].gain));
             if (_poolB0 != null)
             {
                 var a0 = float.IsNaN(_poolSwing)
-                    ? (float)MenuV6Math.TorchPoolA0(flick) * _poolGain
-                    : _poolGain * .2f * .95f + _poolSwing * .2f * .3f * (flick - .5f);
+                    ? (float)MenuV6Math.TorchPoolA0(flick, sg) * _poolGain
+                    : (_poolGain * .2f * .95f + _poolSwing * .2f * .3f * (flick - .5f)) * (float)(1 - .6 * sg);
                 SetAlpha(_poolB0, Mathf.Clamp01(a0));
             }
+
+            if (_poolB1 != null && _poolB1A >= 0f) SetAlpha(_poolB1, Mathf.Clamp01(_poolB1A * (float)(1 - .5 * sg)));
         }
 
         static void SetAlpha(Graphic g, float a)

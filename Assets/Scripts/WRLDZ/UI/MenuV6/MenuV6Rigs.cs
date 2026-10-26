@@ -149,6 +149,12 @@ namespace WRLDZ.UI.MenuV6
 
         /// <summary>P2 entrance: the keystone's eye value at t given the idle one (the lock's +1.1 / +1.2 boost); null = idle.</summary>
         public Func<double, double, double> KeystoneEye;
+
+        /// <summary>P5: the dread ladder (null = none: the deck hall, the title, a clone without the P5 data).</summary>
+        public DreadLadder Dread;
+
+        /// <summary>The ladder's state at t (at rest without a ladder).</summary>
+        public DreadState DreadAt(double t) => Dread != null ? Dread.At(t) : DreadState.Rest;
         public string Layout => Kind == MenuLayoutKind.Landscape ? "Land" : "Port";
         public Dictionary<string, object> Rig(string id) => RJ.D(Rigs, id);
     }
@@ -327,7 +333,7 @@ namespace WRLDZ.UI.MenuV6
         public override void Tick(double t)
         {
             if (_blur != null) SetA(_blur, .55 * MenuV6RigMath.EmissiveBreath(t) * _gBlur);
-            var pr = MenuV6RigMath.VignettePr(t);
+            var pr = MenuV6RigMath.VignettePr(t, Ctx != null ? Ctx.DreadAt(t).Sg : 0);   // P5: + .3 sg
             foreach (var v in _vignettes) SetA(v, pr * _gVig);
         }
 

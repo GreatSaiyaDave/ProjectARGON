@@ -93,9 +93,12 @@ def main() -> int:
             fail(f"{cs.relative_to(ROOT)} loads menu art through StreamingSprite (RGBA32, keyed corners)")
         if re.search(r"\bSystem\.IO\b", src):
             fail(f"{cs.relative_to(ROOT)} reads files directly (v6 art goes through Resources.Load)")
-        # P1b (D3): the idle rigs draw on UI/Default; no shader or material of their own before P5's one shader
-        if re.search(r"\bShader\.Find\b|\bnew\s+Material\s*\(", src):
-            fail(f"{cs.relative_to(ROOT)} makes its own shader / material (D3: UI/Default until P5)")
+        # P1b (D3): the idle rigs draw on UI/Default; P5 adds exactly ONE shader, the cel smoke's, made only by SmokeField
+        if re.search(r"\bShader\.Find\b|\bnew\s+Material\s*\(", src) and cs.name != "SmokeField.cs":
+            fail(f"{cs.relative_to(ROOT)} makes its own shader / material (D3: UI/Default, the cel smoke's one shader excepted)")
+        # AGENTS.md: always WrldzInput, never Input.GetKey (the back key, P5)
+        if re.search(r"\bInput\.Get(Key|Button|Mouse)", src):
+            fail(f"{cs.relative_to(ROOT)} reads UnityEngine.Input directly (use WrldzInput)")
     # P1b: the portrait plan builds the Stone, and a rig that cannot build keeps its layer's P1a still
     must_contain(stage, "MenuLayoutKind.Portrait", "the Stone lost its portrait plan (P1b)")
     must_contain(stage, "RigsKept", "a rig that cannot build no longer keeps its P1a still")
@@ -302,6 +305,41 @@ def main() -> int:
         fail("AvatarCustomizerUI takes the shared frame (§12: it belongs to the Player customization session)")
     must_contain(smoke, "MenuV6 sheets", "MenuSmokeTest lost the P3 sheet checks")
 
+    # P5 (BUILD_PLAN §3 "No fifth UI shader" row, §5.6, D3): the one new UI shader is hand-written HLSL in the menu's own
+    # folder (no ShaderGraph, no VFX Graph), only SmokeField finds it, and EVERY WRLDZ/UI shader ships: a shader reached
+    # only through Shader.Find is stripped from a player build unless its GUID is in m_AlwaysIncludedShaders.
+    cel = MENU_V6 / "Shaders/MenuCelSmoke.shader"
+    if not cel.is_file():
+        fail("missing Assets/Scripts/WRLDZ/UI/MenuV6/Shaders/MenuCelSmoke.shader (P5: the cel smoke, D3)")
+    must_contain(cel, 'Shader "WRLDZ/UI/MenuCelSmoke"', "the cel smoke shader lost its name")
+    for bad in list(MENU_V6.rglob("*.shadergraph")) + list(MENU_V6.rglob("*.vfx")) + list(MENU_V6.rglob("*.shadersubgraph")):
+        fail(f"{bad.relative_to(ROOT)}: no ShaderGraph / VFX Graph in the menu (hand-written HLSL only)")
+    must_contain(MENU_V6 / "SmokeField.cs", '"WRLDZ/UI/MenuCelSmoke"', "SmokeField does not find the cel smoke shader by name")
+    must_contain(MENU_V6 / "SmokeField.cs", "WrldzTheme.BatterySaver", "the live smoke ignores Battery Saver (SPEC §8.7: a static plate)")
+    must_contain(MENU_V6 / "MenuBack.cs", "WrldzInput.KeyDown(KeyCode.Escape)", "the back key does not go through WrldzInput")
+    must_contain(MENU_V6 / "SafeArea.cs", "Screen.safeArea", "the v6 screens ignore Screen.safeArea (P5)")
+    must_contain(ROOT / "Assets/Editor/WRLDZ/MenuV6ShipSettings.cs", "ShaderUtil.ShaderHasError",
+                 "the Always Included step no longer gates on ShaderUtil.ShaderHasError (§5.6)")
+    ui_shaders = []
+    for sh in sorted((ROOT / "Assets/Scripts/WRLDZ/UI").rglob("*.shader")):
+        m = re.search(r'Shader\s+"(WRLDZ/UI/[^"]+)"', sh.read_text(encoding="utf-8", errors="replace"))
+        if not m:
+            continue
+        meta = sh.with_name(sh.name + ".meta")
+        g = re.search(r"^guid:\s*([0-9a-f]{32})\s*$", meta.read_text(encoding="utf-8", errors="replace"), re.M) if meta.is_file() else None
+        if not g:
+            fail(f"{sh.relative_to(ROOT)} has no .meta guid")
+        ui_shaders.append((m.group(1), g.group(1)))
+    gfx = ROOT / "ProjectSettings/GraphicsSettings.asset"
+    if not gfx.is_file():
+        fail("missing ProjectSettings/GraphicsSettings.asset (the Always Included Shaders list)")
+    gm = re.search(r"m_AlwaysIncludedShaders:\s*\n((?:[ \t]*- \{[^\n]*\}[ \t]*\n)*)", gfx.read_text(encoding="utf-8", errors="replace"))
+    block = gm.group(1) if gm else ""
+    for name, g in ui_shaders:
+        if f"guid: {g}, type: 3" not in block:
+            fail(f"{name} (guid {g}) is not in GraphicsSettings m_AlwaysIncludedShaders: a player build strips it "
+                 "(BUILD_PLAN §5.6; run WRLDZ.EditorTools.MenuV6ShipSettings.Apply in the Editor)")
+
     print("hub overlay chrome")
     print("  HubChrome header / well / BACK present")
     print("  DualMenuPresenter compact Solid Vision slates (map visible)")
@@ -310,6 +348,7 @@ def main() -> int:
     print("  main menu: portrait plan, rigs on UI/Default (no own shader), P1a stills kept as the rigs' fallback")
     print("  boot: v6.3 title gate + legacy cascade, D8 handoff, entry token, live cracks, edit-mode title smoke")
     print("  sheets: Sanctuary painters behind the marker, false door + FrameGhost, the Stone's sheets, QUIT fold, CREDITS")
+    print(f"  P5: one hand-written menu shader (MenuCelSmoke), {len(ui_shaders)} WRLDZ/UI shaders in Always Included, back key via WrldzInput, safe area")
     print("PASS")
     return 0
 

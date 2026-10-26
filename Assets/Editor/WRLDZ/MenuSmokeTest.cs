@@ -81,14 +81,16 @@ namespace WRLDZ.EditorTools
                 }
             }
 
-            // the menu build's own checks (P3 sheets, P4 deck hall) press buttons in edit mode: every press that reaches
-            // WrldzAudio.Ensure leaves a "WRLDZ_Audio" root (DontDestroyOnLoad throws outside Play); these checks remove the
-            // strays they made (P3 landing: ~40 per run)
+            // the menu build's own checks (P1a-P5) build menus and press buttons in edit mode: a press that reaches
+            // WrldzAudio.Ensure / ScreenRouter.Ensure leaves its root behind (DontDestroyOnLoad throws outside Play), a build
+            // can leave a canvas. P5 (the P4 landing: 70 strays in the open scene): each of these checks removes EVERY scene
+            // root it created (the roots are listed before it runs; nothing that was there before is touched). The other
+            // checks in this file belong to their own sessions and keep their own cleanup.
             void OurCheck(string name, Action act) => Check(name, () =>
             {
-                var before = StrayIds();
+                var before = RootSet();
                 try { act(); }
-                finally { DestroyNewStrays(before); }
+                finally { DestroyNewRoots(before); }
             });
 
             sb.AppendLine("WRLDZ menu smoke");
@@ -125,7 +127,7 @@ namespace WRLDZ.EditorTools
 
             // The v6.3 Stone (BUILD_PLAN P1a §3 rows): the nine labels, the Tiles host, the old control names, a
             // clone without the local-only art, a builder pass with no art at all, and the legacy fallback.
-            Check("Main menu v6 Stone: labels, Tiles, control names (1920x1080)", () =>
+            OurCheck("Main menu v6 Stone: labels, Tiles, control names (1920x1080)", () =>
             {
                 RequireMenuV6Art();
                 WithHub("HubSmokeV6", 1920, 1080, menu =>
@@ -138,7 +140,7 @@ namespace WRLDZ.EditorTools
                             throw new Exception("control " + n + " missing");
                 });
             });
-            Check("Main menu v6 Stone with ForceNoLocal (a clone without the local-only art)", () =>
+            OurCheck("Main menu v6 Stone with ForceNoLocal (a clone without the local-only art)", () =>
             {
                 RequireMenuV6Art();
                 try
@@ -164,7 +166,7 @@ namespace WRLDZ.EditorTools
                     MenuV6Art.ClearCache();
                 }
             });
-            Check("Main menu v6 builder with no art does not throw; the hub falls back", () =>
+            OurCheck("Main menu v6 builder with no art does not throw; the hub falls back", () =>
             {
                 RectTransform canvas = null, canvasPort = null;
                 try
@@ -191,7 +193,7 @@ namespace WRLDZ.EditorTools
                 }
             });
             // P1b: the portrait plan builds the Stone too (its first cut); the legacy portrait menu stays the fallback.
-            Check("Main menu v6 portrait Stone: labels, Tiles, control names (1080x2340)", () =>
+            OurCheck("Main menu v6 portrait Stone: labels, Tiles, control names (1080x2340)", () =>
             {
                 if (!MenuV6Stage.HasArt(MenuLayoutKind.Portrait))
                     throw new Exception("portrait v6 art missing under Resources/" + MenuV6Art.Root + " (the P1b art set is not installed)");
@@ -207,7 +209,7 @@ namespace WRLDZ.EditorTools
             });
             // P1b: every idle rig builds in both plans (none keeps its P1a still; the box needs the local renders), and every
             // control's hover / press state draws without throwing.
-            Check("Main menu v6 rigs build and every hover / press state draws (1920x1080, 1080x2340)", () =>
+            OurCheck("Main menu v6 rigs build and every hover / press state draws (1920x1080, 1080x2340)", () =>
             {
                 foreach (var (w, h, kind) in new[] { (1920, 1080, MenuLayoutKind.Landscape), (1080, 2340, MenuLayoutKind.Portrait) })
                 {
@@ -237,7 +239,7 @@ namespace WRLDZ.EditorTools
             // The legacy portrait menu (the fallback when the v6 path is off: kill switch, no art, a build error) is today's
             // menu unchanged. The check keeps its P1a name (the landing compares names with a baseline run); since P1b the
             // portrait default is the v6 Stone, so the fallback is reached with the test-only MenuV6Stage.ForceLegacy.
-            Check("Main menu portrait (1080x2340) is today's legacy menu", () =>
+            OurCheck("Main menu portrait (1080x2340) is today's legacy menu", () =>
             {
                 try
                 {
@@ -257,7 +259,7 @@ namespace WRLDZ.EditorTools
             // P2 (BUILD_PLAN §6 P2, §11 F18): the boot builds the v6.3 title's settled idle in edit mode without throwing
             // (no coroutine, no video, no RenderTexture), with and without the local-only art; the legacy cascade still
             // builds; the Stone draws its live cracks and its entrance (cold open, boot handoff) runs and returns to rest.
-            Check("Boot title v6: BootFlowUI.BuildAndRun builds the settled idle (1920x1080, 1080x2340)", () =>
+            OurCheck("Boot title v6: BootFlowUI.BuildAndRun builds the settled idle (1920x1080, 1080x2340)", () =>
             {
                 foreach (var (w, h) in new[] { (1920, 1080), (1080, 2340) })
                 {
@@ -296,7 +298,7 @@ namespace WRLDZ.EditorTools
                 }
             });
 
-            Check("Boot legacy cascade (v6 title off) still builds", () =>
+            OurCheck("Boot legacy cascade (v6 title off) still builds", () =>
             {
                 try
                 {
@@ -315,7 +317,7 @@ namespace WRLDZ.EditorTools
                 }
             });
 
-            Check("Main menu v6 live cracks + the entrance (cold open, boot handoff) return to rest", () =>
+            OurCheck("Main menu v6 live cracks + the entrance (cold open, boot handoff) return to rest", () =>
             {
                 foreach (var (w, h) in new[] { (1920, 1080), (1080, 2340) })
                     WithHub("HubSmokeV6Entrance", w, h, menu =>
@@ -599,6 +601,178 @@ namespace WRLDZ.EditorTools
                     UnityEngine.Object.DestroyImmediate(lh.gameObject);
                 }
             });
+            // P5 (BUILD_PLAN §6 P5 verify): the dread ladder (the page's own director vectors; every rung at the omen, the
+            // whisper and the story beats, the Stone back at rest), the live cel smoke over its plate (the plate kept when the
+            // shader is missing), the title's fog, the back key, the safe-area bands, SETTINGS' pinned CREDITS and the deck's
+            // portrait tap pads. Nothing is saved; no beat is left running.
+            OurCheck("MenuV6 P5: the dread ladder (the page's director, every rung at the omen / whisper / story beats) (1920x1080, 1080x2340)", () =>
+            {
+                foreach (var (w, h, kind) in new[] { (1920, 1080, MenuLayoutKind.Landscape), (1080, 2340, MenuLayoutKind.Portrait) })
+                {
+                    var tag = w + "x" + h + ": ";
+                    if (DreadData.Load(kind) == null) throw new Exception(tag + "dread data missing (the P5 art set is not installed)");
+                    DreadVectors(kind, tag);
+                    WithHub("HubSmokeV6Dread", w, h, menu =>
+                    {
+                        var stone = menu.Stone;
+                        if (stone == null) throw new Exception(tag + "v6 path not taken");
+                        if (stone.Dread == null) throw new Exception(tag + "no dread ladder");
+                        var o = DreadMath.OmenStart(0);
+                        var wh = DreadMath.WhisperStart(0);
+                        stone.ProbeDread(false, o - 1, o + .2, o + .5, o + .9, o + 1.2, o + 1.6, o + 2.2, wh + .1, wh + .6, wh + 1.2, wh + 1.9);
+                        stone.ProbeDread(true, 3, 6, 8, 9.5, 12.4, 13.6, 14.2, 15, 16.5, 18);
+                        if (stone.Life != null && stone.Life.Dropped.Count > 0)
+                            throw new Exception(tag + "rigs threw under the ladder: " + string.Join(", ", stone.Life.Dropped));
+                        if (stone.Dread.Story) throw new Exception(tag + "the story beat was left running");
+                        RequireMainMenu(menu.MenuCanvas, MainMenuV6Labels);
+                    });
+                }
+            });
+            OurCheck("MenuV6 P5: the live cel smoke over its plate, the plate kept without the shader; the title's fog (1920x1080, 1080x2340)", () =>
+            {
+                foreach (var (w, h, kind) in new[] { (1920, 1080, MenuLayoutKind.Landscape), (1080, 2340, MenuLayoutKind.Portrait) })
+                {
+                    var tag = w + "x" + h + ": ";
+                    if (SmokeSet.Load(kind) == null) throw new Exception(tag + "smoke data missing (the P5 art set is not installed)");
+                    if (CelSmokeShader.Get() == null) throw new Exception(tag + CelSmokeShader.Name + " is missing or does not compile");
+                    WithHub("HubSmokeV6Smoke", w, h, menu =>
+                    {
+                        var stone = menu.Stone;
+                        if (stone == null) throw new Exception(tag + "v6 path not taken");
+                        if (stone.Smoke == null) throw new Exception(tag + "the live smoke did not build over the plate");
+                        foreach (var t in new[] { .5, 2.8, 9.3, 33.0, 70.0 }) stone.Smoke.DrawAt(t);
+                        if (stone.Smoke.Quads < 1) throw new Exception(tag + "the live smoke drew nothing");
+                    });
+                    try
+                    {
+                        CelSmokeShader.ForceMissing = true;
+                        WithHub("HubSmokeV6SmokePlate", w, h, menu =>
+                        {
+                            var stone = menu.Stone;
+                            if (stone == null) throw new Exception(tag + "v6 path not taken without the smoke shader");
+                            if (stone.Smoke != null) throw new Exception(tag + "the live smoke built without its shader");
+                            var img = CompAt<Image>(FindNamed(menu.MenuCanvas, "smoke"));
+                            if (img == null || !img.enabled) throw new Exception(tag + "the smoke plate is not showing");
+                        });
+                    }
+                    finally
+                    {
+                        CelSmokeShader.ForceMissing = false;
+                    }
+
+                    if (TitleStage.WhyNot(kind) == null)
+                    {
+                        var tc = WrldzTheme.Canvas("TitleFogSmokeCanvas", 49, aspect: true);
+                        var ts = TitleStage.Build(tc, kind, new TitleStage.Options { Video = false, StartRaw = TitleStage.SettledRaw });
+                        if (ts == null) throw new Exception(tag + "the title did not build");
+                        if (ts.Fog == null) throw new Exception(tag + "the title has no live fog");
+                        if (ts.Fog.Quads < 1) throw new Exception(tag + "the title's fog drew nothing at the settled idle");
+                        UnityEngine.Object.DestroyImmediate(tc.gameObject);
+                    }
+                }
+            });
+            OurCheck("MenuV6 P5: the back key: the popover's STAY, then nothing on the bare menu (1920x1080)", () =>
+            {
+                WithHub("HubSmokeV6Back", 1920, 1080, menu =>
+                {
+                    var back = menu.Back;
+                    if (back == null) throw new Exception("no back handler on the main menu");
+                    if (back.Press() || back.Last != "nothing") throw new Exception("back on the bare menu did something: " + back.Last);
+                    Press(menu.MenuCanvas, "Hero");
+                    if (menu.Sheet == null) throw new Exception("DUEL did not open its sheet");
+                    if (!back.Press() || back.Last != "popover") throw new Exception("back did not close CHOOSE YOUR DUEL (" + back.Last + ")");
+                    if (menu.Sheet != null || FindNamed(menu.MenuCanvas, "Popover_DuelChoice") != null)
+                        throw new Exception("CHOOSE YOUR DUEL is still open after back");
+                    Press(menu.MenuCanvas, "Quit");
+                    if (menu.Sheet as QuitSheet == null) throw new Exception("QUIT did not open the fold sheet");
+                    if (!back.Press()) throw new Exception("back did not take QUIT's STAY");
+                    if (FindNamed(menu.MenuCanvas, "Popover_QuitConfirm") != null) throw new Exception("QUIT is still open after back");
+                });
+            });
+            OurCheck("MenuV6 P5: the safe-area bands (a simulated 120 px top / 80 px bottom inset, 1080x2340)", () =>
+            {
+                WithHub("HubSmokeV6Safe", 1080, 2340, menu =>
+                {
+                    var stone = menu.Stone;
+                    if (stone == null) throw new Exception("v6 path not taken");
+                    var sa = stone.Safe;
+                    if (sa == null || sa.Bands == 0) throw new Exception("no safe-area bands");
+                    try
+                    {
+                        var cs = new Vector3[4];
+                        stone.Stage.GetWorldCorners(cs);
+                        var p0 = RectTransformUtility.WorldToScreenPoint(null, cs[0]);
+                        var p2 = RectTransformUtility.WorldToScreenPoint(null, cs[2]);
+                        var k = (p2.x - p0.x) / 1080f;   // screen px per stage px
+                        if (k <= .001f) return;   // no view to measure in this Editor layout: the bands exist, nothing to move
+                        SafeArea.Override = Rect.MinMaxRect(p0.x, p0.y + 80f * k, p2.x, p2.y - 120f * k);
+                        sa.Apply(true);
+                        if (Mathf.Abs(sa.T - 120f) > 2f || Mathf.Abs(sa.B - 80f) > 2f)
+                            throw new Exception("insets measured " + sa.T + " / " + sa.B + " stage px (want 120 / 80)");
+                        var top = FindNamed(stone.Stage, "Safe_top") as RectTransform;
+                        var foot = FindNamed(stone.Stage, "Safe_footer") as RectTransform;
+                        if (top == null || foot == null) throw new Exception("the identity-row / footer bands are missing");
+                        if (Mathf.Abs(top.anchoredPosition.y + 100f) > .5f) throw new Exception("the identity row moved " + top.anchoredPosition.y + " (want -100)");
+                        if (Mathf.Abs(foot.anchoredPosition.y - 58f) > .5f) throw new Exception("the footer moved " + foot.anchoredPosition.y + " (want +58)");
+                    }
+                    finally
+                    {
+                        SafeArea.Override = null;
+                        sa.Apply(true);
+                    }
+                });
+            });
+            OurCheck("MenuV6 P5: SETTINGS keeps CREDITS on the sheet (the pinned footer) (1920x1080, 1080x2340)", () =>
+            {
+                foreach (var (w, h) in new[] { (1920, 1080), (1080, 2340) })
+                    WithHub("HubSmokeV6Credits", w, h, menu =>
+                    {
+                        var tag = w + "x" + h + ": ";
+                        var modal = SmokeModalHost("HubSmokeV6CreditsModal", SanctuaryHost.Stone);
+                        var settings = SettingsScreen.Build(modal, null, () => { });
+                        if (settings == null) throw new Exception(tag + "SettingsScreen did not build");
+                        if (!SheetCredits.AddRow(settings, modal)) throw new Exception(tag + "SETTINGS has no list for the CREDITS row");
+                        var foot = FindNamed(settings, "CreditsFoot");
+                        if (foot == null) throw new Exception(tag + "CREDITS is not pinned under the list");
+                        RequireLabel(foot, SheetCredits.RowLabel);
+                        if (FindNamed(settings, "ListView") == null) throw new Exception(tag + "the list has no viewport above the footer");
+                        DestroyNamed("HubSmokeV6CreditsModal");
+                    });
+            });
+            OurCheck("Deck hall P5: every portrait tap is at least 56 px (the tap pads), the safe-area bands (1080x2340)", () =>
+            {
+                var why = DeckHallSpec.WhyNot(MenuLayoutKind.Portrait);
+                if (why != null) throw new Exception(why + " (the P4 art set is not installed)");
+                var dh = new GameObject("DeckHallSmokeP5", typeof(RectTransform)).GetComponent<RectTransform>();
+                dh.SetParent(canvas, false);
+                FloatingPanel.Stretch(dh);
+                try
+                {
+                    MenuAspect.Force(1080, 2340);
+                    DeckCollectionScreen.Build(dh, () => { }, UiPresentation.NonArPortrait);
+                    var root = FindNamed(dh, "PhoneMenu_DECK");
+                    var hall = root != null ? root.GetComponent<DeckHall>() : null;
+                    if (hall == null) throw new Exception("the deck builder did not build the hall");
+                    if (hall.Safe == null) throw new Exception("the deck hall has no safe-area bands");
+                    foreach (var b in root.GetComponentsInChildren<Button>(true))
+                    {
+                        var img = b.targetGraphic as Image;
+                        if (img == null || img.color.a > .001f) continue;   // the hall's hit pattern: an invisible Image + Button
+                        var rt = (RectTransform)b.transform;
+                        var sz = rt.rect.size;
+                        if (sz.x >= 55.5f && sz.y >= 55.5f) continue;
+                        var pad = b.transform.Find("TapPad") as RectTransform;
+                        if (pad == null || pad.rect.width < 55.5f || pad.rect.height < 55.5f)
+                            throw new Exception("the tap " + b.name + " is " + sz.x.ToString("0") + " x " + sz.y.ToString("0") + " px with no 56 px pad");
+                    }
+                }
+                finally
+                {
+                    MenuAspect.ClearForce();
+                    UnityEngine.Object.DestroyImmediate(dh.gameObject);
+                }
+            });
+
             Check("Inventory phone", () =>
             {
                 InventoryScreen.Build(host, () => { }, UiPresentation.NonArPortrait);
@@ -1178,6 +1352,30 @@ namespace WRLDZ.EditorTools
         static readonly string[] MainMenuControls =
             { "Hero", "Dest_DECK", "Dest_BAG", "Dest_STORY", "Dest_BAZAAR", "Tert_VIEW", "Tert_SET", "MapBack", "Quit" };
 
+        /// <summary>P5: the page's own director test vectors (dread_&lt;layout&gt;.json director.testVectorsIdle / Story) against
+        /// DreadMath.State, every column.</summary>
+        static void DreadVectors(MenuLayoutKind kind, string tag)
+        {
+            var ta = MenuV6Art.Data(kind == MenuLayoutKind.Landscape ? "dread_land" : "dread_port");
+            var root = ta != null ? MenuV6Json.Parse(ta.text) as System.Collections.Generic.Dictionary<string, object> : null;
+            var dir = RJ.D(root, "director");
+            foreach (var (key, story) in new[] { ("testVectorsIdle", false), ("testVectorsStory", true) })
+            {
+                var rows = RJ.L(dir, key);
+                if (rows == null || rows.Count == 0) throw new Exception(tag + "no director " + key);
+                foreach (var r in rows)
+                {
+                    var a = r as System.Collections.Generic.List<object>;
+                    var t = RJ.At(a, 0);
+                    var S = DreadMath.State(t, story ? DreadMath.StoryD0 : double.NaN);
+                    var got = new double[] { t, S.Tier, S.OmenU, S.WhisperU, S.ApparU, S.Omen, S.Whisper, S.Appar, S.Still, S.Lid, S.Surf, S.Push, S.Relief, S.Sg, S.Drop };
+                    for (var i = 1; i < got.Length && a != null && i < a.Count; i++)
+                        if (Math.Abs(got[i] - RJ.At(a, i)) > 2e-5)
+                            throw new Exception(tag + key + " t " + t + " column " + i + ": " + got[i] + " vs the page's " + RJ.At(a, i));
+                }
+            }
+        }
+
         static void RequireMenuV6Art()
         {
             if (!MenuV6Stage.HasArt(MenuLayoutKind.Landscape))
@@ -1443,10 +1641,8 @@ namespace WRLDZ.EditorTools
             return null;
         }
 
-        static readonly string[] StrayNames = { "WRLDZ_Audio", "WRLDZ_Sfx" };
-
-        /// <summary>The scene roots an edit-mode button press can leave behind (see OurCheck).</summary>
-        static System.Collections.Generic.HashSet<GameObject> StrayIds()
+        /// <summary>Every root GameObject of every loaded scene, by instance (P5: OurCheck's before-list).</summary>
+        static System.Collections.Generic.HashSet<GameObject> RootSet()
         {
             var ids = new System.Collections.Generic.HashSet<GameObject>();
             for (var s = 0; s < UnityEngine.SceneManagement.SceneManager.sceneCount; s++)
@@ -1454,32 +1650,31 @@ namespace WRLDZ.EditorTools
                 var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(s);
                 if (!scene.isLoaded) continue;
                 foreach (var go in scene.GetRootGameObjects())
-                    if (go != null && Array.IndexOf(StrayNames, go.name) >= 0)
+                    if (go != null)
                         ids.Add(go);
             }
 
             return ids;
         }
 
-        /// <summary>Remove the strays made since <paramref name="before"/> (never one that was there already).</summary>
-        static int DestroyNewStrays(System.Collections.Generic.HashSet<GameObject> before)
+        /// <summary>Remove every root made since <paramref name="before"/> (never one that was there already; edit mode only).</summary>
+        static int DestroyNewRoots(System.Collections.Generic.HashSet<GameObject> before)
         {
-            if (Application.isPlaying) return 0;
-            var n = 0;
+            if (Application.isPlaying || before == null) return 0;
+            var made = new System.Collections.Generic.List<GameObject>();
             for (var s = 0; s < UnityEngine.SceneManagement.SceneManager.sceneCount; s++)
             {
                 var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(s);
                 if (!scene.isLoaded) continue;
                 foreach (var go in scene.GetRootGameObjects())
-                {
-                    if (go == null || Array.IndexOf(StrayNames, go.name) < 0) continue;
-                    if (before != null && before.Contains(go)) continue;
-                    UnityEngine.Object.DestroyImmediate(go);
-                    n++;
-                }
+                    if (go != null && !before.Contains(go))
+                        made.Add(go);
             }
 
-            return n;
+            foreach (var go in made)
+                if (go != null)
+                    UnityEngine.Object.DestroyImmediate(go);
+            return made.Count;
         }
 
         static void DestroyNamed(string name)
