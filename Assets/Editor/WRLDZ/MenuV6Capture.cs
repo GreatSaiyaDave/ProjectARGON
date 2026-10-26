@@ -54,7 +54,9 @@ namespace WRLDZ.EditorTools
         /// <summary>P5: the session's budget (P5 adds the dread / smoke stills, the 17 s pop-scan sequences and the
         /// Profiler window to the P3 + P4 shots; ueval.py capture waits 900 s).</summary>
         static double Watchdog(string phase) =>
-            !string.IsNullOrEmpty(phase) && (phase.StartsWith("p5") || phase.StartsWith("p6") || phase.StartsWith("p7")) ? 840.0 : WatchdogSeconds;
+            string.IsNullOrEmpty(phase) ? WatchdogSeconds :
+            phase.StartsWith("p8") ? 1500.0 :   // P8: + the A/B frames and the Frame Debugger steps (budget_p8.json)
+            phase.StartsWith("p5") || phase.StartsWith("p6") || phase.StartsWith("p7") ? 840.0 : WatchdogSeconds;
         const string RunnerName = "MenuV6CaptureRunner";
 
         static MenuV6Capture()
@@ -203,6 +205,7 @@ namespace WRLDZ.EditorTools
                 if (EditorApplication.timeSinceStartup - t0 > wd && string.IsNullOrEmpty(SessionState.GetString(KResult, "")))
                 {
                     SessionState.SetString(KResult, "fail: watchdog (" + wd + " s) — the session stalled");
+                    MenuV6FrameDebug.Abort("watchdog");
                     EditorApplication.ExitPlaymode();
                 }
             }
@@ -242,6 +245,9 @@ namespace WRLDZ.EditorTools
             // P7: a session cut short in the title's "held" pass must not leave every cel layer held in edit mode (leaving
             // Play does not reload the domain)
             CelSmokeVariants.ForceNotReady = false;
+            // P8: a session cut short must not leave the Frame Debugger on (or Play paused), nor a P8 switch off
+            MenuV6FrameDebug.Abort("the capture session ended");
+            MenuV6Perf.SetAll(true);
             var outDir = SessionState.GetString(KOut, "");
             var result = SessionState.GetString(KResult, "");
             var notes = new StringBuilder();
@@ -457,7 +463,7 @@ namespace WRLDZ.EditorTools
                 yield return P3Shots();
             // P4 (BUILD_PLAN §6 P4 verify): the offering hall, both plans (P5: again, through the DECK route: the P4 landing's
             // capture found no overlay shell). P6: again (the deck select, the inspect art, the +1 flight, the tabs, the search)
-            if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p4") || _phase.StartsWith("p5") || _phase.StartsWith("p6") || _phase.StartsWith("p7")))
+            if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p4") || _phase.StartsWith("p5") || _phase.StartsWith("p6") || _phase.StartsWith("p7") || _phase.StartsWith("p8")))
                 yield return P4Shots();
             // P5 (BUILD_PLAN §6 P5 verify): the dread ladder, the live smoke, the title's fog, the safe area, Battery Saver,
             // the pop-scan sequences and the Profiler's batch count, both plans. P6: again (the portrait sky-lid, the title fog)
@@ -468,8 +474,13 @@ namespace WRLDZ.EditorTools
                 yield return P6Budget();
             // P7: the touch-ups (P4Shots above shoot the deck select's rows): the story beat's sky-lid and the title's fog with
             // its variant states and a pure-cyan pixel count, both plans
-            if (!string.IsNullOrEmpty(_phase) && _phase.StartsWith("p7"))
+            if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p7") || _phase.StartsWith("p8")))
                 yield return P7Shots();
+            // P8 (PERF_PLAN steps 0-3): the same frozen frames with the draw-call work off / step by step / on, each with the
+            // Profiler's counters, the Game view's statistics and (off / on) the Frame Debugger's per-draw list: budget_p8.json
+            // + p8_<layout>_<frame>_<mode>.png for the A/B diff (unity_build/tools/p8_ab.py)
+            if (!string.IsNullOrEmpty(_phase) && _phase.StartsWith("p8"))
+                yield return P8Session();
 
             // 4. WORLD MAP last: it leaves the scene
             yield return SetSize(1920, 1080);
@@ -1542,6 +1553,221 @@ namespace WRLDZ.EditorTools
             }
         }
 
+        /// <summary>
+        /// P8 (PERF_PLAN.md step 0 + the A/B rule: the draw-call work must not change a pixel), for 1920×1080 and 1080×2340 and
+        /// four modes in this one session — off (P7's draws: no deck art atlas, RigShapes on UGUI's white, every packed sprite
+        /// drawn from its own texture), atlas (the Sprite Atlas V2 pages alone), deckart (the deck's run-time art pages alone)
+        /// and on (the shipped state) — the same frozen frames: the menu at rest (2.8), in the first omen (19.268) and at the
+        /// story's sky-lid (13.6), the title at its idle (raw 25) and the deck hall at rest (6.8, its art loaded). Each frame: a
+        /// still p8_&lt;layout&gt;_&lt;frame&gt;_&lt;mode&gt;.png, the Profiler's counters over 12 frames, the Game view's statistics,
+        /// MenuV6Budget's counts and the draw-order audit; off and on also the Frame Debugger's list of every draw with its
+        /// texture, shader and batch-break cause (<see cref="MenuV6FrameDebug"/>; ≤ 50 s a frame, ≤ 720 s a session). The
+        /// switches go back on whatever happens. budget_p8.json.
+        /// </summary>
+        IEnumerator P8Session()
+        {
+            var I = CultureInfo.InvariantCulture;
+            var fdOk = MenuV6FrameDebug.Available(out var fdWhy);
+            var fdLeft = 720.0;   // the Frame Debugger's share of the 1500 s watchdog (20 frames, 50 s each at most)
+            var sb = new StringBuilder("{\n  \"phase\": ").Append(Q(_phase)).Append(", \"unity\": ").Append(Q(Application.unityVersion));
+            sb.Append(",\n  \"frameDebugger\": ").Append(Q(fdOk ? "available" : "unavailable: " + fdWhy));
+            sb.Append(",\n  \"atlases\": ").Append(Q(MenuV6Perf.AtlasLine()));
+            sb.Append(",\n  \"deckArtSupported\": ").Append(DeckArtAtlas.Supported ? "true" : "false");
+            var modes = new[]
+            {
+                ("off", false, false, true, true), ("atlas", false, false, false, false), ("deckart", true, false, true, false),
+                ("on", true, true, false, true)
+            };
+            foreach (var (w, h, lay) in new[] { (1920, 1080, "land"), (1080, 2340, "port") })
+            {
+                yield return SetSize(w, h);
+                var kind = w >= h ? MenuLayoutKind.Landscape : MenuLayoutKind.Portrait;
+                sb.Append(",\n  ").Append(Q(lay)).Append(": {");
+                var firstMode = true;
+                foreach (var (mode, deckArt, shapes, bypass, fd) in modes)
+                {
+                    MenuV6Perf.DeckArtAtlas = deckArt;
+                    MenuV6Perf.ShapesOnAtlas = shapes;
+                    MenuV6Perf.AtlasBypass = bypass;
+                    sb.Append(firstMode ? "" : ",").Append("\n    ").Append(Q(mode)).Append(": {\"switches\": ").Append(Q(MenuV6Perf.State()));
+                    firstMode = false;
+                    var useFd = fd && fdOk;
+                    try
+                    {
+                        // 1. the menu (the deck art switch alone changes nothing there: not shot in that mode)
+                        if (mode != "deckart")
+                        {
+                            var menu = Rebuild();
+                            yield return Wait(.8f);
+                            var stone = menu != null ? menu.Stone : null;
+                            if (stone == null) _notes.Add("p8 " + lay + " " + mode + ": the legacy menu built");
+                            else
+                                foreach (var (frame, t, story) in new[] { ("menu_rest", 2.8, false), ("menu_omen", 19.268, false), ("menu_skylid", 13.6, true) })
+                                {
+                                    if (story && stone.Dread == null) continue;
+                                    if (story) stone.Dread.PlayStory(0);
+                                    MenuV6Clock.Freeze((float)t);
+                                    var job = new P8Job();
+                                    yield return P8Frame("p8_" + lay + "_" + frame + "_" + mode, frame, stone.Root, stone, useFd && fdLeft > 0, sb, job);
+                                    fdLeft -= job.FdSeconds;
+                                    if (story) stone.Dread.StopStory();
+                                    MenuV6Clock.Unfreeze();
+                                }
+
+                            // 2. the title at its idle (the menu torn down first: its opaque canvas sorts above the title's 49)
+                            ClearMenu();
+                            RectTransform tc = null;
+                            TitleStage ts = null;
+                            try
+                            {
+                                tc = WrldzTheme.Canvas("TitleCaptureCanvas", 49, aspect: true);
+                                ts = TitleStage.Build(tc, kind, new TitleStage.Options { Video = false, StartRaw = TitleStage.GenEndRaw });
+                            }
+                            catch (Exception ex)
+                            {
+                                _notes.Add("p8 " + lay + " " + mode + " title: " + ex.Message);
+                            }
+
+                            if (ts != null)
+                            {
+                                ts.Freeze(25.0);
+                                yield return null;
+                                var job = new P8Job();
+                                yield return P8Frame("p8_" + lay + "_title_idle_" + mode, "title_idle", ts.Root, null, useFd && fdLeft > 0, sb, job);
+                                fdLeft -= job.FdSeconds;
+                            }
+
+                            if (tc != null) Destroy(tc.gameObject);
+                            yield return null;
+                        }
+
+                        // 3. the deck hall at rest, its art loaded (DeferredCardArt: 4 a frame) and, with deckart, on its pages
+                        {
+                            var menu = Rebuild();
+                            yield return Wait(.6f);
+                            var dest = Find(menu.MenuCanvas, "Dest_DECK");
+                            if (dest != null)
+                            {
+                                Click(dest.gameObject);
+                                yield return null;
+                                var deckCta = Find(menu.MenuCanvas, "Cta");
+                                var deckCtaBtn = deckCta != null ? deckCta.GetComponent<Button>() : null;
+                                if (deckCtaBtn != null) deckCtaBtn.onClick.Invoke();
+                            }
+
+                            yield return Wait(.6f);
+                            var shell = menu.HubShell;
+                            var hall = shell != null && shell.ModalHost != null ? shell.ModalHost.GetComponentInChildren<DeckHall>(true) : null;
+                            if (hall == null) _notes.Add("p8 " + lay + " " + mode + ": no deck hall (" + DeckHall.WhyNot() + ")");
+                            else
+                            {
+                                yield return Wait(1.6f);
+                                hall.FreezeAt(6.8);
+                                var job = new P8Job();
+                                yield return P8Frame("p8_" + lay + "_deck_rest_" + mode, "deck_rest", hall.transform, null, useFd && fdLeft > 0, sb, job);
+                                fdLeft -= job.FdSeconds;
+                                MenuV6Clock.Unfreeze();
+                            }
+
+                            if (shell != null) shell.ClearOverlays();
+                            yield return null;
+                        }
+                    }
+                    finally
+                    {
+                        MenuV6Perf.SetAll(true);
+                        MenuV6Clock.Unfreeze();
+                    }
+
+                    sb.Append('}');
+                }
+
+                sb.Append('}');
+            }
+
+            sb.Append(",\n  \"frameDebuggerSecondsLeft\": ").Append(fdLeft.ToString("0", I)).Append("\n}\n");
+            try { File.WriteAllText(Path.Combine(_out, "budget_p8.json"), sb.ToString()); }
+            catch (Exception ex) { _notes.Add("budget_p8.json: " + ex.Message); }
+            Rebuild();
+            yield return Wait(.4f);
+        }
+
+        sealed class P8Job
+        {
+            public double FdSeconds;
+        }
+
+        /// <summary>P8: one frozen frame — its still, then the counters, and the Frame Debugger's list when asked. JSON member
+        /// <paramref name="key"/> of the mode's object.</summary>
+        IEnumerator P8Frame(string shot, string key, Transform root, MenuV6Stage stone, bool fd, StringBuilder sb, P8Job job)
+        {
+            var I = CultureInfo.InvariantCulture;
+            yield return null;
+            yield return null;
+            yield return new WaitForEndOfFrame();
+            Shot(shot, 1);
+            var recs = StartRenderRecorders(out var names);
+            for (var f = 0; f < 12; f++) yield return null;
+            var counts = MenuV6Budget.Measure(root, stone);
+            sb.Append(", ").Append(Q(key)).Append(": {\"shot\": ").Append(Q(shot + ".png"));
+            for (var i = 0; i < names.Count; i++)
+            {
+                var v = recs[i].Valid ? recs[i].LastValue.ToString(I) : "null";
+                // only the counters this budget reads (P6's file held ~200 zero recorders)
+                if (names[i].EndsWith(" Count", StringComparison.Ordinal) || names[i] == "Material.SetPassFast" || names[i].StartsWith("UGUI.", StringComparison.Ordinal) ||
+                    names[i].StartsWith("Canvas.", StringComparison.Ordinal))
+                    sb.Append(", ").Append(Q(names[i])).Append(": ").Append(v);
+                recs[i].Dispose();
+            }
+
+            sb.Append(", \"unityStats\": ").Append(EditorStats()).Append(", \"counts\": ").Append(MenuV6Budget.Json(counts));
+            sb.Append(", \"audit\": ").Append(BatchAudit(root));
+            // the P8 switches' reach in this frame: shape layers on an atlas page, card art on the deck pages
+            var shapes = 0;
+            var onPage = 0;
+            if (root != null)
+                foreach (var g in root.GetComponentsInChildren<RigShapes>(false))
+                {
+                    if (g == null || !g.isActiveAndEnabled) continue;
+                    shapes++;
+                    if (g.Page != null) onPage++;
+                }
+
+            var arts = 0;
+            var atlased = 0;
+            if (root != null && key == "deck_rest")
+                foreach (var img in root.GetComponentsInChildren<Image>(false))
+                {
+                    if (img == null || img.name != "A" || img.sprite == null) continue;
+                    arts++;
+                    if (DeckArtAtlas.IsAtlased(img.sprite)) atlased++;
+                }
+
+            sb.Append(", \"p8\": {\"rigShapes\": ").Append(shapes).Append(", \"rigShapesOnPage\": ").Append(onPage)
+                .Append(", \"chipArt\": ").Append(arts).Append(", \"chipArtOnPages\": ").Append(atlased)
+                .Append(", \"deckAtlas\": ").Append(Q(DeckArtAtlas.Line())).Append('}');
+            if (fd)
+            {
+                var t0 = EditorApplication.timeSinceStartup;
+                var j = MenuV6FrameDebug.Begin(shot, 50, out var why);
+                if (j == null) sb.Append(", \"frameDebugger\": ").Append(Q("not run: " + why));
+                else
+                {
+                    while (!j.Done) yield return null;
+                    sb.Append(",\n        \"frameDebugger\": ").Append(j.Json);
+                }
+
+                job.FdSeconds = EditorApplication.timeSinceStartup - t0;
+                if (MenuV6FrameDebug.ForceOff()) _notes.Add(shot + ": the Frame Debugger was still on after its job (switched off)");
+                if (EditorApplication.isPaused) EditorApplication.isPaused = false;
+                // the debugger paused and resumed Play: give the Game view one frame back before the next shot
+                yield return null;
+                yield return new WaitForEndOfFrame();
+            }
+
+            sb.Append('}');
+        }
+
         /// <summary>P7: a still (as <see cref="Shot"/>) and its count of pure-cyan pixels (the async-compile placeholder).</summary>
         int ShotCyan(string name)
         {
@@ -1638,6 +1864,7 @@ namespace WRLDZ.EditorTools
         void Finish(bool ok, string fail)
         {
             MenuV6Clock.Unfreeze();
+            MenuV6Perf.SetAll(true);   // P8: the shipped state
             WrldzTheme.BatterySaverOverride = null;   // P5: never left on (the player's own setting was never touched)
             SafeArea.Override = null;
             MenuV6Capture.RunnerDone(ok ? "ok " + _shots.Count + " shots" : "fail: " + fail);

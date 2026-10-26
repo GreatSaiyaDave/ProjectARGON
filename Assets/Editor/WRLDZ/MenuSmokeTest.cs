@@ -994,6 +994,169 @@ namespace WRLDZ.EditorTools
                 }
             });
 
+            // P8 (PERF_PLAN steps 1-3): the draw-call switches build the Stone, the title and the deck hall off and on without a
+            // throw (the same graphics either way), the deck's art pages copy a card into a page sprite of the same size and free
+            // themselves with the last hall, and the Sprite Atlas V2 assets of the table resolve with their settings
+            // (MenuV6Atlases.Check: the landing's atlas step makes them)
+            OurCheck("MenuV6 P8: the draw-call switches off / on, the deck art pages, the Sprite Atlas V2 groups resolve (1920x1080, 1080x2340)", () =>
+            {
+                try
+                {
+                    foreach (var (w, hh, kind) in new[] { (1920, 1080, MenuLayoutKind.Landscape), (1080, 2340, MenuLayoutKind.Portrait) })
+                    {
+                        var tag = w + "x" + hh + ": ";
+                        var graphics = new int[2];
+                        for (var pass = 0; pass < 2; pass++)
+                        {
+                            MenuV6Perf.SetAll(pass == 1);
+                            var mode = pass == 1 ? "on: " : "off: ";
+                            WithHub("HubSmokeV6P8", w, hh, menu =>
+                            {
+                                var stone = menu.Stone;
+                                if (stone == null) throw new Exception(tag + mode + "v6 path not taken");
+                                Canvas.ForceUpdateCanvases();
+                                foreach (var g in stone.Root.GetComponentsInChildren<RigShapes>(true))
+                                    if (g != null && g.mainTexture == null) throw new Exception(tag + mode + g.name + " has no texture");
+                                graphics[pass] = MenuV6Budget.Measure(stone.Root, stone).Graphics;
+                            });
+                            if (TitleStage.WhyNot(kind) == null)
+                            {
+                                var tc = WrldzTheme.Canvas("TitleSmokeCanvasP8", 49, aspect: true);
+                                try
+                                {
+                                    var ts = TitleStage.Build(tc, kind, new TitleStage.Options { Video = false, StartRaw = TitleStage.SettledRaw });
+                                    if (ts == null) throw new Exception(tag + mode + "the title did not build");
+                                    Canvas.ForceUpdateCanvases();
+                                }
+                                finally
+                                {
+                                    UnityEngine.Object.DestroyImmediate(tc.gameObject);
+                                }
+                            }
+
+                            if (DeckHallSpec.WhyNot(kind) == null)
+                            {
+                                var dh = new GameObject("DeckHallSmokeP8", typeof(RectTransform)).GetComponent<RectTransform>();
+                                dh.SetParent(canvas, false);
+                                FloatingPanel.Stretch(dh);
+                                try
+                                {
+                                    MenuAspect.Force(w, hh);
+                                    DeckCollectionScreen.Build(dh, () => { }, UiPresentation.NonArPortrait);
+                                    var root = FindNamed(dh, "PhoneMenu_DECK");
+                                    if (root == null || root.GetComponent<DeckHall>() == null) throw new Exception(tag + mode + "the deck builder did not build the hall");
+                                    Canvas.ForceUpdateCanvases();
+                                }
+                                finally
+                                {
+                                    MenuAspect.ClearForce();
+                                    UnityEngine.Object.DestroyImmediate(dh.gameObject);
+                                }
+                            }
+                        }
+
+                        if (graphics[0] != graphics[1])
+                            throw new Exception(tag + "the switches changed the Stone's graphics (" + graphics[0] + " off, " + graphics[1] + " on)");
+                    }
+
+                    // the deck's art pages: a card-sized RGB24 texture becomes a page sprite of the same rect, pivot and ppu
+                    MenuV6Perf.SetAll(true);
+                    Texture2D card = null;
+                    Sprite art = null;
+                    DeckArtAtlas.Acquire();
+                    try
+                    {
+                        card = new Texture2D(268, 391, TextureFormat.RGB24, false) { name = "P8SmokeCard" };
+                        // a texel pattern (no two neighbours alike), so the read-back below proves the copy and its gutter
+                        var pat = new Color32[268 * 391];
+                        for (var i = 0; i < pat.Length; i++) pat[i] = new Color32((byte)(i * 7), (byte)((i * 13) >> 3), (byte)((i * 29) >> 5), 255);
+                        card.SetPixels32(pat);
+                        card.Apply(false, false);
+                        art = Sprite.Create(card, new Rect(0, 0, 268, 391), new Vector2(.5f, .5f), 100f);
+                        var at = DeckArtAtlas.For(art);
+                        if (DeckArtAtlas.Supported)
+                        {
+                            if (at == art) throw new Exception("the deck art atlas kept the card on its own texture (" + DeckArtAtlas.Line() + ")");
+                            if (!DeckArtAtlas.IsAtlased(at) || at.texture == card) throw new Exception("the page sprite is not on a page");
+                            if ((int)at.rect.width != 268 || (int)at.rect.height != 391 || Mathf.Abs(at.pixelsPerUnit - 100f) > .001f ||
+                                (at.pivot - art.pivot).sqrMagnitude > .0001f)
+                                throw new Exception("the page sprite differs: rect " + at.rect + ", ppu " + at.pixelsPerUnit + ", pivot " + at.pivot);
+                            if (at.texture.format != card.format || at.texture.graphicsFormat != card.graphicsFormat || at.texture.isDataSRGB != card.isDataSRGB ||
+                                at.texture.filterMode != card.filterMode || at.texture.mipmapCount != 1)
+                                throw new Exception("the page's format differs: " + at.texture.format + " / " + at.texture.graphicsFormat);
+                            if (DeckArtAtlas.For(art) != at) throw new Exception("a second lookup made another cell");
+                            // texel for texel (p8review): the card and its page cell + 1-texel gutter, both read back from the GPU the
+                            // same way; the gutter holds what the card's Repeat wrap gives one texel past each edge. Skipped (not
+                            // failed) when this Editor cannot read a texture back.
+                            if (SystemInfo.supportsAsyncGPUReadback)
+                            {
+                                const int cw = 268, ch = 391;
+                                var tr = at.textureRect;
+                                int px0 = Mathf.RoundToInt(tr.x), py0 = Mathf.RoundToInt(tr.y);
+                                var ra = UnityEngine.Rendering.AsyncGPUReadback.Request(card, 0, 0, cw, 0, ch, 0, 1, null);
+                                var rb = UnityEngine.Rendering.AsyncGPUReadback.Request(at.texture, 0, px0 - 1, cw + 2, py0 - 1, ch + 2, 0, 1, null);
+                                ra.WaitForCompletion();
+                                rb.WaitForCompletion();
+                                if (!ra.hasError && !rb.hasError)
+                                {
+                                    var da = ra.GetData<byte>();
+                                    var db = rb.GetData<byte>();
+                                    var bpp = da.Length / (cw * ch);
+                                    // a read-back layout this Editor gives differently for the two is the read-back's limit, not
+                                    // the copy's: noted and skipped (a texel that differs in matching layouts fails below)
+                                    if (bpp <= 0 || da.Length != bpp * cw * ch || db.Length != bpp * (cw + 2) * (ch + 2))
+                                        Debug.LogWarning("[WRLDZ] MenuSmokeTest P8: read-back sizes do not match (card " + da.Length + " B, page cell " + db.Length +
+                                                         " B): the texel check is skipped");
+                                    else
+                                    {
+                                        for (var y = -1; y <= ch; y++)
+                                        for (var x = -1; x <= cw; x++)
+                                        {
+                                            int ia = (((y + ch) % ch) * cw + (x + cw) % cw) * bpp, ib = ((y + 1) * (cw + 2) + x + 1) * bpp;
+                                            for (var k = 0; k < bpp; k++)
+                                                if (da[ia + k] != db[ib + k])
+                                                    throw new Exception("the page's texel (" + x + ", " + y + ") differs from the card's (" +
+                                                                        (x < 0 || y < 0 || x >= cw || y >= ch ? "gutter" : "inside") + ")");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        MenuV6Perf.DeckArtAtlas = false;
+                        if (DeckArtAtlas.For(art) != art) throw new Exception("the switch off still returns a page sprite");
+                    }
+                    finally
+                    {
+                        MenuV6Perf.SetAll(true);
+                        DeckArtAtlas.Release();
+                        if (art != null) UnityEngine.Object.DestroyImmediate(art);
+                        if (card != null) UnityEngine.Object.DestroyImmediate(card);
+                    }
+
+                    if (DeckArtAtlas.PageCount != 0) throw new Exception("the pages outlived the last hall (" + DeckArtAtlas.Line() + ")");
+
+                    // the Sprite Atlas V2 groups (made by the landing's atlas step) resolve with the table's settings
+                    var report = MenuV6Atlases.Check(out var aok);
+                    if (!aok)
+                    {
+                        var first = "";
+                        foreach (var l in report.Split('\n'))
+                            if (l.Contains("FAIL"))
+                            {
+                                first = l.Trim();
+                                break;
+                            }
+
+                        throw new Exception("Sprite Atlas V2: " + first);
+                    }
+                }
+                finally
+                {
+                    MenuV6Perf.SetAll(true);
+                }
+            });
+
             Check("Inventory phone", () =>
             {
                 InventoryScreen.Build(host, () => { }, UiPresentation.NonArPortrait);

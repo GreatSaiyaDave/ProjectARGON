@@ -52,8 +52,40 @@ namespace WRLDZ.UI.MenuV6
 
         static bool IsLocalPath(string path) => !string.IsNullOrEmpty(path) && path.StartsWith(LocalRoot);
 
-        /// <summary>A sprite by Resources path (e.g. "WRLDZ/MenuV6/Main/Land/room"); tracked art only.</summary>
-        public static Sprite Sprite(string path) => IsLocalPath(path) ? null : Load<Sprite>(path);
+        /// <summary>A sprite by Resources path (e.g. "WRLDZ/MenuV6/Main/Land/room"); tracked art only. P8: with
+        /// <see cref="MenuV6Perf.AtlasBypass"/> a sprite packed into a Sprite Atlas comes back unpacked (<see cref="Unpacked"/>).</summary>
+        public static Sprite Sprite(string path)
+        {
+            if (IsLocalPath(path)) return null;
+            var s = Load<Sprite>(path);
+            return s != null && s.packed && MenuV6Perf.Bypass ? Unpacked(path, s) : s;
+        }
+
+        static readonly Dictionary<string, Sprite> UnpackedCache = new();
+
+        /// <summary>
+        /// P8 (the capture's "before" for the Sprite Atlas V2 groups): <paramref name="packed"/> as the menu drew it before the
+        /// atlases — the same rect, pivot, pixels per unit, border and mesh type (FullRect, as the importer writes them), on its
+        /// own texture (the Texture2D at the same Resources path). The packed sprite when that texture is missing.
+        /// </summary>
+        static Sprite Unpacked(string path, Sprite packed)
+        {
+            if (UnpackedCache.TryGetValue(path, out var hit))
+            {
+                if (hit != null) return hit;
+                UnpackedCache.Remove(path);
+            }
+
+            var tex = Load<Texture2D>(path);
+            if (tex == null) return packed;
+            var r = packed.rect;
+            if (r.width <= 0 || r.height <= 0 || r.xMax > tex.width || r.yMax > tex.height) return packed;
+            var s = UnityEngine.Sprite.Create(tex, r, new Vector2(packed.pivot.x / r.width, packed.pivot.y / r.height),
+                packed.pixelsPerUnit, 0, SpriteMeshType.FullRect, packed.border);
+            s.name = packed.name;
+            UnpackedCache[path] = s;
+            return s;
+        }
 
         /// <summary>The local-only sprite when present (and not <see cref="ForceNoLocal"/>), else the tracked fallback.</summary>
         public static Sprite LocalOr(string localPath, string fallbackPath)
@@ -89,6 +121,8 @@ namespace WRLDZ.UI.MenuV6
         {
             Cache.Clear();
             Misses.Clear();
+            UnpackedCache.Clear();
+            MenuV6Perf.ClearCache();
         }
     }
 }

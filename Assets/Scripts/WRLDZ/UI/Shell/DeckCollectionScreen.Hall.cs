@@ -1757,6 +1757,12 @@ namespace WRLDZ.UI.Shell
             readonly Dictionary<int, Sprite> _artSeen = new();
             readonly List<(int id, Image img, Sprite was)> _artWait = new();
 
+            // P8 (PERF_PLAN step 1): the chips' art is drawn from the run-time atlas pages (DeckArtAtlas: the same texels,
+            // copied), which this hall holds while it lives
+            void Awake() => DeckArtAtlas.Acquire();
+
+            void OnDestroy() => DeckArtAtlas.Release();
+
             void LateUpdate()
             {
                 if (St?.Hall == null) return;
@@ -1832,14 +1838,32 @@ namespace WRLDZ.UI.Shell
                     var now = img.sprite;
                     if (now != null && now != was)
                     {
-                        _artSeen[id] = now;
+                        // P8: the art on an atlas page when it can be (DeckArtAtlas.For: itself otherwise)
+                        var at = DeckArtAtlas.For(now);
+                        if (at != now) img.sprite = at;
+                        _artSeen[id] = at;
                         _artWait.RemoveAt(i);
                         continue;
                     }
 
                     // tried and found no art (the back stays): nothing to remember
                     var lazy = img.GetComponent<DeferredCardArt>();
-                    if (lazy == null || !lazy.enabled) _artWait.RemoveAt(i);
+                    if (lazy == null || !lazy.enabled)
+                    {
+                        // P8: the card's art it already had when this hall first saw the chip (DeferredCardArt ran first that
+                        // frame); never the card back or the white sprite (a card with no art keeps P6's lazy path)
+                        if (now != null && now != YgoCardFrames.CardBack() && now != UiFoundation.WhiteSprite())
+                        {
+                            var at = DeckArtAtlas.For(now);
+                            if (at != now)
+                            {
+                                img.sprite = at;
+                                _artSeen[id] = at;
+                            }
+                        }
+
+                        _artWait.RemoveAt(i);
+                    }
                 }
             }
 

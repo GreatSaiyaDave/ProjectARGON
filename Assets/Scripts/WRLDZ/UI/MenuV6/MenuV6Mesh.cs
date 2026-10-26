@@ -48,7 +48,10 @@ namespace WRLDZ.UI.MenuV6
         }
     }
 
-    /// <summary>A rig's vector layer on UI/Default: the <see cref="ShapeList"/> mapped into this graphic's rect.</summary>
+    /// <summary>A rig's vector layer on UI/Default: the <see cref="ShapeList"/> mapped into this graphic's rect. P8 (PERF_PLAN
+    /// step 3, <see cref="MenuV6Perf.ShapesOnAtlas"/>): it samples the 8×8 white block of the atlas page its rig's quads draw
+    /// from (white × vertex colour, as UGUI's white texture gives), so the rig's shape and quad layers share one texture and
+    /// batch; with no such page (no atlas, the switch off, a stencil mask) it keeps UGUI's white texture.</summary>
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class RigShapes : MaskableGraphic
     {
@@ -57,6 +60,45 @@ namespace WRLDZ.UI.MenuV6
         static readonly List<UIVertex> Verts = new();
 
         public ShapeLayer Layer { get; private set; }
+
+        Texture _page;
+        Vector2 _pageUv;
+        bool _pageResolved;
+
+        /// <summary>P8: the atlas page this layer draws from (null = UGUI's white texture).</summary>
+        public Texture Page
+        {
+            get
+            {
+                ResolvePage();
+                return _page;
+            }
+        }
+
+        public override Texture mainTexture
+        {
+            get
+            {
+                ResolvePage();
+                return _page != null ? _page : s_WhiteTexture;
+            }
+        }
+
+        /// <summary>Once per layer, at its first canvas update (its rig's quads exist by then; a rebuilt menu makes new
+        /// layers, so a switch change takes effect on the next build).</summary>
+        void ResolvePage()
+        {
+            if (_pageResolved) return;
+            _pageResolved = true;
+            _page = null;
+            _pageUv = Vector2.zero;
+            // a stencil mask's shape keeps the white texture (its alpha is what it stencils)
+            if (!MenuV6Perf.ShapesOn || TryGetComponent(out Mask _)) return;
+            var p = MenuV6Perf.HostPage(transform, out var uv);
+            if (p == null) return;
+            _page = p;
+            _pageUv = uv;
+        }
 
         public static RigShapes Create(Transform parent, string name, Rect frame)
         {
@@ -87,6 +129,8 @@ namespace WRLDZ.UI.MenuV6
         {
             vh.Clear();
             if (_s.V.Count == 0) return;
+            ResolvePage();
+            var uv0 = _page != null ? _pageUv : Vector2.zero;
             var map = new StageMap(Frame, rectTransform.rect);
             Verts.Clear();
             foreach (var sv in _s.V)
@@ -94,7 +138,7 @@ namespace WRLDZ.UI.MenuV6
                 var v = UIVertex.simpleVert;
                 v.position = map.P(sv.X, sv.Y);
                 v.color = sv.C;
-                v.uv0 = Vector2.zero;
+                v.uv0 = uv0;
                 Verts.Add(v);
             }
 
