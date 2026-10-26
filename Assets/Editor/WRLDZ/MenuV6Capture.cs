@@ -54,7 +54,7 @@ namespace WRLDZ.EditorTools
         /// <summary>P5: the session's budget (P5 adds the dread / smoke stills, the 17 s pop-scan sequences and the
         /// Profiler window to the P3 + P4 shots; ueval.py capture waits 900 s).</summary>
         static double Watchdog(string phase) =>
-            !string.IsNullOrEmpty(phase) && (phase.StartsWith("p5") || phase.StartsWith("p6")) ? 840.0 : WatchdogSeconds;
+            !string.IsNullOrEmpty(phase) && (phase.StartsWith("p5") || phase.StartsWith("p6") || phase.StartsWith("p7")) ? 840.0 : WatchdogSeconds;
         const string RunnerName = "MenuV6CaptureRunner";
 
         static MenuV6Capture()
@@ -239,6 +239,9 @@ namespace WRLDZ.EditorTools
 
         static void Finish()
         {
+            // P7: a session cut short in the title's "held" pass must not leave every cel layer held in edit mode (leaving
+            // Play does not reload the domain)
+            CelSmokeVariants.ForceNotReady = false;
             var outDir = SessionState.GetString(KOut, "");
             var result = SessionState.GetString(KResult, "");
             var notes = new StringBuilder();
@@ -454,7 +457,7 @@ namespace WRLDZ.EditorTools
                 yield return P3Shots();
             // P4 (BUILD_PLAN §6 P4 verify): the offering hall, both plans (P5: again, through the DECK route: the P4 landing's
             // capture found no overlay shell). P6: again (the deck select, the inspect art, the +1 flight, the tabs, the search)
-            if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p4") || _phase.StartsWith("p5") || _phase.StartsWith("p6")))
+            if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p4") || _phase.StartsWith("p5") || _phase.StartsWith("p6") || _phase.StartsWith("p7")))
                 yield return P4Shots();
             // P5 (BUILD_PLAN §6 P5 verify): the dread ladder, the live smoke, the title's fog, the safe area, Battery Saver,
             // the pop-scan sequences and the Profiler's batch count, both plans. P6: again (the portrait sky-lid, the title fog)
@@ -463,6 +466,10 @@ namespace WRLDZ.EditorTools
             // P6: the batch budget before / after in this one session (P5's structure vs P6's, same frames: budget_p6.json)
             if (!string.IsNullOrEmpty(_phase) && _phase.StartsWith("p6"))
                 yield return P6Budget();
+            // P7: the touch-ups (P4Shots above shoot the deck select's rows): the story beat's sky-lid and the title's fog with
+            // its variant states and a pure-cyan pixel count, both plans
+            if (!string.IsNullOrEmpty(_phase) && _phase.StartsWith("p7"))
+                yield return P7Shots();
 
             // 4. WORLD MAP last: it leaves the scene
             yield return SetSize(1920, 1080);
@@ -1439,6 +1446,167 @@ namespace WRLDZ.EditorTools
 
             if (tc != null) Destroy(tc.gameObject);
             yield return null;
+        }
+
+        /// <summary>
+        /// P7 (the P6 landing's touch-ups), for 1920×1080 and 1080×2340: the story beat's sky-lid at 12.8 / 13.6 / 14.3 (the
+        /// portrait name must end before it: its column, label size and the sky-lid rect go to the notes), then the title built
+        /// fresh at raw 24.9 / 25 (its fog's first frames), again deliberately early ("held": the gate as while a variant still
+        /// compiles, <see cref="CelSmokeVariants.ForceNotReady"/>, because this Editor's cache already holds both variants and a
+        /// real first compile cannot be re-staged: nothing of the fog may show, cyan px 0 and drawn zero), and again once both
+        /// variants report compiled (≤ 10 s: the quad is drawn again, inside the strip). Every title still counts its pure-cyan
+        /// pixels (the Editor's async-compile placeholder, 0,255,255) and notes the fog's quad (held / drawn) and MenuCelSmoke's
+        /// two variants (compiled or not). The menu is rebuilt at rest afterwards.
+        /// </summary>
+        IEnumerator P7Shots()
+        {
+            var I = CultureInfo.InvariantCulture;
+            foreach (var (w, h, lay) in new[] { (1920, 1080, "land"), (1080, 2340, "port") })
+            {
+                yield return SetSize(w, h);
+                var kind = w >= h ? MenuLayoutKind.Landscape : MenuLayoutKind.Portrait;
+                var menu = Rebuild();
+                yield return Wait(.8f);
+                var stone = menu != null ? menu.Stone : null;
+                if (stone != null && stone.Dread != null)
+                {
+                    var nl = stone.NameLabel;
+                    _notes.Add("p7 " + lay + ": name column " + stone.NameColumn + ", sky-lid rect " + stone.Dread.D.SkyRect +
+                               (nl != null ? ", name '" + nl.text + "' at " + nl.fontSize + " px" : ""));
+                    stone.Dread.PlayStory(0);
+                    foreach (var t in new[] { 12.8, 13.6, 14.3 })
+                    {
+                        MenuV6Clock.Freeze((float)t);
+                        yield return null;
+                        yield return new WaitForEndOfFrame();
+                        Shot("p7_" + lay + "_story_t" + t.ToString("0.000", I), 1);
+                    }
+
+                    stone.Dread.StopStory();
+                    MenuV6Clock.Unfreeze();
+                }
+                else _notes.Add("p7 " + lay + ": no dread ladder (no story shots)");
+
+                ClearMenu();
+                RectTransform tc = null;
+                TitleStage ts = null;
+                try
+                {
+                    tc = WrldzTheme.Canvas("TitleCaptureCanvas", 49, aspect: true);
+                    ts = TitleStage.Build(tc, kind, new TitleStage.Options { Video = false, StartRaw = TitleStage.GenEndRaw });
+                }
+                catch (Exception ex)
+                {
+                    _notes.Add("p7 " + lay + " title: " + ex.Message);
+                }
+
+                if (ts != null)
+                {
+                    if (ts.Fog == null) _notes.Add("p7 " + lay + " title: no live fog");
+                    foreach (var pass in new[] { "fresh", "held", "compiled" })
+                    {
+                        if (pass == "compiled" && ts.Fog != null)
+                        {
+                            var t0 = Time.realtimeSinceStartup;
+                            while ((ShaderUtil.anythingCompiling || !Variants(out _)) && Time.realtimeSinceStartup - t0 < 10f) yield return null;
+                            if (!Variants(out var st)) _notes.Add("p7 " + lay + " title: the variants are not compiled after 10 s (" + st + ")");
+                        }
+
+                        // held: every cel quad is held back as while its variant compiles (reset below and in Finish)
+                        CelSmokeVariants.ForceNotReady = pass == "held";
+                        try
+                        {
+                            foreach (var raw in new[] { 24.9, 25.0 })
+                            {
+                                ts.Freeze(raw);
+                                yield return null;
+                                yield return new WaitForEndOfFrame();
+                                var name = "p7_" + lay + "_title_" + pass + "_raw" + raw.ToString("0.0", I);
+                                var cyan = ShotCyan(name);
+                                var g = ts.Fog != null ? ts.Fog.Graphic : null;
+                                _notes.Add(name + ": cyan px " + cyan + (g != null ? ", fog held " + g.Held + " drawn " + g.Drawn + " crop " + g.Crop : "") +
+                                           ", variants " + VariantStates() + (pass == "held" ? " (expect: cyan px 0, held True, drawn zero)" : ""));
+                            }
+                        }
+                        finally
+                        {
+                            CelSmokeVariants.ForceNotReady = false;
+                        }
+                    }
+                }
+
+                if (tc != null) Destroy(tc.gameObject);
+                yield return null;
+                Rebuild();
+                yield return Wait(.4f);
+            }
+        }
+
+        /// <summary>P7: a still (as <see cref="Shot"/>) and its count of pure-cyan pixels (the async-compile placeholder).</summary>
+        int ShotCyan(string name)
+        {
+            var tex = ScreenCapture.CaptureScreenshotAsTexture(1);
+            var n = 0;
+            try
+            {
+                foreach (var p in tex.GetPixels32())
+                    if (p.r <= 8 && p.g >= 247 && p.b >= 247) n++;
+                var path = Path.Combine(_out, name + ".png");
+                File.WriteAllBytes(path, tex.EncodeToPNG());
+                _shots.Add(path);
+            }
+            catch (Exception ex)
+            {
+                _notes.Add(name + ": " + ex.Message);
+            }
+            finally
+            {
+                Destroy(tex);
+            }
+
+            return n;
+        }
+
+        /// <summary>P7: MenuCelSmoke's two variants (plain / UNITY_UI_CLIP_RECT) compiled or not in this Editor right now.</summary>
+        static string VariantStates()
+        {
+            Variants(out var state);
+            return state;
+        }
+
+        /// <summary>P7: true when both MenuCelSmoke variants (plain / UNITY_UI_CLIP_RECT) are compiled in this Editor now;
+        /// <paramref name="state"/> is the note.</summary>
+        static bool Variants(out string state)
+        {
+            var sh = CelSmokeShader.Get();
+            if (sh == null)
+            {
+                state = "no shader";
+                return false;
+            }
+
+            Material plain = null, clip = null;
+            try
+            {
+                plain = new Material(sh) { hideFlags = HideFlags.HideAndDontSave };
+                clip = new Material(sh) { hideFlags = HideFlags.HideAndDontSave };
+                clip.EnableKeyword(CelSmokeVariants.ClipKeyword);
+                var p = ShaderUtil.IsPassCompiled(plain, 0);
+                var c = ShaderUtil.IsPassCompiled(clip, 0);
+                state = "plain " + p + " clip " + c + " (anythingCompiling " + ShaderUtil.anythingCompiling + ", hasError " +
+                        ShaderUtil.ShaderHasError(sh) + ")";
+                return p && c;
+            }
+            catch (Exception ex)
+            {
+                state = "probe failed: " + ex.Message;
+                return false;
+            }
+            finally
+            {
+                if (plain != null) DestroyImmediate(plain);
+                if (clip != null) DestroyImmediate(clip);
+            }
         }
 
         /// <summary>Tear the menu down (its overlays, host and canvas), as <see cref="Rebuild"/> does before it builds.</summary>

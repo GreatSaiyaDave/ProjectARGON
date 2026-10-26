@@ -891,6 +891,109 @@ namespace WRLDZ.EditorTools
                 }
             });
 
+            // P7 (the P6 landing's touch-ups): the deck select's row plates are opaque, the portrait name's column ends before
+            // the sky-lid, a cel layer holds its quad back while its shader variant is not compiled (the title's cyan block)
+            // and the title fog's quad stops at Nut's strip (both plans)
+            OurCheck("MenuV6 P7: opaque deck select rows, the portrait name clear of the sky-lid, the cel variant gate and the fog strip (1920x1080, 1080x2340)", () =>
+            {
+                foreach (var (w, hh, kind) in new[] { (1920, 1080, MenuLayoutKind.Landscape), (1080, 2340, MenuLayoutKind.Portrait) })
+                {
+                    var tag = w + "x" + hh + ": ";
+                    if (DeckHallSpec.WhyNot(kind) != null) throw new Exception(tag + DeckHallSpec.WhyNot(kind) + " (the P4 art set is not installed)");
+                    var dh = new GameObject("DeckHallSmokeP7", typeof(RectTransform)).GetComponent<RectTransform>();
+                    dh.SetParent(canvas, false);
+                    FloatingPanel.Stretch(dh);
+                    try
+                    {
+                        MenuAspect.Force(w, hh);
+                        DeckCollectionScreen.Build(dh, () => { }, UiPresentation.NonArPortrait);
+                        var root = FindNamed(dh, "PhoneMenu_DECK");
+                        if (root == null || root.GetComponent<DeckHall>() == null) throw new Exception(tag + "the deck builder did not build the hall");
+                        var caret = FindNamed(root, "Caret");
+                        if (caret == null) throw new Exception(tag + "no Caret");
+                        var es = EventSystem.current;
+                        if (es == null) es = UnityEngine.Object.FindAnyObjectByType<EventSystem>();
+                        var ped = new PointerEventData(es);
+                        ExecuteEvents.Execute(caret.gameObject, ped, ExecuteEvents.pointerDownHandler);
+                        ExecuteEvents.Execute(caret.gameObject, ped, ExecuteEvents.pointerUpHandler);
+                        var drop = FindNamed(root, "DeckDropdown");
+                        if (drop == null) throw new Exception(tag + "the Caret opened no DeckDropdown");
+                        var plates = 0;
+                        for (var i = 0; i < drop.childCount; i++)
+                        {
+                            var row = drop.GetChild(i);
+                            if (!row.name.StartsWith("DeckBox_", StringComparison.Ordinal) && row.name != "Empty") continue;
+                            var img = row.GetComponent<Image>();
+                            if (img == null || !img.enabled) throw new Exception(tag + row.name + ": no plate");
+                            if (img.color.a < .999f) throw new Exception(tag + row.name + ": the plate is see-through (alpha " + img.color.a.ToString("0.00") + ")");
+                            plates++;
+                        }
+
+                        if (plates == 0) throw new Exception(tag + "the deck list has no rows");
+                    }
+                    finally
+                    {
+                        MenuAspect.ClearForce();
+                        UnityEngine.Object.DestroyImmediate(dh.gameObject);
+                    }
+
+                    if (kind == MenuLayoutKind.Portrait)
+                        WithHub("HubSmokeV6P7", w, hh, menu =>
+                        {
+                            var stone = menu.Stone;
+                            if (stone == null) throw new Exception(tag + "v6 path not taken");
+                            var d = stone.Dread != null ? stone.Dread.D : null;
+                            if (d == null || d.Sky.Count == 0 || d.SkyRect.width <= 0) return;   // no sky-lid data: nothing to keep clear
+                            var col = stone.NameColumn;
+                            if (col.width <= 0 || stone.NameLabel == null) throw new Exception(tag + "the portrait name has no column");
+                            if (col.xMax > d.SkyRect.xMin - 1f)
+                                throw new Exception(tag + "the name's column ends at x " + col.xMax.ToString("0") + ", inside the sky-lid (x " + d.SkyRect.xMin.ToString("0") + ")");
+                            var t = stone.NameLabel;
+                            var ls = t.GetComponent<LetterSpacingEffect>();
+                            var tw = t.preferredWidth + (ls != null ? ls.Spacing * t.text.Length : 0f);
+                            if (tw > t.rectTransform.rect.width + 1f)
+                                throw new Exception(tag + "'" + t.text + "' is " + tw.ToString("0") + " wide in its " + t.rectTransform.rect.width.ToString("0") + " column");
+                        });
+
+                    if (TitleStage.WhyNot(kind) != null || CelSmokeShader.Get() == null) continue;   // the P5 check reports these
+                    var tc = WrldzTheme.Canvas("TitleFogSmokeCanvasP7", 49, aspect: true);
+                    try
+                    {
+                        var ts = TitleStage.Build(tc, kind, new TitleStage.Options { Video = false, StartRaw = TitleStage.SettledRaw });
+                        if (ts == null || ts.Fog == null) throw new Exception(tag + "the title has no live fog");
+                        var g = ts.Fog.Graphic;
+                        if (g == null) throw new Exception(tag + "the title's fog has no graphic");
+                        var clip = ts.Fog.Clip;
+                        if (clip.width > 0 && g.Crop != clip) throw new Exception(tag + "the fog's quad is cut to " + g.Crop + ", not Nut's strip " + clip);
+                        g.SetVerticesDirty();
+                        Canvas.ForceUpdateCanvases();
+                        var q = g.Drawn;   // zero while this Editor still compiles the variant (held) or the strip meets no bank
+                        var heldNow = g.Held;
+                        if (q.width > 0 && clip.width > 0 &&
+                            (q.xMin < clip.xMin - .5f || q.xMax > clip.xMax + .5f || q.yMin < clip.yMin - .5f || q.yMax > clip.yMax + .5f))
+                            throw new Exception(tag + "the fog's quad " + q + " reaches past Nut's strip " + clip);
+                        try
+                        {
+                            CelSmokeVariants.ForceNotReady = true;
+                            g.SetVerticesDirty();
+                            Canvas.ForceUpdateCanvases();
+                            if (g.Drawn.width > 0) throw new Exception(tag + "the fog drew its quad while its shader variant was not compiled");
+                            if ((q.width > 0 || heldNow) && !g.Held) throw new Exception(tag + "the fog's quad was not held back for its variant");
+                        }
+                        finally
+                        {
+                            CelSmokeVariants.ForceNotReady = false;
+                            g.SetVerticesDirty();
+                            Canvas.ForceUpdateCanvases();
+                        }
+                    }
+                    finally
+                    {
+                        UnityEngine.Object.DestroyImmediate(tc.gameObject);
+                    }
+                }
+            });
+
             Check("Inventory phone", () =>
             {
                 InventoryScreen.Build(host, () => { }, UiPresentation.NonArPortrait);

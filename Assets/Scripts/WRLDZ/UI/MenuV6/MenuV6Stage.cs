@@ -108,6 +108,11 @@ namespace WRLDZ.UI.MenuV6
         /// <summary>P5: the safe-area bands (Screen.safeArea).</summary>
         public SafeArea Safe { get; private set; }
 
+        /// <summary>P7 (tests): the portrait name's column (stage px; Rect.zero in landscape) and its label.</summary>
+        public Rect NameColumn { get; private set; }
+
+        public Text NameLabel { get; private set; }
+
         Handlers _h;
         Rect _stageRect;
         Vector2 _lastRootSize;
@@ -1494,6 +1499,15 @@ namespace WRLDZ.UI.MenuV6
                 var r = slot.Rect;
                 var medal = Layout.LayerById("medal_ring_0");
                 r.width = (medal != null ? medal.Rect.x - 24f : r.xMax) - r.x;
+                // P7 (the P6 landing: "Great SaiyaDave" drew over the left half of the sky-lid eye at the story beat): when
+                // the sky-lid can show, the column ends 24 px before its rect (dread_port.json skylid.rect x 502; the torn
+                // hole opens to x 505 on this row), never narrower than the page's own word; a long name shrinks, then
+                // ellipsizes, inside it. The eye stays where the page puts it
+                var sky = Dread != null ? Dread.D : null;
+                if (sky != null && sky.Sky.Count > 0 && sky.SkyRect.width > 0)
+                    r.width = Mathf.Min(r.width, Mathf.Max(slot.Rect.width, sky.SkyRect.xMin - 24f - r.x));
+                NameColumn = r;
+                NameLabel = name;
                 MenuV6Layout.Place(name.rectTransform, r, S);
                 KeepInColumn(name, r.width, 30);
             }

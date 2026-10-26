@@ -503,6 +503,7 @@ namespace WRLDZ.UI.MenuV6
                 _s = null;
             }
 
+            if (_s != null) CelSmokeVariants.WarmUp(_s);   // P7: a player warms both variants once (CelSmokeVariants)
             return _s;
         }
 
@@ -538,18 +539,160 @@ namespace WRLDZ.UI.MenuV6
         }
     }
 
+    /// <summary>
+    /// P7 (the P6 landing: a solid cyan block at x 10-139, y 852-1079 in both landscape title stills, raw 24.9 / 25): the
+    /// Editor compiles shader variants asynchronously and draws a cyan placeholder until a variant is ready. P6's fog clip
+    /// (a RectMask2D) made the title the first screen to draw MenuCelSmoke's UNITY_UI_CLIP_RECT variant, and the placeholder
+    /// does not clip, so it filled the fog's whole quad (the density's reach: Nut's 44 px strip + the 96 px margin, x 0-140;
+    /// the clip itself is the page's part() rect). A cel layer now draws only a compiled variant: in the Editor its graphic
+    /// holds the quad back while ShaderUtil.IsPassCompiled is false for the variant it draws with (rect clip or not) and asks
+    /// for that pass (async; at once when the Editor compiles synchronously). Each graphic asks for both when it is made, so
+    /// the title's fog (~17 s after the title builds) is compiled long before it shows. A player compiles every variant
+    /// offline (multi_compile_local, Always Included since P5) and never draws a placeholder; it warms both up once
+    /// (a ShaderVariantCollection) so the first fog frame does not stall.
+    /// </summary>
+    public static class CelSmokeVariants
+    {
+        public const string ClipKeyword = "UNITY_UI_CLIP_RECT";
+
+        /// <summary>Tests: behave as if no variant had compiled yet (every cel quad is held back).</summary>
+        public static bool ForceNotReady;
+
+#if !UNITY_EDITOR
+        static bool _warm;
+#endif
+
+        /// <summary>True when the pass <paramref name="probe"/> selects (its shader + keywords) can be drawn now. The Editor:
+        /// ShaderUtil.IsPassCompiled, else the pass is asked for; a player: always (nothing compiles at run time).</summary>
+        public static bool Ready(Material probe)
+        {
+            if (ForceNotReady) return false;
+#if UNITY_EDITOR
+            if (probe == null) return true;
+            try
+            {
+                if (UnityEditor.ShaderUtil.IsPassCompiled(probe, 0)) return true;
+                UnityEditor.ShaderUtil.CompilePass(probe, 0, false);   // queued once by the Editor (async), or compiled now
+                return UnityEditor.ShaderUtil.IsPassCompiled(probe, 0);
+            }
+            catch (Exception)
+            {
+                return true;   // the probe failed: draw as before P7
+            }
+#else
+            return true;
+#endif
+        }
+
+        /// <summary>The Editor: a hidden copy of <paramref name="m"/> with the rect-clip keyword (the variant a RectMask2D
+        /// draws it with); null in a player (nothing to probe).</summary>
+        public static Material ClipProbe(Material m)
+        {
+#if UNITY_EDITOR
+            if (m == null) return null;
+            try
+            {
+                var p = new Material(m) { name = m.name + "_clip", hideFlags = HideFlags.HideAndDontSave };
+                p.EnableKeyword(ClipKeyword);
+                return p;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+#else
+            return null;
+#endif
+        }
+
+        /// <summary>A player: both variants (with / without the rect clip) warmed up once, for the pass type this pipeline
+        /// compiled. The Editor: nothing here (each graphic asks for its passes).</summary>
+        public static void WarmUp(Shader s)
+        {
+#if !UNITY_EDITOR
+            if (s == null || _warm) return;
+            _warm = true;
+            ShaderVariantCollection svc = null;
+            try
+            {
+                svc = new ShaderVariantCollection();
+                foreach (var pt in new[] { UnityEngine.Rendering.PassType.ScriptableRenderPipelineDefaultUnlit, UnityEngine.Rendering.PassType.Normal })
+                foreach (var kw in new[] { new string[0], new[] { ClipKeyword } })
+                {
+                    try
+                    {
+                        svc.Add(new ShaderVariantCollection.ShaderVariant(s, pt, kw));
+                    }
+                    catch (ArgumentException)
+                    {
+                        // not a pass type this pipeline compiled
+                    }
+                }
+
+                if (svc.variantCount > 0) svc.WarmUp();
+            }
+            catch (Exception)
+            {
+                // a warm-up is only a stall saved
+            }
+            finally
+            {
+                if (svc != null) UnityEngine.Object.Destroy(svc);
+            }
+#endif
+        }
+    }
+
     /// <summary>One cel layer on screen: a quad over the layer's reach (stage px) sampling the density in its region,
-    /// drawn by WRLDZ/UI/MenuCelSmoke with the kind's filter constants (BUILD_PLAN D3).</summary>
+    /// drawn by WRLDZ/UI/MenuCelSmoke with the kind's filter constants (BUILD_PLAN D3). P7: the quad is drawn only once its
+    /// shader variant is compiled (<see cref="CelSmokeVariants"/>), and cut to <see cref="Crop"/> when one is set.</summary>
     [RequireComponent(typeof(CanvasRenderer))]
     [ExecuteAlways]   // OnDestroy frees the density / glow textures and the material in edit mode too (MenuSmokeTest)
     public sealed class CelSmokeGraphic : MaskableGraphic
     {
         public Rect Frame;   // the stage rect this graphic's RectTransform covers
+
+        /// <summary>P7: the stage rect the quad is cut to (Rect.zero = none): the title fog's strip, so nothing of the layer
+        /// is ever drawn past the page's clip (the RectMask2D over it stays).</summary>
+        public Rect Crop;
+
         Rect _box, _region;
         [NonSerialized] Texture2D _dens, _glow;
-        [NonSerialized] Material _mat;
+        [NonSerialized] Material _mat, _clipProbe;
+        bool _clipped, _held;
+
+        /// <summary>P7: true while the quad is held back because its shader variant is not compiled yet (the Editor).</summary>
+        public bool Held => _held;
+
+        /// <summary>P7 (tests / captures): the stage rect the last mesh covered (Rect.zero = nothing drawn).</summary>
+        public Rect Drawn { get; private set; }
 
         public override Texture mainTexture => _dens != null ? (Texture)_dens : s_WhiteTexture;
+
+        /// <summary>P7: the quad drawn for <paramref name="box"/> cut to <paramref name="crop"/> (zero = no cut); zero when they
+        /// do not meet. Pure.</summary>
+        public static Rect Quad(Rect box, Rect crop)
+        {
+            if (box.width <= 0 || box.height <= 0) return Rect.zero;
+            if (crop.width <= 0 || crop.height <= 0) return box;
+            var x0 = Mathf.Max(box.xMin, crop.xMin);
+            var y0 = Mathf.Max(box.yMin, crop.yMin);
+            var x1 = Mathf.Min(box.xMax, crop.xMax);
+            var y1 = Mathf.Min(box.yMax, crop.yMax);
+            return x1 > x0 && y1 > y0 ? Rect.MinMaxRect(x0, y0, x1, y1) : Rect.zero;
+        }
+
+        /// <summary>P7: the variant this graphic draws with is compiled (with the rect clip when a RectMask2D clips it).</summary>
+        bool VariantReady() => CelSmokeVariants.Ready(_clipped ? _clipProbe : _mat);
+
+        /// <summary>P7: the RectMask2D's clip turns UNITY_UI_CLIP_RECT on for this graphic: note which variant it draws with.</summary>
+        public override void SetClipRect(Rect clipRect, bool validRect)
+        {
+            base.SetClipRect(clipRect, validRect);
+            if (validRect == _clipped) return;
+            _clipped = validRect;
+            SetVerticesDirty();
+        }
 
         public static CelSmokeGraphic Create(Transform parent, string name, Rect frame, Rect parentRect, CelBuffer buf, SmokeKind kind,
             Shader shader)
@@ -590,10 +733,16 @@ namespace WRLDZ.UI.MenuV6
             m.SetFloat("_RefDark", (float)MenuV6Linear.RoomDark);
             g.material = m;
             g.color = Color.white;
+            // P7: ask for both variants now (the Editor; a player has them): the first draw finds them compiled
+            g._clipProbe = CelSmokeVariants.ClipProbe(m);
+            CelSmokeVariants.Ready(m);
+            if (g._clipProbe != null) CelSmokeVariants.Ready(g._clipProbe);
             return g;
         }
 
-        /// <summary>Upload this frame's density and glow and cover <paramref name="box"/> (stage px; zero = draw nothing).</summary>
+        /// <summary>Upload this frame's density and glow and cover <paramref name="box"/> (stage px; zero = draw nothing).
+        /// P7: a quad held back for its variant is rebuilt once the variant is ready, and a drawn one is held back again if
+        /// the Editor recompiles the shader.</summary>
         public void Show(CelBuffer buf, Rect box)
         {
             if (buf == null || _dens == null || _glow == null) return;
@@ -606,6 +755,7 @@ namespace WRLDZ.UI.MenuV6
                 _box = box;
                 SetVerticesDirty();
             }
+            else if (Quad(_box, Crop).width > 0 && VariantReady() == _held) SetVerticesDirty();
         }
 
         public void Hide()
@@ -618,7 +768,18 @@ namespace WRLDZ.UI.MenuV6
         protected override void OnPopulateMesh(VertexHelper vh)
         {
             vh.Clear();
-            if (_box.width <= 0 || _box.height <= 0) return;
+            Drawn = Rect.zero;
+            var q = Quad(_box, Crop);
+            if (q.width <= 0 || q.height <= 0)
+            {
+                _held = false;
+                return;
+            }
+
+            // P7: never a variant the Editor is still compiling (its cyan placeholder ignores the clip)
+            _held = !VariantReady();
+            if (_held) return;
+            Drawn = q;
             var map = new StageMap(Frame, rectTransform.rect);
             var c = (Color32)color;
             void V(double x, double y)
@@ -630,10 +791,10 @@ namespace WRLDZ.UI.MenuV6
                 vh.AddVert(v);
             }
 
-            V(_box.xMin, _box.yMin);
-            V(_box.xMax, _box.yMin);
-            V(_box.xMax, _box.yMax);
-            V(_box.xMin, _box.yMax);
+            V(q.xMin, q.yMin);
+            V(q.xMax, q.yMin);
+            V(q.xMax, q.yMax);
+            V(q.xMin, q.yMax);
             vh.AddTriangle(0, 1, 2);
             vh.AddTriangle(2, 3, 0);
         }
@@ -644,8 +805,9 @@ namespace WRLDZ.UI.MenuV6
             Kill(_dens);
             Kill(_glow);
             Kill(_mat);
+            Kill(_clipProbe);
             _dens = _glow = null;
-            _mat = null;
+            _mat = _clipProbe = null;
         }
 
         static void Kill(UnityEngine.Object o)
@@ -949,6 +1111,9 @@ namespace WRLDZ.UI.MenuV6
 
         public int Quads => _l != null ? _l.Quads : 0;
 
+        /// <summary>P7 (tests / captures): the fog's graphic (its held / drawn quad).</summary>
+        public CelSmokeGraphic Graphic => _l != null ? _l.Gfx : null;
+
         /// <summary>P6: the clip the fog is drawn through (stage px; Rect.zero = none).</summary>
         public Rect Clip { get; private set; }
 
@@ -1015,6 +1180,9 @@ namespace WRLDZ.UI.MenuV6
                 return null;
             }
 
+            // P7: the quad itself stops at the strip (it reached the density's margin, x 0-140, under the RectMask2D), so
+            // no pixel of the layer can ever land past the page's clip, whatever its shader variant is doing
+            if (clipped) l.Gfx.Crop = clip;
             return new TitleFog { _s = s, _l = l, Clip = clipped ? clip : Rect.zero };
         }
 

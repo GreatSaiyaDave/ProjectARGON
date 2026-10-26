@@ -516,7 +516,7 @@ namespace WRLDZ.UI.Shell
         /// count out as the cartouche lays out its name and caret. The count ("41 MAIN") is right-aligned in the shape
         /// strip's caps; the name, in the cartouche's own face (span.cart), starts after the emblem and ends 10 stage px before
         /// the count. A name that is still too long after a small shrink is ellipsized (the collection names' rule). The rows,
-        /// emblems, glass, taps and long-press menu are unchanged. Both plans.
+        /// emblems, taps and long-press menu are unchanged. Both plans. P7: the row plates are opaque (nothing shows through).
         /// </summary>
         static void HallStyleDropdown(State st, Rect cart)
         {
@@ -532,7 +532,15 @@ namespace WRLDZ.UI.Shell
             for (var i = 0; i < host.childCount; i++)
             {
                 var row = host.GetChild(i);
-                if (row == null || !row.name.StartsWith("DeckBox_", StringComparison.Ordinal)) continue;
+                if (row == null) continue;
+                var isRow = row.name.StartsWith("DeckBox_", StringComparison.Ordinal);
+                if (!isRow && row.name != "Empty") continue;
+                // P7 (the P6 landing: the TRADE tab and the MAIN stats bars showed through the rows): the row's plate (and the
+                // "No decks on hand" plate) is the same ledger strip at full opacity (its fill is the frame's own #1E1A23),
+                // solid as the hall's plates are; the rise-in fade (the row's CanvasGroup) is unchanged
+                var plate = row.GetComponent<Image>();
+                if (plate != null) SanctuaryPaint.Fill(plate, Color.white);
+                if (!isRow) continue;
                 var texts = row.GetComponentsInChildren<Text>(true);
                 if (texts.Length < 2) continue;
                 var nameT = texts[0];
