@@ -126,7 +126,7 @@ namespace WRLDZ.UI.Shell
             h.Box = RelicBox.Build(spec, body, stage, FirstCards(st));
             h.Scale = MaatScale.Build(spec, hall, body, stage, TcgRules.MainDeckMin, TcgRules.MainDeckMax, st.Main?.Count ?? 0);
             HallThumbBand(st);
-            h.DrawFive = DrawFiveSheet.Build(hall, hall.Over, id => st.Db != null ? st.Db.GetArt(id) : null,
+            h.DrawFive = DrawFiveSheet.Build(hall, hall.Over, id => HallFace(st, id),
                 id => st.Db?.Get(id)?.name ?? ("#" + id));
 
             h.EnterAt = hall.Now;
@@ -496,6 +496,7 @@ namespace WRLDZ.UI.Shell
                 {
                     OpenDeckDropdownUp(phase, st, host);
                     HallPlaceDropdown(st, phase, cart);
+                    HallStyleDropdown(st, cart);
                 }
             }, () => OpenDeckContextMenu(phase, st, idx));
         }
@@ -508,6 +509,78 @@ namespace WRLDZ.UI.Shell
             var rows = Mathf.Max(1, st.DeckDropHost.transform.childCount);
             var rowH = 58f;
             MenuV6Layout.Place(rt, new Rect(cart.x, cart.yMax + 6, cart.width, rows * rowH + (rows - 1) * 6), st.Hall.Hall.StageRect);
+        }
+
+        /// <summary>
+        /// P6 (the P5 landing: the rows read "Burnin41/MAIN", "Warrio43:mainmazons"): each on-hand deck row lays its name and
+        /// count out as the cartouche lays out its name and caret. The count ("41 MAIN") is right-aligned in the shape
+        /// strip's caps; the name, in the cartouche's own face (span.cart), starts after the emblem and ends 10 stage px before
+        /// the count. A name that is still too long after a small shrink is ellipsized (the collection names' rule). The rows,
+        /// emblems, glass, taps and long-press menu are unchanged. Both plans.
+        /// </summary>
+        static void HallStyleDropdown(State st, Rect cart)
+        {
+            var h = st.Hall;
+            if (h == null || st.DeckDropHost == null) return;
+            var spec = h.Spec;
+            var nameSlot = spec.Text("rest", null, "span.cart");
+            var cntSlot = spec.Text("rest", "MONSTER", "div.shape");
+            if (nameSlot == null || cntSlot == null) return;
+            var rowW = cart.width * .96f;   // OpenDeckDropdownUp's rows span .02-.98 of the host (HallPlaceDropdown: the cartouche's width)
+            const float pad = 12f, gap = 10f, nameX0 = .20f;   // the emblem keeps .02-.18
+            var host = st.DeckDropHost.transform;
+            for (var i = 0; i < host.childCount; i++)
+            {
+                var row = host.GetChild(i);
+                if (row == null || !row.name.StartsWith("DeckBox_", StringComparison.Ordinal)) continue;
+                var texts = row.GetComponentsInChildren<Text>(true);
+                if (texts.Length < 2) continue;
+                var nameT = texts[0];
+                var cntT = texts[1];
+                var selected = row.name == "DeckBox_" + st.DeckIndex;
+                var nm = nameT.text ?? "";
+                var cnt = (cntT.text ?? "").ToUpperInvariant();
+                TextFx.Apply(nameT, nameSlot, nm);
+                TextFx.Apply(cntT, cntSlot, cnt);
+                nameT.supportRichText = false;
+                nameT.horizontalOverflow = HorizontalWrapMode.Overflow;
+                nameT.alignment = TextAnchor.MiddleLeft;
+                cntT.horizontalOverflow = HorizontalWrapMode.Overflow;
+                cntT.alignment = TextAnchor.MiddleRight;
+                if (!selected)
+                {
+                    var c = DeckHallSpec.ColorOf(RJ.S(spec.TextSpec("rest", "EXTRA", "div.tabs"), "color"), WrldzAnimePalette.Muted);
+                    nameT.color = c;
+                }
+
+                nameT.gameObject.name = "Name";
+                cntT.gameObject.name = "Count";
+                var ls = cntT.GetComponent<LetterSpacingEffect>();
+                var cntW = cntT.preferredWidth + (ls != null ? ls.Spacing * cnt.Length : 0f);
+                var cx0 = Mathf.Clamp01((rowW - pad - cntW) / rowW);
+                FloatingPanel.Place(cntT.rectTransform, cx0, .12f, Mathf.Clamp01((rowW - pad) / rowW), .88f);
+                var nameW = Mathf.Max(20f, (cx0 - nameX0) * rowW - gap);
+                FloatingPanel.Place(nameT.rectTransform, nameX0, .08f, Mathf.Clamp(nameX0 + nameW / rowW, nameX0, 1f), .92f);
+                TextFx.FitWidth(nameT, nameW, Mathf.Max(12, Mathf.FloorToInt(nameSlot.Size * .8f)));
+                var nls = nameT.GetComponent<LetterSpacingEffect>();
+                float NameWidth() => nameT.preferredWidth + (nls != null ? nls.Spacing * nameT.text.Length : 0f);
+                while (NameWidth() > nameW && nameT.text.Length > 2)
+                    nameT.text = nameT.text.Substring(0, nameT.text.Length - 2).TrimEnd() + "…";
+            }
+        }
+
+        /// <summary>
+        /// P6 (the P5 landing: the inspect art a blank grey box, the +1 flight card a white square, e.g. 30,000-Year White
+        /// Turtle): a card's face exactly as the board's own chips show it (ArtChip + DeferredCardArt): its art through the
+        /// same loader (CardDatabase.GetArt), else the card back a chip keeps for a card with no art (YgoCardFrames.CardBack),
+        /// else the white sprite. The inspect sheet, the +1 flight and DRAW 5 use it (both plans).
+        /// </summary>
+        static Sprite HallFace(State st, int id)
+        {
+            var a = st?.Db != null ? st.Db.GetArt(id) : null;
+            if (a != null) return a;
+            var back = YgoCardFrames.CardBack();
+            return back != null ? back : UiFoundation.WhiteSprite();
         }
 
         /// <summary>A legacy sheet (the deck context menu) set next to the hall's own controls.</summary>
@@ -538,13 +611,24 @@ namespace WRLDZ.UI.Shell
                 h.TabOn = SheetDraw.Img(phase, "TabOn", spec.Sprite(tabOn), RJ.R(tabOn, "shotRect"), stage);
             }
 
-            foreach (var it in items)
+            var shift = 0f;
+            for (var ti = 0; ti < items.Count; ti++)
             {
+                var it = items[ti];
                 var text = RJ.S(it, "text") ?? "";
                 var r = DeckHallSpec.RectOf(RJ.L(it, "r") ?? new List<object>());
                 if (r.width <= 0) continue;
                 var word = text.Split(' ')[0];
-                if (word == "BINDER") continue;   // D13: no binder source
+                if (word == "BINDER")
+                {
+                    // D13: no binder source. P6 (the P5 landing: a gap between TOME and TRADE): the tabs after the hidden one
+                    // move left by its pitch (its x to the next tab's x), so the row keeps the page's even spacing
+                    var nextR = ti + 1 < items.Count ? DeckHallSpec.RectOf(RJ.L(items[ti + 1], "r") ?? new List<object>()) : Rect.zero;
+                    if (nextR.width > 0 && nextR.x > r.x) shift += nextR.x - r.x;
+                    continue;
+                }
+
+                if (shift > 0f) r.x -= shift;
                 var section = word == "MAIN" ? 0 : word == "EXTRA" ? 1 : word == "SIDE" ? 2 : -1;
                 var b = DeckHall.Hit(phase, "Tab_" + word, r, stage, () =>
                 {
@@ -1508,9 +1592,9 @@ namespace WRLDZ.UI.Shell
             var def = st.Db?.Get(id);
             if (h.InspArt != null)
             {
-                var a = st.Db != null ? st.Db.GetArt(id) : null;
-                h.InspArt.sprite = a != null ? a : UiFoundation.WhiteSprite();
-                h.InspArt.color = a != null ? Color.white : new Color(1, 1, 1, .08f);
+                // P6 (the P5 landing: a grey box for a card with no art): the face the board's chip shows (HallFace)
+                h.InspArt.sprite = HallFace(st, id);
+                h.InspArt.color = Color.white;
             }
 
             var limit = OfficialDataSources.StatusOf(id);
@@ -1624,7 +1708,7 @@ namespace WRLDZ.UI.Shell
             var slotIdx = list.Count - 1;
             var target = pile != null && slotIdx >= 0 && slotIdx < pile.childCount ? pile.GetChild(slotIdx) as RectTransform : null;
             var to = target != null ? DeckFlight.StageRectOf(h.Hall, target) : Rect.zero;
-            var art = st.Db != null ? st.Db.GetArt(id) : null;
+            var art = HallFace(st, id);   // P6: never a white square (a card with no art flies as the back its slot shows)
             DeckFlight.Plus1(h.Hall, art, from, to, target != null ? target.gameObject : null, () =>
             {
                 h.FlightPending = false;
@@ -1658,9 +1742,17 @@ namespace WRLDZ.UI.Shell
             [NonSerialized] public State St;
             readonly Dictionary<Transform, int> _counts = new();
 
+            /// <summary>P6 (the P5 landing: a search showed the MAIN grid as card backs): a refill (a search, a chip, +1)
+            /// rebuilds every chip and DeferredCardArt loads 4 a frame, so MAIN and the collection showed backs for ~10
+            /// frames after every keystroke (the page's altar never changes on a search). The art a chip of this hall has
+            /// shown is kept per card id and put back on the new chip at once; a card never shown still loads lazily.</summary>
+            readonly Dictionary<int, Sprite> _artSeen = new();
+            readonly List<(int id, Image img, Sprite was)> _artWait = new();
+
             void LateUpdate()
             {
                 if (St?.Hall == null) return;
+                Harvest();
                 Scan(St.PoolGrid, true, false);
                 Scan(St.MainSlots, false, false);
                 Scan(St.ExtraSlots, false, true);
@@ -1698,6 +1790,50 @@ namespace WRLDZ.UI.Shell
             }
 
             static bool Dirty(Transform host) => false;
+
+            /// <summary>A new chip's art: the sprite this hall already showed for the card (no lazy back), else wait for its
+            /// DeferredCardArt and remember what it loads.</summary>
+            void Warm(Transform c, RectTransform art)
+            {
+                var id = IdOf(c);
+                if (art == null || id == 0) return;
+                var img = art.GetComponent<Image>();
+                if (img == null) return;
+                if (_artSeen.TryGetValue(id, out var seen) && seen != null)
+                {
+                    img.sprite = seen;
+                    var lazy = art.GetComponent<DeferredCardArt>();
+                    if (lazy != null) lazy.enabled = false;
+                    return;
+                }
+
+                _artWait.Add((id, img, img.sprite));
+            }
+
+            void Harvest()
+            {
+                for (var i = _artWait.Count - 1; i >= 0; i--)
+                {
+                    var (id, img, was) = _artWait[i];
+                    if (img == null)
+                    {
+                        _artWait.RemoveAt(i);
+                        continue;
+                    }
+
+                    var now = img.sprite;
+                    if (now != null && now != was)
+                    {
+                        _artSeen[id] = now;
+                        _artWait.RemoveAt(i);
+                        continue;
+                    }
+
+                    // tried and found no art (the back stays): nothing to remember
+                    var lazy = img.GetComponent<DeferredCardArt>();
+                    if (lazy == null || !lazy.enabled) _artWait.RemoveAt(i);
+                }
+            }
 
             void Entrance()
             {
@@ -1775,6 +1911,7 @@ namespace WRLDZ.UI.Shell
                     art.offsetMax = Vector2.zero;
                 }
 
+                Warm(c, art);
                 Hide(c, "Qty");
                 Hide(c, "Ban");
                 var frame = AddChrome(c, "cc_frame", cell, art != null ? art.GetSiblingIndex() : 1);
@@ -1885,6 +2022,7 @@ namespace WRLDZ.UI.Shell
                     art.offsetMax = Vector2.zero;
                 }
 
+                Warm(c, art);
                 Hide(c, "Qty");
                 Hide(c, "Ban");
                 var key = xrow ? "xrow_img" : "slot";
@@ -2111,7 +2249,7 @@ namespace WRLDZ.UI.Shell
                 var target = st.MainSlots.GetChild(last) as RectTransform;
                 var to = target != null ? DeckFlight.StageRectOf(h.Hall, target) : Rect.zero;
                 if (from.width <= 0 || to.width <= 0) return false;
-                DeckFlight.Plus1(h.Hall, st.Db != null ? st.Db.GetArt(st.SelectedId) : null, from, to, target.gameObject, null);
+                DeckFlight.Plus1(h.Hall, HallFace(st, st.SelectedId), from, to, target.gameObject, null);
                 return true;
             }
 

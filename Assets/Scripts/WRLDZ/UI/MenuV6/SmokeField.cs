@@ -949,7 +949,22 @@ namespace WRLDZ.UI.MenuV6
 
         public int Quads => _l != null ? _l.Quads : 0;
 
-        public static TitleFog Build(RectTransform stage, Rect stageRect, MenuLayoutKind kind)
+        /// <summary>P6: the clip the fog is drawn through (stage px; Rect.zero = none).</summary>
+        public Rect Clip { get; private set; }
+
+        /// <summary>The stage px past the clip the density is still computed in, so the glow (σ 8 px, reach ~27 px) and the
+        /// pre-blur see the same neighbourhood inside the clip as an unclipped layer.</summary>
+        public const float ClipMargin = 96f;
+
+        /// <summary>
+        /// P6 (the P5 landing: the fog drew flat dark-grey blobs at the Stone's foot, both plans, raw 24.9 / 25; the approved
+        /// stills show none): the page draws the fog's batch inside Nut's first part() clip (title.js:322: the batch flushes on
+        /// nutC's drawImage there, the P2 export's finding: smoke_&lt;layout&gt;.json title.clip), i.e. only through her left
+        /// limb's strip <paramref name="clip"/> = (0, top + R + 30, side + 4, floorY + 40 − (top + R + 30)), under her limb.
+        /// With a clip the layer sits under a RectMask2D at that strip and its density is computed only near it
+        /// (<see cref="ClipMargin"/>); without one (Rect.zero) it is drawn unclipped as before.
+        /// </summary>
+        public static TitleFog Build(RectTransform stage, Rect stageRect, MenuLayoutKind kind, Rect clip = default)
         {
             if (stage == null) return null;
             var s = SmokeSet.Load(kind);
@@ -965,11 +980,34 @@ namespace WRLDZ.UI.MenuV6
             y0 = Math.Max(stageRect.yMin, y0 - 60);
             y1 = Math.Min(stageRect.yMax, y1 + 60);
             if (y1 <= y0) return null;
-            var region = new Rect(stageRect.x, (float)y0, stageRect.width, (float)(y1 - y0));
+            double x0 = stageRect.xMin, x1 = stageRect.xMax;
+            var clipped = clip.width > 0 && clip.height > 0;
+            if (clipped)
+            {
+                x0 = Math.Max(x0, clip.xMin - ClipMargin);
+                x1 = Math.Min(x1, clip.xMax + ClipMargin);
+                y0 = Math.Max(y0, clip.yMin - ClipMargin);
+                y1 = Math.Min(y1, clip.yMax + ClipMargin);
+                if (x1 <= x0 || y1 <= y0) return null;   // the strip never meets the banks: the page shows no fog at all
+            }
+
+            var region = new Rect((float)x0, (float)y0, (float)(x1 - x0), (float)(y1 - y0));
             var go = new GameObject("TitleFog", typeof(RectTransform));
             go.transform.SetParent(stage, false);
             UiTheme.Stretch(go.GetComponent<RectTransform>());
-            var l = CelLayer.Create(go.transform, "TitleFog_cel", stageRect, stageRect, region, s.Scale, kd, sh);
+            Transform parent = go.transform;
+            if (clipped)
+            {
+                var cl = new GameObject("TitleFogClip", typeof(RectTransform), typeof(RectMask2D)).GetComponent<RectTransform>();
+                cl.SetParent(go.transform, false);
+                MenuV6Layout.Place(cl, clip, stageRect);
+                var full = new GameObject("Full", typeof(RectTransform)).GetComponent<RectTransform>();
+                full.SetParent(cl, false);
+                MenuV6Layout.Place(full, stageRect, clip);
+                parent = full;
+            }
+
+            var l = CelLayer.Create(parent, "TitleFog_cel", stageRect, stageRect, region, s.Scale, kd, sh);
             if (l == null)
             {
                 if (Application.isPlaying) UnityEngine.Object.Destroy(go);
@@ -977,7 +1015,18 @@ namespace WRLDZ.UI.MenuV6
                 return null;
             }
 
-            return new TitleFog { _s = s, _l = l };
+            return new TitleFog { _s = s, _l = l, Clip = clipped ? clip : Rect.zero };
+        }
+
+        /// <summary>Nut's first part() clip (title.js:322) from the title's own Nut rig (title_&lt;layout&gt;.json rigs.nut):
+        /// x 0 .. side + 4, y top + R + 30 .. floorY + 40 (the page's literals); Rect.zero when the rig is missing.</summary>
+        public static Rect NutLimbClip(Dictionary<string, object> nutRig)
+        {
+            if (nutRig == null || !RJ.Has(nutRig, "side") || !RJ.Has(nutRig, "floorY")) return Rect.zero;
+            var yT = RJ.N(nutRig, "top") + RJ.N(nutRig, "R") + 30;
+            var fy = RJ.N(nutRig, "floorY") + 40;
+            var w = RJ.N(nutRig, "side") + 4;
+            return fy > yT && w > 0 ? new Rect(0f, (float)yT, (float)w, (float)(fy - yT)) : Rect.zero;
         }
 
         public delegate void Bank(LobeSprite s, double x, double y, double w, double h, double a);

@@ -105,21 +105,24 @@ namespace WRLDZ.EditorTools
             host.SetParent(canvas, false);
             FloatingPanel.Stretch(host);
 
-            Check("MenuShell.CreateOverlay", () =>
+            // P6 (the P5 landing left 29 stray roots in the open scene): the menu shell's own checks (MenuShell, the hub) also
+            // remove the roots they make — ScreenRouter.Ensure's DontDestroyOnLoad throws in edit mode and leaves its object
+            // behind on every call. Same checks, same verdicts; the other sessions' checks below keep their own cleanup.
+            OurCheck("MenuShell.CreateOverlay", () =>
             {
                 var shell = MenuShell.CreateOverlay(90);
                 if (shell == null || shell.ModalHost == null)
                     throw new Exception("overlay shell missing ModalHost");
             });
 
-            Check("MenuShell.Create (full hub)", () =>
+            OurCheck("MenuShell.Create (full hub)", () =>
             {
                 var shell = MenuShell.Create(91);
                 if (shell == null || shell.ContentHost == null)
                     throw new Exception("full shell missing ContentHost");
             });
 
-            Check("DuelDiskMenuUI.Build", () =>
+            OurCheck("DuelDiskMenuUI.Build", () =>
             {
                 var go = new GameObject("HubSmoke");
                 go.AddComponent<DuelDiskMenuUI>().Build();
@@ -428,6 +431,7 @@ namespace WRLDZ.EditorTools
             });
 
             MenuShell overlay = null;
+            var overlayRoots = RootSet();   // P6: the overlay host's checks remove their roots after the last ShowOverlay
             Check("MenuShell overlay host", () =>
             {
                 overlay = MenuShell.CreateOverlay(92);
@@ -448,6 +452,9 @@ namespace WRLDZ.EditorTools
                         throw new Exception("overlay opened with empty modal host");
                 });
             }
+
+            // (the overlay shell itself, when it built, stays for the Settings checks below; the final cleanup removes it by name)
+            DestroyNewRoots(overlayRoots, overlay != null ? overlay.transform.root.gameObject : null);
 
             // P3 (D5 / §11 F5, D19): an overlay sheet wears the false door, its rows the Sanctuary look — also rows built after
             // ShowOverlay returned (SystemsSheets' Refresh closures) — its close is synchronous, and the same painters outside a
@@ -666,7 +673,15 @@ namespace WRLDZ.EditorTools
                         var ts = TitleStage.Build(tc, kind, new TitleStage.Options { Video = false, StartRaw = TitleStage.SettledRaw });
                         if (ts == null) throw new Exception(tag + "the title did not build");
                         if (ts.Fog == null) throw new Exception(tag + "the title has no live fog");
-                        if (ts.Fog.Quads < 1) throw new Exception(tag + "the title's fog drew nothing at the settled idle");
+                        // P6: the fog is drawn only through Nut's left-limb strip, as the page draws it (the P5 landing's
+                        // blobs at the Stone's foot): the clip is the page's part() rect and nothing reaches past it
+                        var want = TitleFog.NutLimbClip(RJ.D(RJ.D(MenuV6Json.Parse(MenuV6Art.Data(TitleStage.FileFor(kind)).text)
+                            as System.Collections.Generic.Dictionary<string, object>, "rigs"), "nut"));
+                        if (want.width <= 0) throw new Exception(tag + "the title data has no Nut rig (rigs.nut)");
+                        if (ts.Fog.Clip != want) throw new Exception(tag + "the title's fog clip is " + ts.Fog.Clip + ", not Nut's strip " + want);
+                        var fogClip = FindNamed(ts.Stage, "TitleFogClip");
+                        if (fogClip == null || fogClip.GetComponent<RectMask2D>() == null)
+                            throw new Exception(tag + "the title's fog has no RectMask2D clip");
                         UnityEngine.Object.DestroyImmediate(tc.gameObject);
                     }
                 }
@@ -770,6 +785,109 @@ namespace WRLDZ.EditorTools
                 {
                     MenuAspect.ClearForce();
                     UnityEngine.Object.DestroyImmediate(dh.gameObject);
+                }
+            });
+
+            // P6 (the P5 landing's defects, BUILD_PLAN §6 P5 polish): the deck select's rows lay out name and count apart, the tab
+            // row closes BINDER's slot, the inspect face is never the white sprite, the crack gaps share their stencil masks
+            // (CrackLayer.MergeGaps) and the sky-lid apparition sits under no clip (both plans)
+            OurCheck("MenuV6 P6: deck select rows, the tab row, the inspect face, shared crack masks, the unclipped sky-lid (1920x1080, 1080x2340)", () =>
+            {
+                var cs = new Vector3[4];
+                float X0(RectTransform r) { r.GetWorldCorners(cs); return cs[0].x; }
+                float X1(RectTransform r) { r.GetWorldCorners(cs); return cs[2].x; }
+                void Masks(Transform layer, string tag2)
+                {
+                    if (layer == null) return;
+                    int per = 0, merged = 0;
+                    for (var i = 0; i < layer.childCount; i++)
+                    {
+                        var n = layer.GetChild(i).name;
+                        if (n.StartsWith("Gaps_", StringComparison.Ordinal)) merged++;
+                        else if (n.StartsWith("Gap_", StringComparison.Ordinal)) per++;
+                    }
+
+                    if (per > 0 || merged == 0) throw new Exception(tag2 + layer.name + ": " + per + " per-net gap masks, " + merged + " shared");
+                }
+
+                foreach (var (w, hh, kind) in new[] { (1920, 1080, MenuLayoutKind.Landscape), (1080, 2340, MenuLayoutKind.Portrait) })
+                {
+                    var tag = w + "x" + hh + ": ";
+                    if (DeckHallSpec.WhyNot(kind) != null) throw new Exception(tag + DeckHallSpec.WhyNot(kind) + " (the P4 art set is not installed)");
+                    var dh = new GameObject("DeckHallSmokeP6", typeof(RectTransform)).GetComponent<RectTransform>();
+                    dh.SetParent(canvas, false);
+                    FloatingPanel.Stretch(dh);
+                    try
+                    {
+                        MenuAspect.Force(w, hh);
+                        DeckCollectionScreen.Build(dh, () => { }, UiPresentation.NonArPortrait);
+                        var root = FindNamed(dh, "PhoneMenu_DECK");
+                        var hall = root != null ? root.GetComponent<DeckHall>() : null;
+                        if (hall == null) throw new Exception(tag + "the deck builder did not build the hall");
+                        var side = AsRect(FindNamed(root, "Tab_SIDE"));
+                        var tome = AsRect(FindNamed(root, "Tab_TOME"));
+                        var trade = AsRect(FindNamed(root, "Tab_TRADE"));
+                        if (side == null || tome == null || trade == null) throw new Exception(tag + "a tab is missing (SIDE / TOME / TRADE)");
+                        var g1 = X0(tome) - X1(side);
+                        var g2 = X0(trade) - X1(tome);
+                        if (Mathf.Abs(g2 - g1) > Mathf.Max(2f, .15f * Mathf.Abs(g1)))
+                            throw new Exception(tag + "the gap TOME -> TRADE is " + g2.ToString("0.0") + " vs SIDE -> TOME " + g1.ToString("0.0") + " (BINDER's slot left open)");
+                        var caret = FindNamed(root, "Caret");
+                        if (caret == null) throw new Exception(tag + "no Caret");
+                        var es = EventSystem.current;
+                        if (es == null) es = UnityEngine.Object.FindAnyObjectByType<EventSystem>();
+                        var ped = new PointerEventData(es);
+                        ExecuteEvents.Execute(caret.gameObject, ped, ExecuteEvents.pointerDownHandler);
+                        ExecuteEvents.Execute(caret.gameObject, ped, ExecuteEvents.pointerUpHandler);
+                        var drop = FindNamed(root, "DeckDropdown");
+                        if (drop == null) throw new Exception(tag + "the Caret opened no DeckDropdown");
+                        for (var i = 0; i < drop.childCount; i++)
+                        {
+                            var row = drop.GetChild(i);
+                            if (!row.name.StartsWith("DeckBox_", StringComparison.Ordinal)) continue;
+                            var nameT = CompAt<Text>(Kid(row, "Name"));
+                            var cntT = CompAt<Text>(Kid(row, "Count"));
+                            if (nameT == null || cntT == null) throw new Exception(tag + row.name + ": no Name / Count label");
+                            if (X1(nameT.rectTransform) > X0(cntT.rectTransform) + .5f)
+                                throw new Exception(tag + row.name + ": the name's box runs into the count's");
+                            foreach (var t in new[] { nameT, cntT })
+                            {
+                                var ls = t.GetComponent<LetterSpacingEffect>();
+                                var tw = t.preferredWidth + (ls != null ? ls.Spacing * t.text.Length : 0f);
+                                if (tw > t.rectTransform.rect.width + 1f)
+                                    throw new Exception(tag + row.name + ": '" + t.text + "' is " + tw.ToString("0") + " wide in a " +
+                                                        t.rectTransform.rect.width.ToString("0") + " box");
+                            }
+                        }
+
+                        var probe = root.GetComponent<DeckCollectionScreen.HallProbe>();
+                        if (probe != null && probe.ShowFirstCard())
+                        {
+                            var art = CompAt<Image>(FindNamed(FindNamed(root, "InspectPopup"), "Art"));
+                            if (art == null) throw new Exception(tag + "the inspect sheet has no Art");
+                            if (art.sprite == UiFoundation.WhiteSprite() && YgoCardFrames.CardBack() != null)
+                                throw new Exception(tag + "the inspect art is the white sprite (no art and no card back)");
+                            probe.HideCard();
+                        }
+
+                        Masks(hall.Cracks != null ? hall.Cracks.transform : null, tag);
+                    }
+                    finally
+                    {
+                        MenuAspect.ClearForce();
+                        UnityEngine.Object.DestroyImmediate(dh.gameObject);
+                    }
+
+                    WithHub("HubSmokeV6P6", w, hh, menu =>
+                    {
+                        var stone = menu.Stone;
+                        if (stone == null) throw new Exception(tag + "v6 path not taken");
+                        Masks(stone.Cracks != null ? stone.Cracks.transform : null, tag);
+                        var sky = stone.Dread != null ? FindNamed(stone.Root, "SkyLid") : null;
+                        for (var p = sky != null ? sky.parent : null; p != null && p != stone.Root; p = p.parent)
+                            if (p.GetComponent<RectMask2D>() != null || p.GetComponent<Mask>() != null)
+                                throw new Exception(tag + "the sky-lid sits under the clip " + p.name);
+                    });
                 }
             });
 
@@ -1657,8 +1775,9 @@ namespace WRLDZ.EditorTools
             return ids;
         }
 
-        /// <summary>Remove every root made since <paramref name="before"/> (never one that was there already; edit mode only).</summary>
-        static int DestroyNewRoots(System.Collections.Generic.HashSet<GameObject> before)
+        /// <summary>Remove every root made since <paramref name="before"/> (never one that was there already, nor
+        /// <paramref name="keep"/>; edit mode only).</summary>
+        static int DestroyNewRoots(System.Collections.Generic.HashSet<GameObject> before, GameObject keep = null)
         {
             if (Application.isPlaying || before == null) return 0;
             var made = new System.Collections.Generic.List<GameObject>();
@@ -1667,7 +1786,7 @@ namespace WRLDZ.EditorTools
                 var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(s);
                 if (!scene.isLoaded) continue;
                 foreach (var go in scene.GetRootGameObjects())
-                    if (go != null && !before.Contains(go))
+                    if (go != null && !before.Contains(go) && go != keep)
                         made.Add(go);
             }
 

@@ -134,6 +134,7 @@ namespace WRLDZ.UI.MenuV6
             ts._json = json;
             ts._o = o ?? new Options();
             ts.BuildInto();
+            MenuV6Budget.CullTransparent(root);   // P6: alpha-0 layers are not submitted (pixels unchanged)
             return ts;
         }
 
@@ -312,7 +313,8 @@ namespace WRLDZ.UI.MenuV6
         {
             try
             {
-                Fog = TitleFog.Build(Stage, _stageRect, Kind);
+                // P6: through Nut's left-limb strip, as the page draws it (TitleFog.Build)
+                Fog = TitleFog.Build(Stage, _stageRect, Kind, TitleFog.NutLimbClip(RJ.D(RJ.D(_json, "rigs"), "nut")));
                 if (Fog != null) _tick.Add(tb => Fog.Tick(tb));
             }
             catch (Exception ex)

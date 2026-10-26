@@ -17,6 +17,10 @@ namespace WRLDZ.UI.MenuV6
         public Rect Frame;
         [NonSerialized] public CrackMesh Mesh;   // built at runtime from the cracks json, never saved
         [NonSerialized] public QuadList Quads;
+
+        /// <summary>P6: several nets' meshes drawn as one graphic, in list order (a layer's merged gap group); used when
+        /// <see cref="Mesh"/> and <see cref="Quads"/> are null.</summary>
+        [NonSerialized] public List<CrackMesh> Meshes;
         Texture _tex;
 
         /// <summary>The stutter's ghosts (applyWaver): w = waver, dir = ±1, k = the net's k.</summary>
@@ -69,13 +73,35 @@ namespace WRLDZ.UI.MenuV6
                 V = Quads.V;
                 I = Quads.I;
             }
+            else if (Meshes != null)
+            {
+                PopulateMany(vh);
+                return;
+            }
             else return;
 
             if (V.Count == 0) return;
-            var map = new StageMap(Frame, rectTransform.rect);
-            var passes = Waver > .01 ? 3 : 1;
             Verts.Clear();
             Idx.Clear();
+            Emit(V, I, tile);
+            vh.AddUIVertexStream(Verts, Idx);
+        }
+
+        void PopulateMany(VertexHelper vh)
+        {
+            Verts.Clear();
+            Idx.Clear();
+            foreach (var m in Meshes)
+                if (m != null && m.V.Count > 0)
+                    Emit(m.V, m.I, m.UvTile);
+            if (Verts.Count > 0) vh.AddUIVertexStream(Verts, Idx);
+        }
+
+        /// <summary>One mesh's vertices (and the stutter's ghost passes) appended to the shared streams.</summary>
+        void Emit(List<StageVert> V, List<int> I, double tile)
+        {
+            var map = new StageMap(Frame, rectTransform.rect);
+            var passes = Waver > .01 ? 3 : 1;
             var du = tile > 0 ? (float)(UvShift / tile) : 0f;
             for (var p = 0; p < passes; p++)
             {
@@ -107,8 +133,6 @@ namespace WRLDZ.UI.MenuV6
 
                 foreach (var i in I) Idx.Add(i + b);
             }
-
-            vh.AddUIVertexStream(Verts, Idx);
         }
     }
 
@@ -146,6 +170,123 @@ namespace WRLDZ.UI.MenuV6
             public long KeyO = long.MinValue;   // the breathe (P5: 1/400 steps, a few nets per frame)
             public double LastE = double.NaN;   // the extent the meshes were built at
             public double LastDrift = double.NaN;
+            public GapGroup Grp;                // P6: the merged gap mask this net's gap draws in (null: its own, P5)
+        }
+
+        /// <summary>P6: one stencil mask (showMaskGraphic) for several nets' gaps, their depth bands under it.</summary>
+        sealed class GapGroup
+        {
+            public CrackNetGraphic Gap;
+            public readonly List<CrackMesh> Meshes = new();
+            public double LastDrift = double.NaN;
+        }
+
+        readonly List<GapGroup> _groups = new();
+
+        /// <summary>
+        /// P6 (BUILD_PLAN §6 P5 step 7; the P5 landing's SetPass 81-165 against the ≤ 25 budget): every net's gap was its own
+        /// stencil Mask — a stencil write, its depth band, a stencil pop per net, 3 material switches each (15 nets on the
+        /// landscape menu, the omen's grade copy again). The gaps now share masks: nets whose depth band can never reach
+        /// another net's gap (<see cref="GapGroups"/>: full extent, the breathe's widest) draw their gaps as ONE mask with
+        /// every depth band under it, which is the same pixels (a depth band only ever lands on its own gap, and no other
+        /// gap covers it); nets that do touch keep the P5 order (a later net's gap over an earlier net's band) by going to a
+        /// later group. The menu's landscape nets need few groups (p6/perf). False = P5's one mask per net (the capture's
+        /// before / after budget).
+        /// </summary>
+        public static bool MergeGaps = true;
+
+        /// <summary>The stage px a conflict test reaches past each triangle (anti-alias fringe, the breathe's rounding).</summary>
+        public const double GroupMargin = 4;
+
+        static readonly Dictionary<string, int[]> GroupCache = new();
+
+        /// <summary>
+        /// The gap group of each net, in the nets' order: net i goes one group after every earlier net it conflicts with
+        /// (its depth band's or its gap's triangles within <see cref="GroupMargin"/> of the other net's gap / depth band,
+        /// both at full extent n.L and the widest breathe 1.2), else group 0. A conflicting pair therefore keeps P5's draw
+        /// order; within a group no depth band touches another member's gap. Cached per crack set and net list.
+        /// </summary>
+        static int[] GapGroups(CrackSet set, IList<NetGfx> g, CrackPainter paint)
+        {
+            var n = g.Count;
+            var key = (set != null ? set.Page + "/" + set.Layout : "?") + ":" + n;
+            foreach (var x in g) key += "," + x.N.Id;
+            if (GroupCache.TryGetValue(key, out var hit)) return hit;
+            var gaps = new List<double[]>[n];
+            var deps = new List<double[]>[n];
+            for (var i = 0; i < n; i++)
+            {
+                var gm = new CrackMesh();
+                var dm = new CrackMesh();
+                var net = g[i].N;
+                var sh = paint.ShapesOf(net);
+                if (paint.Shape(net, net.L, 1.2) > 0)
+                {
+                    paint.Gaps(net, sh, 1, CrackPainter.RealmDeep, gm);
+                    paint.DepthBands(net, sh, 1, dm, true);
+                }
+
+                gaps[i] = Boxes(gm);
+                deps[i] = Boxes(dm);
+            }
+
+            var grp = new int[n];
+            for (var i = 0; i < n; i++)
+            {
+                var gi = 0;
+                for (var j = 0; j < i; j++)
+                    if (grp[j] + 1 > gi && (Touch(deps[i], gaps[j]) || Touch(deps[j], gaps[i])))
+                        gi = grp[j] + 1;
+                grp[i] = gi;
+            }
+
+            GroupCache[key] = grp;
+            return grp;
+        }
+
+        /// <summary>A mesh's triangles as stage-px boxes (x0, y0, x1, y1), padded by <see cref="GroupMargin"/>.</summary>
+        static List<double[]> Boxes(CrackMesh m)
+        {
+            var l = new List<double[]>(m.I.Count / 3);
+            for (var i = 0; i + 2 < m.I.Count; i += 3)
+            {
+                StageVert a = m.V[m.I[i]], b = m.V[m.I[i + 1]], c = m.V[m.I[i + 2]];
+                l.Add(new[]
+                {
+                    Math.Min(a.X, Math.Min(b.X, c.X)) - GroupMargin, Math.Min(a.Y, Math.Min(b.Y, c.Y)) - GroupMargin,
+                    Math.Max(a.X, Math.Max(b.X, c.X)) + GroupMargin, Math.Max(a.Y, Math.Max(b.Y, c.Y)) + GroupMargin
+                });
+            }
+
+            return l;
+        }
+
+        /// <summary>Any box of <paramref name="a"/> overlapping any box of <paramref name="b"/> (a 32 px grid over b).</summary>
+        static bool Touch(List<double[]> a, List<double[]> b)
+        {
+            if (a.Count == 0 || b.Count == 0) return false;
+            const double cell = 32;
+            var grid = new Dictionary<long, List<double[]>>();
+            foreach (var q in b)
+                for (var gx = (long)Math.Floor(q[0] / cell); gx <= (long)Math.Floor(q[2] / cell); gx++)
+                for (var gy = (long)Math.Floor(q[1] / cell); gy <= (long)Math.Floor(q[3] / cell); gy++)
+                {
+                    var k = (gx << 32) ^ (gy & 0xffffffffL);
+                    if (!grid.TryGetValue(k, out var lst)) grid[k] = lst = new List<double[]>();
+                    lst.Add(q);
+                }
+
+            foreach (var p in a)
+                for (var gx = (long)Math.Floor(p[0] / cell); gx <= (long)Math.Floor(p[2] / cell); gx++)
+                for (var gy = (long)Math.Floor(p[1] / cell); gy <= (long)Math.Floor(p[3] / cell); gy++)
+                {
+                    if (!grid.TryGetValue((gx << 32) ^ (gy & 0xffffffffL), out var lst)) continue;
+                    foreach (var q in lst)
+                        if (p[0] <= q[2] && q[0] <= p[2] && p[1] <= q[3] && q[1] <= p[3])
+                            return true;
+                }
+
+            return false;
         }
 
         public const string RealmTile = "WRLDZ/MenuV6/Common/realm_tile";
@@ -212,19 +353,44 @@ namespace WRLDZ.UI.MenuV6
                 if (n != null)
                     L._g.Add(new NetGfx { N = n });
             foreach (var g in L._g) g.Lips = CrackNetGraphic.Create(rt, "Lips_" + g.N.Id, frame);
-            foreach (var g in L._g)
+            if (MergeGaps && L._g.Count > 1)
             {
-                // the gaps are a stencil mask (shown): the dark depth bands are the page's lip strokes clipped to them
-                g.Gap = CrackNetGraphic.Create(rt, "Gap_" + g.N.Id, frame, realm);
-                g.Gap.gameObject.AddComponent<Mask>().showMaskGraphic = true;
-                g.Depth = CrackNetGraphic.Create(g.Gap.transform, "Depth_" + g.N.Id, frame);
+                // P6: the gaps share stencil masks by group (GapGroups); each group's depth bands under its mask in net order
+                var grp = GapGroups(set, L._g, L._paint);
+                var count = 0;
+                foreach (var k in grp) count = Math.Max(count, k + 1);
+                for (var k = 0; k < count; k++)
+                {
+                    var G = new GapGroup { Gap = CrackNetGraphic.Create(rt, "Gaps_" + k, frame, realm) };
+                    G.Gap.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+                    G.Gap.Meshes = G.Meshes;
+                    L._groups.Add(G);
+                }
+
+                for (var i = 0; i < L._g.Count; i++)
+                {
+                    var g = L._g[i];
+                    var G = L._groups[grp[i]];
+                    g.Grp = G;
+                    g.Gap = G.Gap;
+                    G.Meshes.Add(g.GapM);
+                    g.Depth = CrackNetGraphic.Create(G.Gap.transform, "Depth_" + g.N.Id, frame);
+                }
             }
+            else
+                foreach (var g in L._g)
+                {
+                    // the gaps are a stencil mask (shown): the dark depth bands are the page's lip strokes clipped to them
+                    g.Gap = CrackNetGraphic.Create(rt, "Gap_" + g.N.Id, frame, realm);
+                    g.Gap.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+                    g.Depth = CrackNetGraphic.Create(g.Gap.transform, "Depth_" + g.N.Id, frame);
+                }
 
             foreach (var g in L._g) g.Top = CrackNetGraphic.Create(rt, "Top_" + g.N.Id, frame);
             foreach (var g in L._g)
             {
                 g.Lips.Mesh = g.LipsM;
-                g.Gap.Mesh = g.GapM;
+                if (g.Grp == null) g.Gap.Mesh = g.GapM;
                 g.Depth.Mesh = g.DepthM;
                 g.Top.Mesh = g.TopM;
                 if (L._realm) g.GapM.UvTile = RealmTileSize;
@@ -332,15 +498,36 @@ namespace WRLDZ.UI.MenuV6
                     g.Depth.Dirty();
                     g.Top.Dirty();
                     g.LastDrift = drift;
+                    if (g.Grp != null) g.Grp.LastDrift = drift;   // the merged mask is re-emitted at this frame's drift
                 }
-                else if (_realm && g.GapM.V.Count > 0 && (double.IsNaN(g.LastDrift) || Math.Abs(drift - g.LastDrift) >= .5))
+                else if (g.Grp == null && _realm && g.GapM.V.Count > 0 && (double.IsNaN(g.LastDrift) || Math.Abs(drift - g.LastDrift) >= .5))
                 {
                     g.LastDrift = drift;
                     g.Gap.Dirty();
                 }
 
-                g.Gap.UvShift = g.LastDrift;
+                if (g.Grp == null) g.Gap.UvShift = g.LastDrift;
                 verts += g.LipsM.V.Count + g.GapM.V.Count + g.DepthM.V.Count + g.TopM.V.Count;
+            }
+
+            // P6: a merged gap mask drifts as one (the same .5 px step the nets took one by one)
+            foreach (var G in _groups)
+            {
+                var any = false;
+                foreach (var m in G.Meshes)
+                    if (m.V.Count > 0)
+                    {
+                        any = true;
+                        break;
+                    }
+
+                if (_realm && any && (double.IsNaN(G.LastDrift) || Math.Abs(drift - G.LastDrift) >= .5))
+                {
+                    G.LastDrift = drift;
+                    G.Gap.Dirty();
+                }
+
+                if (!double.IsNaN(G.LastDrift)) G.Gap.UvShift = G.LastDrift;
             }
 
             // the bolts (black lightning, l.60): on their own schedule, drawn before the waver as the page does

@@ -358,6 +358,7 @@ namespace WRLDZ.UI.MenuV6
             }
 
             if (Dread != null) Dread.Apply(MenuV6Clock.Now);
+            MenuV6Budget.CullTransparent(Root);   // P6: the rigs' alpha-0 layers are not submitted (pixels unchanged)
         }
 
         Graphic StaticOf(string id) => _static.TryGetValue(id, out var img) ? img : null;
@@ -568,10 +569,22 @@ namespace WRLDZ.UI.MenuV6
 
                 NutCracks.Render(CrackClockNow());
                 Parts.NutDriver = drv;
-                // P5: the sky-lid apparition at the page's place, inside Nut's clip after her fracture (story only)
+                // P5: the sky-lid apparition at the page's place, right after her fracture (story only). P6 (the P5 landing:
+                // in portrait his eye never showed, only the torn band behind the name): it was built inside NutCrackClip,
+                // the fracture plate's rect + 8 px (portrait y 148-264), which cut the apparition (y 54-177) to its last few
+                // rows. The page draws it inside Nut's body clip, which does not cut it (dread_<layout>.json skylid.clip), so it
+                // gets its own full-stage node right after the clip: the same z, no clip, landscape unchanged (its rect was
+                // inside the clip there)
                 if (Dread != null)
                 {
-                    try { Dread.BuildSkyLid(_ctx, full, _stageRect); }
+                    try
+                    {
+                        var skyHost = new GameObject("SkyLidHost", typeof(RectTransform)).GetComponent<RectTransform>();
+                        skyHost.SetParent(group, false);
+                        skyHost.SetSiblingIndex(clip.GetSiblingIndex() + 1);
+                        MenuV6Layout.Place(skyHost, _stageRect, _stageRect);
+                        Dread.BuildSkyLid(_ctx, skyHost, _stageRect);
+                    }
                     catch (Exception ex) { Debug.LogWarning("[WRLDZ MenuV6] sky-lid skipped: " + ex.Message); }
                 }
 

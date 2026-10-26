@@ -128,6 +128,7 @@ namespace WRLDZ.UI.MenuV6
             hall.BuildHeader(title, subtitle, onClose);
             hall.BuildPlaceholder();
             hall.Tick(true);
+            MenuV6Budget.CullTransparent(root);   // P6: alpha-0 layers are not submitted (pixels unchanged)
             Debug.Log("[WRLDZ MenuV6] deck hall · " + spec.Lay + " · PhoneMenu_" + title);
             return hall;
         }

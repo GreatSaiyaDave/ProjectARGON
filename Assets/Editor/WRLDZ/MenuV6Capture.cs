@@ -6,6 +6,7 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using Unity.Profiling;
+using Unity.Profiling.LowLevel.Unsafe;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -52,7 +53,8 @@ namespace WRLDZ.EditorTools
 
         /// <summary>P5: the session's budget (P5 adds the dread / smoke stills, the 17 s pop-scan sequences and the
         /// Profiler window to the P3 + P4 shots; ueval.py capture waits 900 s).</summary>
-        static double Watchdog(string phase) => !string.IsNullOrEmpty(phase) && phase.StartsWith("p5") ? 840.0 : WatchdogSeconds;
+        static double Watchdog(string phase) =>
+            !string.IsNullOrEmpty(phase) && (phase.StartsWith("p5") || phase.StartsWith("p6")) ? 840.0 : WatchdogSeconds;
         const string RunnerName = "MenuV6CaptureRunner";
 
         static MenuV6Capture()
@@ -448,16 +450,19 @@ namespace WRLDZ.EditorTools
             if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p2") || _phase.StartsWith("p3")))
                 yield return P2Shots();
             // P3 (BUILD_PLAN §6 P3 verify): the Stone's sheets at fixed sheet times, both plans, and the false door over an overlay
-            if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p3") || _phase.StartsWith("p4") || _phase.StartsWith("p5")))
+            if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p3") || _phase.StartsWith("p4") || _phase.StartsWith("p5") || _phase.StartsWith("p6")))
                 yield return P3Shots();
             // P4 (BUILD_PLAN §6 P4 verify): the offering hall, both plans (P5: again, through the DECK route: the P4 landing's
-            // capture found no overlay shell)
-            if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p4") || _phase.StartsWith("p5")))
+            // capture found no overlay shell). P6: again (the deck select, the inspect art, the +1 flight, the tabs, the search)
+            if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p4") || _phase.StartsWith("p5") || _phase.StartsWith("p6")))
                 yield return P4Shots();
             // P5 (BUILD_PLAN §6 P5 verify): the dread ladder, the live smoke, the title's fog, the safe area, Battery Saver,
-            // the pop-scan sequences and the Profiler's batch count, both plans
-            if (!string.IsNullOrEmpty(_phase) && _phase.StartsWith("p5"))
+            // the pop-scan sequences and the Profiler's batch count, both plans. P6: again (the portrait sky-lid, the title fog)
+            if (!string.IsNullOrEmpty(_phase) && (_phase.StartsWith("p5") || _phase.StartsWith("p6")))
                 yield return P5Shots();
+            // P6: the batch budget before / after in this one session (P5's structure vs P6's, same frames: budget_p6.json)
+            if (!string.IsNullOrEmpty(_phase) && _phase.StartsWith("p6"))
+                yield return P6Budget();
 
             // 4. WORLD MAP last: it leaves the scene
             yield return SetSize(1920, 1080);
@@ -1177,28 +1182,230 @@ namespace WRLDZ.EditorTools
         }
 
         /// <summary>P5: the Profiler's render counters (last frame of 12, the clock frozen at <paramref name="t"/>) and
-        /// MenuV6Budget's own counts, as one JSON member.</summary>
-        IEnumerator Profile(MenuV6Stage stone, string label, double t, bool story, StringBuilder sb, bool first)
+        /// MenuV6Budget's own counts, as one JSON member. P6: the counters this Editor publishes (found by name), the Game
+        /// view's statistics and, with <paramref name="audit"/>, the per-canvas draw-order audit (<see cref="BatchAudit"/>).</summary>
+        IEnumerator Profile(MenuV6Stage stone, string label, double t, bool story, StringBuilder sb, bool first, bool audit = false)
         {
             if (story && stone.Dread != null) stone.Dread.PlayStory(0);
             MenuV6Clock.Freeze((float)t);
             yield return null;
-            var names = new[] { "Batches Count", "SetPass Calls Count", "Draw Calls Count", "Triangles Count", "Vertices Count" };
-            var recs = new ProfilerRecorder[names.Length];
-            for (var i = 0; i < names.Length; i++) recs[i] = ProfilerRecorder.StartNew(ProfilerCategory.Render, names[i], 16);
+            var recs = StartRenderRecorders(out var names);
             for (var f = 0; f < 12; f++) yield return null;
             var counts = MenuV6Budget.Measure(stone.Root, stone);
             sb.Append(first ? "" : ", ").Append(Q(label)).Append(": {");
-            for (var i = 0; i < names.Length; i++)
+            for (var i = 0; i < names.Count; i++)
             {
                 var v = recs[i].Valid ? recs[i].LastValue.ToString(CultureInfo.InvariantCulture) : "null";
                 sb.Append(Q(names[i])).Append(": ").Append(v).Append(", ");
                 recs[i].Dispose();
             }
 
-            sb.Append("\"counts\": ").Append(MenuV6Budget.Json(counts)).Append('}');
+            // P6: the Game view's own statistics (the Stats overlay's numbers; Editor-only, the frame just rendered)
+            sb.Append("\"unityStats\": ").Append(EditorStats()).Append(", ");
+            sb.Append("\"counts\": ").Append(MenuV6Budget.Json(counts));
+            if (audit) sb.Append(", \"audit\": ").Append(BatchAudit(stone.Root));
+            sb.Append('}');
             if (story && stone.Dread != null) stone.Dread.StopStory();
             MenuV6Clock.Unfreeze();
+        }
+
+        /// <summary>
+        /// P6 (the P5 landing: "Batches Count" and "Draw Calls Count" came back null in the Editor): the render counters this
+        /// Editor actually publishes, found by name (ProfilerRecorderHandle.GetAvailable) whatever their category — every
+        /// counter whose name has "Batch", "Draw Call" or "SetPass", and the triangle / vertex counts — plus P5's three names
+        /// when missing (null in the JSON = this Editor has no such counter).
+        /// </summary>
+        static ProfilerRecorder[] StartRenderRecorders(out List<string> names)
+        {
+            names = new List<string>();
+            var cats = new List<ProfilerCategory>();
+            try
+            {
+                var handles = new List<ProfilerRecorderHandle>();
+                ProfilerRecorderHandle.GetAvailable(handles);
+                foreach (var h in handles)
+                {
+                    var d = ProfilerRecorderHandle.GetDescription(h);
+                    var n = d.Name;
+                    if (string.IsNullOrEmpty(n) || names.Contains(n)) continue;
+                    var want = n.IndexOf("Batch", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                               n.IndexOf("Draw Call", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                               n.IndexOf("SetPass", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                               n == "Triangles Count" || n == "Vertices Count";
+                    if (!want) continue;
+                    names.Add(n);
+                    cats.Add(d.Category);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[WRLDZ MenuV6Capture] render counters: " + ex.Message);
+            }
+
+            foreach (var n in new[] { "Batches Count", "SetPass Calls Count", "Draw Calls Count", "Triangles Count", "Vertices Count" })
+                if (!names.Contains(n))
+                {
+                    names.Add(n);
+                    cats.Add(ProfilerCategory.Render);
+                }
+
+            var recs = new ProfilerRecorder[names.Count];
+            for (var i = 0; i < names.Count; i++) recs[i] = ProfilerRecorder.StartNew(cats[i], names[i], 16);
+            return recs;
+        }
+
+        /// <summary>P6: the Game view's statistics for the frame just rendered (UnityStats: what the Stats overlay shows).</summary>
+        static string EditorStats()
+        {
+            try
+            {
+                return "{\"drawCalls\": " + UnityStats.drawCalls + ", \"setPassCalls\": " + UnityStats.setPassCalls +
+                       ", \"dynamicBatches\": " + UnityStats.dynamicBatches + ", \"dynamicBatchedDrawCalls\": " +
+                       UnityStats.dynamicBatchedDrawCalls + ", \"staticBatches\": " + UnityStats.staticBatches +
+                       ", \"instancedBatches\": " + UnityStats.instancedBatches + ", \"triangles\": " + UnityStats.triangles +
+                       ", \"vertices\": " + UnityStats.vertices + "}";
+            }
+            catch (Exception ex)
+            {
+                return Q("unavailable: " + ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// P6: per canvas under <paramref name="root"/> (the Stone's canvas and its nested ones: the crack layers), the
+        /// graphics it draws in draw order (hierarchy order; disabled, culled and culled-transparent ones left out) and the
+        /// number of runs of one (material, texture) — every change is a possible new batch, every stencil mask adds its pop:
+        /// an upper bound on that canvas's batches (UGUI also merges runs that do not overlap) — and the stage layers that
+        /// start the most runs. JSON.
+        /// </summary>
+        static string BatchAudit(Transform root)
+        {
+            var I = CultureInfo.InvariantCulture;
+            var order = new List<Canvas>();
+            var byCanvas = new Dictionary<Canvas, List<Graphic>>();
+            if (root != null)
+                foreach (var g in root.GetComponentsInChildren<Graphic>(false))
+                {
+                    if (g == null || !g.enabled || !g.gameObject.activeInHierarchy) continue;
+                    var cr = g.canvasRenderer;
+                    if (cr == null || cr.cull) continue;
+                    if (cr.cullTransparentMesh && g.color.a <= .002f) continue;
+                    var cv = g.canvas;
+                    if (cv == null) continue;
+                    if (!byCanvas.TryGetValue(cv, out var l))
+                    {
+                        byCanvas[cv] = l = new List<Graphic>();
+                        order.Add(cv);
+                    }
+
+                    l.Add(g);
+                }
+
+            var layers = new Dictionary<string, int>();
+            var sb = new StringBuilder("{\"canvases\": [");
+            var total = 0;
+            for (var c = 0; c < order.Count; c++)
+            {
+                var list = byCanvas[order[c]];
+                Material lastM = null;
+                Texture lastT = null;
+                var runs = 0;
+                var masks = 0;
+                foreach (var g in list)
+                {
+                    var m = g.materialForRendering;
+                    var t = g.mainTexture;
+                    if (runs == 0 || m != lastM || t != lastT)
+                    {
+                        runs++;
+                        var key = LayerKey(g.transform, root);
+                        layers[key] = (layers.TryGetValue(key, out var k) ? k : 0) + 1;
+                    }
+
+                    lastM = m;
+                    lastT = t;
+                    var mk = g.GetComponent<Mask>();
+                    if (mk != null && mk.enabled) masks++;
+                }
+
+                total += runs + masks;
+                sb.Append(c == 0 ? "" : ", ").Append("{\"canvas\": ").Append(Q(order[c].name)).Append(", \"graphics\": ").Append(list.Count)
+                    .Append(", \"runs\": ").Append(runs).Append(", \"maskPops\": ").Append(masks).Append('}');
+            }
+
+            var top = new List<KeyValuePair<string, int>>(layers);
+            top.Sort((a, b) => b.Value.CompareTo(a.Value));
+            sb.Append("], \"runsTotal\": ").Append(total.ToString(I)).Append(", \"topLayers\": {");
+            for (var i = 0; i < top.Count && i < 16; i++)
+                sb.Append(i == 0 ? "" : ", ").Append(Q(top[i].Key)).Append(": ").Append(top[i].Value);
+            sb.Append("}}");
+            return sb.ToString();
+        }
+
+        /// <summary>The graphic's first two ancestors under <paramref name="root"/> ("Stage/Rig_torch"), for the audit.</summary>
+        static string LayerKey(Transform t, Transform root)
+        {
+            var names = new List<string>();
+            for (var x = t; x != null && x != root; x = x.parent) names.Add(x.name);
+            names.Reverse();
+            return names.Count == 0 ? "(root)" : names.Count == 1 ? names[0] : names[0] + "/" + names[1];
+        }
+
+        /// <summary>
+        /// P6 (BUILD_PLAN §6 P5 step 7, SPEC §v2.6 ≤ 25 batches / ≤ 150 animated quads; the P5 landing measured SetPass 81-165):
+        /// the budget before / after in this one session. For both plans the Stone is built twice — P5's structure
+        /// (CrackLayer.MergeGaps and MenuV6Budget.CullOn off: one stencil mask per crack net, every alpha-0 layer submitted) and
+        /// P6's — and profiled at the same three frozen frames as P5 (rest 2.8, the first omen 19.268, the story's sky-lid
+        /// 13.6), each with the counters, the Game view's statistics, the counts and the draw-order audit. budget_p6.json.
+        /// The switches are put back on whatever happens.
+        /// </summary>
+        IEnumerator P6Budget()
+        {
+            var sb = new StringBuilder("{");
+            var firstLay = true;
+            foreach (var (w, h, lay) in new[] { (1920, 1080, "land"), (1080, 2340, "port") })
+            {
+                yield return SetSize(w, h);
+                sb.Append(firstLay ? "" : ",").Append("\n  ").Append(Q(lay)).Append(": {");
+                firstLay = false;
+                var firstMode = true;
+                foreach (var (mode, on) in new[] { ("p5", false), ("p6", true) })
+                {
+                    CrackLayer.MergeGaps = on;
+                    MenuV6Budget.CullOn = on;
+                    try
+                    {
+                        var menu = Rebuild();
+                        yield return Wait(.8f);
+                        var stone = menu != null ? menu.Stone : null;
+                        if (stone == null)
+                        {
+                            _notes.Add("p6 budget " + lay + " " + mode + ": the legacy menu built");
+                            continue;
+                        }
+
+                        sb.Append(firstMode ? "" : ",").Append("\n    ").Append(Q(mode)).Append(": {");
+                        firstMode = false;
+                        yield return Profile(stone, "rest", 2.8, false, sb, true, true);
+                        yield return Profile(stone, "omen", 19.268, false, sb, false, true);
+                        yield return Profile(stone, "story_skylid", 13.6, true, sb, false, true);
+                        sb.Append('}');
+                    }
+                    finally
+                    {
+                        CrackLayer.MergeGaps = true;
+                        MenuV6Budget.CullOn = true;
+                    }
+                }
+
+                sb.Append('}');
+            }
+
+            sb.Append("\n}\n");
+            try { File.WriteAllText(Path.Combine(_out, "budget_p6.json"), sb.ToString()); }
+            catch (Exception ex) { _notes.Add("budget_p6.json: " + ex.Message); }
+            Rebuild();
+            yield return Wait(.4f);
         }
 
         /// <summary>P5: the live title (its fog) at raw 24.9 / 25 (v63_portrait_03 / 05, v63_title 24.9); the menu is torn
