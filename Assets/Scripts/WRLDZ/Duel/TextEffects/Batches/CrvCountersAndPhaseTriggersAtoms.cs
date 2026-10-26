@@ -170,6 +170,54 @@ namespace WRLDZ.Duel.TextEffects
                         MakesChainLink = true
                     }),
 
+            // Princess Curran (c2316186): the same Standby burn, in a multi-sentence text (the Nomi sentences stay structural).
+            new AtomRegistration.Atom(
+                Begin + @"This card cannot be Normal Summoned or Set\. This card cannot be Special Summoned except with ""Trial of the Princesses""\. During your Standby Phase, inflict (\d+) damage to your opponent for each monster they control" + Finish,
+                m => Pos(m, 1) <= 0
+                    ? null
+                    : new EffectClause
+                    {
+                        Timing = EffectTiming.StandbyPhase,
+                        Action = EffectActionKind.InflictDamageToOpponent,
+                        Side = EffectSide.Opponent,
+                        Amount = Pos(m, 1),
+                        ScaleAmountByOpponentMonsterCount = true,
+                        StaysOnField = true,
+                        MakesChainLink = true
+                    }),
+
+            // Princess Pikeru (c75917088): Standby LP gain per monster you control, in a multi-sentence text.
+            new AtomRegistration.Atom(
+                Begin + @"This card cannot be Normal Summoned or Set\. This card cannot be Special Summoned except with ""Trial of the Princesses""\. During your Standby Phase, gain (\d+) Life Points for each monster you control" + Finish,
+                m => Pos(m, 1) <= 0
+                    ? null
+                    : new EffectClause
+                    {
+                        Timing = EffectTiming.StandbyPhase,
+                        Action = EffectActionKind.GainLifePoints,
+                        Side = EffectSide.Controller,
+                        Amount = Pos(m, 1),
+                        ScaleAmountByControllerMonsters = true,
+                        StaysOnField = true,
+                        MakesChainLink = true
+                    }),
+
+            // Princess Pikeru (c75917088): whole-text atom so the Nomi sentences stay structural.
+            new AtomRegistration.Atom(
+                @"During your Standby Phase, gain (\d+) Life Points for each monster you control" + E,
+                m => Pos(m, 1) <= 0
+                    ? null
+                    : new EffectClause
+                    {
+                        Timing = EffectTiming.StandbyPhase,
+                        Action = EffectActionKind.GainLifePoints,
+                        Side = EffectSide.Controller,
+                        Amount = Pos(m, 1),
+                        ScaleAmountByControllerMonsters = true,
+                        StaysOnField = true,
+                        MakesChainLink = true
+                    }),
+
             // Cyber Archfiend e1: FIELD TRIGGER_O EVENT_PREDRAW; condition ep == tp and an empty hand; target
             // IsPlayerCanDraw(tp,1); Draw(tp,1). A marker: DuelEngine.ContinueDrawPhase offers it before the normal draw.
             new AtomRegistration.Atom(

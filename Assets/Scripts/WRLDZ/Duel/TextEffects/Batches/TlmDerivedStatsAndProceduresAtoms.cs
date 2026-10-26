@@ -103,6 +103,21 @@ namespace WRLDZ.Duel.TextEffects
                     MakesChainLink = false
                 }),
 
+            // Grass Phantom (c41249545) / Beelze Frog (c49522489): +N ATK for each same-named card in your GY.
+            new AtomRegistration.Atom(
+                Start + @"This card gains (\d+) ATK for each ""([^""]+)"" in your " + Gy + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.GainSelfAtkPerCount,
+                    Side = EffectSide.Controller,
+                    NamedCard = m.Groups[2].Value,
+                    Amount = Parse(m, 1, 0),
+                    DefAmount = 0,
+                    CountSource = TlmDerivedStatsAndProceduresRuntime.NamedOrAltInYourGy,
+                    MakesChainLink = false
+                }),
+
             // King of the Skull Servants: the optional battle-destroyed revival; the banish is its cost.
             new AtomRegistration.Atom(
                 Start + @"When this card is destroyed by battle and sent to the " + Gy + @": You can banish 1 other " + Name +

@@ -31,7 +31,9 @@ internal static class Diag
         }
 
         Console.WriteLine($"#{def.id}  {def.name}");
-        Console.WriteLine($"  type={def.type}  race={def.race}  attr={def.attribute}  {(def.IsMonster ? $"Lv{def.level} {def.atk}/{def.def}" : "")}");
+        var _stats = def.IsMonster ? $"Lv{def.level} {def.atk}/{def.def}" : "";
+        var _sc = (def.scaleLeft > 0 || def.scaleRight > 0) ? $"  Sc:{def.scaleLeft}--{def.scaleRight}" : "";
+        Console.WriteLine($"  type={def.type}  race={def.race}  attr={def.attribute}  {_stats}{_sc}");
         Console.WriteLine($"  desc: {def.desc}");
         Console.WriteLine();
         PrintCompiled(def);
@@ -81,10 +83,10 @@ internal static class Diag
         var def = hit.ToDef();
         Console.WriteLine($"#{def.id}  {def.name}");
         Console.WriteLine($"  pool: prelink wall={file.wall}");
-        Console.WriteLine($"  type={def.type}  race={def.race}  attr={def.attribute}  {(def.IsMonster ? $"Lv{def.level} {def.atk}/{def.def}" : "")}");
+        var _stats = def.IsMonster ? $"Lv{def.level} {def.atk}/{def.def}" : "";
+        var _sc = (def.scaleLeft > 0 || def.scaleRight > 0) ? $"  Sc:{def.scaleLeft}--{def.scaleRight}" : "";
+        Console.WriteLine($"  type={def.type}  race={def.race}  attr={def.attribute}  {_stats}{_sc}");
         Console.WriteLine($"  desc: {def.desc}");
-        if (hit.scaleLeft > 0 || hit.scaleRight > 0)
-            Console.WriteLine($"  scales: {hit.scaleLeft}/{hit.scaleRight}");
         var db = CardDatabase.Load();
         if (db.TryGet(def.id, out var dbDef) && dbDef != null)
         {
@@ -107,6 +109,10 @@ internal static class Diag
         var prog = CardTextEffectCompiler.Compile(def);
         if (prog == null) { Console.WriteLine("  compile: <null program>"); return; }
         Console.WriteLine($"  FullyCompiled: {prog.FullyCompiled}");
+        Console.WriteLine($"  CompileSource: {prog.CompileSource}");
+        if (prog.UnparsedFragments != null && prog.UnparsedFragments.Length > 0)
+            foreach (var fragment in prog.UnparsedFragments)
+                Console.WriteLine($"  unparsed: {fragment}");
         Console.WriteLine($"  timings: {string.Join(", ", Enum.GetValues(typeof(EffectTiming)).Cast<EffectTiming>().Where(prog.HasTiming))}");
         Console.WriteLine($"  clauses: {prog.ClauseList.Count}");
         int i = 0;
@@ -120,6 +126,7 @@ internal static class Diag
                 .Select(f => $"{f.Name}={Fmt(f.GetValue(c))}");
             var joined = string.Join(", ", setFlags);
             if (!string.IsNullOrEmpty(joined)) Console.WriteLine($"        {joined}");
+            if (c?.SourceSnippet != null) Console.WriteLine($"        SourceSnippet={c.SourceSnippet}");
         }
     }
 
@@ -569,6 +576,8 @@ internal static class Diag
             race = race ?? "",
             attribute = attribute ?? "",
             archetype = archetype ?? "",
+            scaleLeft = scaleLeft,
+            scaleRight = scaleRight,
         };
     }
 

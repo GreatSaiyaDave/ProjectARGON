@@ -42,6 +42,20 @@ namespace WRLDZ.Duel.TextEffects
 
         public static readonly AtomRegistration.Atom[] Atoms =
         {
+            // Ancient Gear (c31557782): own hand procedure if you control a face-up "Ancient Gear".
+            new AtomRegistration.Atom(
+                Start + @"If you control an ""([^""]+)"", you can Special Summon this card \(from your hand\) in face-up Attack Position" + End,
+                m => new EffectClause
+                {
+                    Timing = EffectTiming.ContinuousWhileFaceUp,
+                    Action = EffectActionKind.SpecialSummonThisFromHandByOwnProcedure,
+                    Side = EffectSide.Controller,
+                    FromHand = true,
+                    ActivationCondition = TlmCostLinkedSpellsRuntime.YouControlFaceUpNamed,
+                    ConditionName = m.Groups[1].Value,
+                    MakesChainLink = false
+                }),
+
             // Cyber Dragon.
             new AtomRegistration.Atom(
                 Start + @"If only your opponent controls a monster, you can Special Summon this card \(from your hand\)" + End,

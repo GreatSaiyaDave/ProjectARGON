@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using WRLDZ.Data;
+using WRLDZ.Duel;
 using WRLDZ.Duel.Rules;
 
 namespace WRLDZ.Duel.TextEffects
@@ -205,6 +206,14 @@ namespace WRLDZ.Duel.TextEffects
             if (!CrvHandProceduresAndNamedSummonsRuntime.OwnHandProcedureAllows(engine, who,
                     ClauseOf(card, EffectActionKind.SpecialSummonThisFromHandByOwnProcedure), out reason))
                 return false;
+            // TlmCostLinkedSpells batch: Ancient Gear — "If you control an "X"".
+            var ownProc = ClauseOf(card, EffectActionKind.SpecialSummonThisFromHandByOwnProcedure);
+            if (ownProc != null && ownProc.ActivationCondition == TlmCostLinkedSpellsRuntime.YouControlFaceUpNamed &&
+                !FieldSpellEffects.ControlsFaceUpNamed(who, ownProc.ConditionName))
+            {
+                reason = $"Requires a face-up \"{ownProc.ConditionName}\" you control.";
+                return false;
+            }
 
             reason = "OK";
             return true;
@@ -240,6 +249,10 @@ namespace WRLDZ.Duel.TextEffects
             // CrvHandProceduresAndNamedSummons batch: Cyber Dragon's conditional procedure gives the opponent nothing.
             if (CrvHandProceduresAndNamedSummonsRuntime.IsConditionalOwnHandProcedure(
                     ClauseOf(card, EffectActionKind.SpecialSummonThisFromHandByOwnProcedure)))
+                return true;
+            // TlmCostLinkedSpells batch: Ancient Gear's conditional procedure gives the opponent nothing.
+            if (ClauseOf(card, EffectActionKind.SpecialSummonThisFromHandByOwnProcedure)?.ActivationCondition ==
+                TlmCostLinkedSpellsRuntime.YouControlFaceUpNamed)
                 return true;
             var opp = engine.OpponentOf(ai);
             if (opp == null) return true;
