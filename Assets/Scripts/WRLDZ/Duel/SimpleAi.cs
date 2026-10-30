@@ -241,9 +241,30 @@ namespace WRLDZ.Duel
         }
 
         /// <summary>Yields once per successful action.</summary>
+        static bool ShouldMakeRandomChoice(DuelEngine engine)
+        {
+            var variance = AiHeuristicPolicy.GetVariance();
+            if (DuelistIntelligenceUpgrade.Instance != null)
+            {
+                variance = DuelistIntelligenceUpgrade.Instance.GetEffectiveVariance();
+            }
+            if (variance <= 0f) return false;
+            // Use engine RNG for deterministic replay if seeded
+            return engine.Rng.NextFloat() < variance;
+        }
+
         static IEnumerable<object> RunMainPhaseActions(DuelEngine engine, DuelistState ai, string phaseLabel)
         {
-            const int maxSteps = 10;
+            int maxSteps = 10;
+            var intelligence = AiHeuristicPolicy.GetIntelligence();
+            if (DuelistIntelligenceUpgrade.Instance != null)
+            {
+                intelligence = DuelistIntelligenceUpgrade.Instance.GetEffectiveIntelligence();
+            }
+            if (intelligence > 0.8f) maxSteps = 15;
+            if (intelligence > 1.0f) maxSteps = (int)(10 + intelligence * 5);
+            if (intelligence > 1.5f) maxSteps = 25;
+            if (maxSteps > 30) maxSteps = 30;
             for (var step = 0; step < maxSteps; step++)
             {
                 if (engine.GameOver || engine.TurnPlayer != ai || !engine.InMainPhase)
@@ -255,12 +276,26 @@ namespace WRLDZ.Duel
                 if (engine.GameOver || engine.TurnPlayer != ai || !engine.InMainPhase)
                     yield break;
 
+                // With high variance, sometimes skip optimal plays or make suboptimal choices
+                if (ShouldMakeRandomChoice(engine) && engine.Rng.NextFloat() < 0.3f)
+                {
+                    // Sometimes just do nothing extra this step with variance
+                }
+
                 // Advantage spells first (policy table)
                 if (AiHeuristicPolicy.PreferPotOfGreed &&
                     TryActivateById(engine, ai, SpellTrapEffects.PotOfGreed, phaseLabel))
                 {
-                    yield return null;
-                    continue;
+                    // With variance, sometimes don't follow through optimally? Skip small random chance
+                    if (ShouldMakeRandomChoice(engine) && engine.Rng.NextFloat() < 0.2f)
+                    {
+                        // Skip this action 20% of the time on high variance
+                    }
+                    else
+                    {
+                        yield return null;
+                        continue;
+                    }
                 }
 
                 // Search cards (Normal+): fetch a key piece from the Deck
@@ -720,7 +755,14 @@ namespace WRLDZ.Duel
                     }
 
                     if (attacker == null)
+                    {
                         attacker = attackers.OrderByDescending(m => m.CurrentAtk).FirstOrDefault();
+                        // Add variance in attacker selection
+                        if (ShouldMakeRandomChoice(engine) && engine.Rng.NextFloat() < 0.3f && attackers.Count > 1)
+                        {
+                            attacker = attackers[engine.Rng.Next(attackers.Count)];
+                        }
+                    }
                 }
 
                 if (attacker == null)
@@ -822,7 +864,17 @@ namespace WRLDZ.Duel
                          .OrderBy(m => m.CurrentAtk))
             {
                 if (atk > t.CurrentAtk)
+                {
+                    // With variance, sometimes pick differently
+                    if (ShouldMakeRandomChoice(engine) && engine.Rng.NextFloat() < 0.25f)
+                    {
+                        // Pick a random alternative target instead (only beatable ones)
+                        var alternatives = playerMonsters.Where(x => x != t && atk > x.CurrentAtk).ToList();
+                        if (alternatives.Count > 0)
+                            return alternatives[engine.Rng.Next(alternatives.Count)];
+                    }
                     return t;
+                }
             }
 
             // 2) Destroy face-down / DEF only if ATK > (known or estimated) DEF — otherwise we take
@@ -832,7 +884,15 @@ namespace WRLDZ.Duel
                          .OrderBy(KnownDef))
             {
                 if (atk > KnownDef(t))
+                {
+                    if (ShouldMakeRandomChoice(engine) && engine.Rng.NextFloat() < 0.2f)
+                    {
+                        var alternatives = playerMonsters.Where(x => x != t && atk > KnownDef(x)).ToList();
+                        if (alternatives.Count > 0)
+                            return alternatives[engine.Rng.Next(alternatives.Count)];
+                    }
                     return t;
+                }
             }
 
             // 3) Equal ATK trade only with board advantage (policy)
@@ -842,10 +902,27 @@ namespace WRLDZ.Duel
             {
                 if (atk == t.CurrentAtk &&
                     ai.MonsterCount >= AiHeuristicPolicy.EqualTradeMinOwnMonsters)
+                {
+                    if (ShouldMakeRandomChoice(engine) && engine.Rng.NextFloat() < 0.15f)
+                    {
+                        var alternatives = playerMonsters.Where(x => x != t).ToList();
+                        if (alternatives.Count > 0)
+                            return alternatives[engine.Rng.Next(alternatives.Count)];
+                    }
                     return t;
+                }
             }
 
             // 4) No beneficial attack — return null (do not suicide into higher DEF for "demo")
+            // With variance, sometimes make a risky attack
+            if (ShouldMakeRandomChoice(engine) && engine.Rng.NextFloat() < 0.1f && playerMonsters.Count > 0)
+            {
+                // Only risk an attack into a monster we can actually beat; never suicide into a
+                // strictly stronger one (a Toon limited to a stronger face-up Toon has no good target).
+                var beatable = playerMonsters.Where(m => atk > (m.FaceUp && m.Position == BattlePosition.Attack ? m.CurrentAtk : KnownDef(m))).ToList();
+                if (beatable.Count > 0)
+                    return beatable[engine.Rng.Next(beatable.Count)];
+            }
             return null;
         }
     }

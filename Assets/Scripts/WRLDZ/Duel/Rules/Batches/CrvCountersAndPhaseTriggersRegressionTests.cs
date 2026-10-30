@@ -22,7 +22,6 @@ namespace WRLDZ.Duel.Rules
         const int Tetran = 44954628;          // Machine Lv6 1800/2300
         const int DarkCatapulter = 33875961;  // Machine Lv4 1000/1500
         const int EbonCurran = 46128076;      // Spellcaster Lv2 1200/0
-        const int PrincessCurran = 2316186;
         const int JustDesserts = 24068492;
         const int CyberArchfiend = 59907935;  // Fiend Lv4 1000/2000
         const int RapidFire = 6337436;        // Spellcaster Lv4 1600/1200
@@ -207,11 +206,10 @@ namespace WRLDZ.Duel.Rules
                 ecBurn.ScaleAmountByOpponentMonsterCount && !ecBurn.OpponentTurnOnly &&
                 Is(EbonCurran, CardEffectStatusKind.Implemented), Describe(ec));
             var jd = P(JustDesserts);
-            Check("Just Desserts keeps its Activate burn; Princess Curran (an unenforced Special Summon lock) stays out",
+            Check("Just Desserts keeps its Activate burn (Princess Curran now implemented via v311 simplified atoms)",
                 Find(jd, EffectActionKind.InflictDamageToOpponent)?.Timing == EffectTiming.Activate &&
-                Is(JustDesserts, CardEffectStatusKind.Implemented) &&
-                (db.Get(PrincessCurran) == null || !Is(PrincessCurran, CardEffectStatusKind.Implemented)),
-                Describe(jd) + " / " + Describe(P(PrincessCurran)));
+                Is(JustDesserts, CardEffectStatusKind.Implemented),
+                Describe(jd));
 
             var ca = P(CyberArchfiend);
             var caDraw = Find(ca, EffectActionKind.DrawOneAtDrawPhaseStartIfHandEmpty);
